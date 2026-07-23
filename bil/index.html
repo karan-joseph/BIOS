@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIOS - Building Intelligent Outcomes with Solutions</title>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<style>
+  /* Import Outfit and Inter Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Colors */
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #e0e7ff;
+  
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+  --secondary-light: #f1f5f9;
+
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --success-dark: #065f46;
+
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --warning-dark: #92400e;
+
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --danger-dark: #991b1b;
+
+  --info: #0ea5e9;
+  --info-light: #e0f2fe;
+  --info-dark: #075985;
+
+  /* Neutral Dark Theme elements */
+  --bg-main: #f8fafc;
+  --bg-sidebar: #0f172a;
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+  --card-bg: #ffffff;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  
+  /* Layout & Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset and Global Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* App Layout Grid */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  width: 280px;
+  background-color: var(--bg-sidebar);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  flex-shrink: 0;
+  transition: var(--transition);
+  z-index: 100;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 2rem 0.5rem;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 2rem;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-title {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.logo-subtitle {
+  color: var(--primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.nav-link svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  transition: var(--transition);
+}
+
+.nav-link:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.nav-link.active {
+  background-color: var(--primary);
+  color: var(--sidebar-text-active);
+}
+
+.nav-link.active svg {
+  stroke: var(--sidebar-text-active);
+}
+
+/* Main Content Styling */
+.main-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevents flex items from overflowing */
+  min-height: 100vh;
+}
+
+header {
+  background-color: var(--card-bg);
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-title-area h2 {
+  font-size: 1.5rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-main);
+  padding: 0.25rem;
+}
+
+.mobile-menu-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.date-indicator {
+  background-color: var(--secondary-light);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--secondary-hover);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-indicator svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Page Section Wrappers */
+.content-area {
+  padding: 2rem;
+  flex-grow: 1;
+}
+
+.page-section {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.page-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Page Headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-header-left h3 {
+  font-size: 1.75rem;
+}
+
+.section-header-left p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-light);
+  color: var(--secondary-hover);
+}
+.btn-secondary:hover {
+  background-color: var(--border);
+  color: var(--text-main);
+}
+
+.btn-outline {
+  border-color: var(--border);
+  background-color: transparent;
+  color: var(--secondary-hover);
+}
+.btn-outline:hover {
+  background-color: var(--secondary-light);
+  color: var(--text-main);
+}
+
+.btn-success {
+  background-color: var(--success);
+  color: white;
+}
+.btn-success:hover {
+  background-color: #059669;
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+}
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Footer styling */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  font-weight: 500;
+}
+
+/* --- DASHBOARD SECTION --- */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.stat-card.enquiries::before { background-color: var(--info); }
+.stat-card.bookings::before { background-color: var(--success); }
+.stat-card.billing::before { background-color: var(--primary); }
+
+.stat-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stat-icon-wrapper {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card.enquiries .stat-icon-wrapper {
+  background-color: var(--info-light);
+  color: var(--info);
+}
+
+.stat-card.bookings .stat-icon-wrapper {
+  background-color: var(--success-light);
+  color: var(--success);
+}
+
+.stat-card.billing .stat-icon-wrapper {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.stat-icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Dashboard Secondary Grid */
+.dashboard-details-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-card {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-title-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title-area h4 {
+  font-size: 1.15rem;
+}
+
+/* Custom Visual Status Bars for Dashboard */
+.status-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.status-breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.status-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-progress-track {
+  height: 8px;
+  background-color: var(--secondary-light);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.status-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.8s ease-out;
+}
+
+/* Data Table Filtering Controls */
+.filter-bar {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-group-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-grow: 1;
+  min-width: 180px;
+}
+
+.form-group-inline label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* Inputs & Form Elements */
+input, select, textarea {
+  width: 100%;
+  padding: 0.625rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  background-color: #ffffff;
+  outline: none;
+  transition: var(--transition);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+/* Tables CSS */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+th {
+  background-color: var(--secondary-light);
+  color: var(--secondary-hover);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 0.95rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background-color: var(--bg-main);
+}
+
+.no-data-msg {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem 1.5rem !important;
+}
+
+.no-data-msg svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  color: var(--border);
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Badges / Pill Tags */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-new {
+  background-color: var(--info-light);
+  color: var(--info-dark);
+}
+
+.badge-followup {
+  background-color: var(--warning-light);
+  color: var(--warning-dark);
+}
+
+.badge-booking {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+}
+
+.badge-cancelled {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1.5rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.modal-close-btn:hover {
+  color: var(--danger);
+}
+
+.modal-close-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Forms general styling inside modal */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-full-width {
+  grid-column: span 2;
+}
+
+@media (max-width: 576px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-full-width {
+    grid-column: span 1;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--secondary-hover);
+}
+
+/* --- INVOICE PRINT PREVIEW MODAL --- */
+.invoice-modal {
+  max-width: 800px;
+}
+
+.invoice-preview-card {
+  background: #ffffff;
+  padding: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.invoice-header-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+}
+
+.invoice-title {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.invoice-meta {
+  text-align: right;
+}
+
+.invoice-meta-label {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.invoice-meta-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.invoice-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.invoice-party-title {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.invoice-party-details {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.invoice-party-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.invoice-table {
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.invoice-table th {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border-bottom: 2px solid var(--border);
+}
+
+.invoice-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.invoice-summary-area {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.invoice-summary-box {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.invoice-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.invoice-summary-row.total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-top: 2px solid var(--border);
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.invoice-terms {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Activity list in dashboard */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activity-icon.enquiry { background-color: var(--info-light); color: var(--info); }
+.activity-icon.booking { background-color: var(--success-light); color: var(--success); }
+.activity-icon.billing { background-color: var(--primary-light); color: var(--primary); }
+
+.activity-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+}
+
+.activity-desc {
+  flex-grow: 1;
+  font-size: 0.825rem;
+}
+
+.activity-desc strong {
+  color: var(--text-main);
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+  }
+  
+  body.sidebar-open .sidebar {
+    left: 0;
+  }
+  
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 99;
+  }
+  
+  body.sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  header {
+    padding: 1rem;
+  }
+  
+  .content-area {
+    padding: 1rem;
+  }
+}
+
+/* --- PRINT RULES --- */
+@media print {
+  /* Hide all elements on the page except the invoice print view */
+  body * {
+    visibility: hidden;
+  }
+  
+  #invoice-modal,
+  #invoice-modal * {
+    visibility: visible;
+  }
+  
+  #invoice-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+  }
+  
+  /* Hide header/buttons in the modal during print */
+  #invoice-modal .modal-header,
+  #invoice-modal .modal-footer {
+    display: none !important;
+  }
+  
+  /* Invoice content full-width */
+  #invoice-modal .modal-content {
+    border: none;
+    box-shadow: none;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: visible;
+  }
+  
+  .invoice-preview-card {
+    padding: 0 !important;
+    border: none !important;
+  }
+  
+  /* Ensure page breaks clean */
+  .invoice-preview-card {
+    page-break-after: avoid;
+  }
+}
+
+</style>
+<body>
+  <!-- Backdrop for mobile sidebar -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="logo-container">
+        <!-- Minimalist Circuit & Gear Logo SVG -->
+        <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#818cf8" />
+              <stop offset="100%" stop-color="#4f46e5" />
+            </linearGradient>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          <rect x="25" y="25" width="50" height="50" rx="12" fill="url(#logo-grad)" filter="url(#glow)" />
+          <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+          <circle cx="50" cy="50" r="6" fill="#ffffff" />
+          <path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50" stroke="#818cf8" stroke-width="4" stroke-linecap="round" />
+        </svg>
+        <div class="logo-text">
+          <span class="logo-title">BIOS</span>
+          <span class="logo-subtitle">Intelligent Solutions</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="nav-links">
+        <li>
+          <a class="nav-link active" data-target="dashboard">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="3" width="7" height="9" rx="1"/>
+              <rect x="14" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="12" width="7" height="9" rx="1"/>
+              <rect x="3" y="16" width="7" height="5" rx="1"/>
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="enquiries">
+            <svg viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Enquiries
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="bookings">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Bookings
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="billing">
+            <svg viewBox="0 0 24 24">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Billing
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="reports">
+            <svg viewBox="0 0 24 24">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            Reports
+          </a>
+        </li>
+      </nav>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header>
+        <div class="header-right-mobile">
+          <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle Sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="header-title-area">
+          <h2 id="header-view-title">Dashboard</h2>
+        </div>
+        <div class="header-right">
+          <div class="date-indicator">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span id="current-date-span">July 23, 2026</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Dynamic Content Area -->
+      <main class="content-area">
+        
+        <!-- ==================== DASHBOARD VIEW ==================== -->
+        <section id="dashboard-section" class="page-section active">
+          <div class="dashboard-grid">
+            <!-- Stat Card 1 -->
+            <div class="stat-card enquiries">
+              <div class="stat-details">
+                <span class="stat-label">Total Enquiries</span>
+                <span class="stat-value" id="dash-total-enquiries">0</span>
+              </div>
+              <div class="stat-icon-wrapper">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+            </div>
+            <!-- Stat Card 2 -->
+            <div class="stat-card bookings">
+              <div class="stat-details">
+                <span class="stat-label">Total Bookings</span>
+                <span class="stat-value" id="dash-total-bookings">0</span>
+              </div>
+              <div class="stat-icon-wrapper">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+            </div>
+            <!-- Stat Card 3 -->
+            <div class="stat-card billing">
+              <div class="stat-details">
+                <span class="stat-label">Total Billing Amount</span>
+                <span class="stat-value" id="dash-total-billing">₹0.00</span>
+              </div>
+              <div class="stat-icon-wrapper">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Grid -->
+          <div class="dashboard-details-grid">
+            <!-- Recent Activity -->
+            <div class="dashboard-card">
+              <div class="card-title-area">
+                <h4>Recent Activity</h4>
+                <span class="badge badge-new" style="background-color: var(--secondary-light); color: var(--secondary-hover);">Live Updates</span>
+              </div>
+              <div class="activity-list" id="dashboard-activity-list">
+                <!-- Populated dynamically -->
+                <div class="no-data-msg" style="padding: 1.5rem !important;">
+                  No recent activities recorded yet.
+                </div>
+              </div>
+            </div>
+
+            <!-- Status & Enquiries Breakdown -->
+            <div class="dashboard-card">
+              <div class="card-title-area">
+                <h4>Enquiry Statuses</h4>
+              </div>
+              <div class="status-breakdown-list">
+                <div class="status-breakdown-item">
+                  <div class="status-label-row">
+                    <span>New Enquiries</span>
+                    <span id="breakdown-new-count">0</span>
+                  </div>
+                  <div class="status-progress-track">
+                    <div class="status-progress-bar" id="breakdown-new-bar" style="width: 0%; background-color: var(--info);"></div>
+                  </div>
+                </div>
+                <div class="status-breakdown-item">
+                  <div class="status-label-row">
+                    <span>Follow Up</span>
+                    <span id="breakdown-followup-count">0</span>
+                  </div>
+                  <div class="status-progress-track">
+                    <div class="status-progress-bar" id="breakdown-followup-bar" style="width: 0%; background-color: var(--warning);"></div>
+                  </div>
+                </div>
+                <div class="status-breakdown-item">
+                  <div class="status-label-row">
+                    <span>Converted to Booking</span>
+                    <span id="breakdown-booking-count">0</span>
+                  </div>
+                  <div class="status-progress-track">
+                    <div class="status-progress-bar" id="breakdown-booking-bar" style="width: 0%; background-color: var(--success);"></div>
+                  </div>
+                </div>
+                <div class="status-breakdown-item">
+                  <div class="status-label-row">
+                    <span>Cancelled</span>
+                    <span id="breakdown-cancelled-count">0</span>
+                  </div>
+                  <div class="status-progress-track">
+                    <div class="status-progress-bar" id="breakdown-cancelled-bar" style="width: 0%; background-color: var(--danger);"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ENQUIRIES VIEW ==================== -->
+        <section id="enquiries-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Enquiries Management</h3>
+              <p>Register, update, and follow up with potential customers.</p>
+            </div>
+            <button class="btn btn-primary" id="open-add-enquiry-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Enquiry
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="form-group-inline" style="flex-grow: 2;">
+              <label for="enquiry-search">Search Customers</label>
+              <input type="text" id="enquiry-search" placeholder="Search by name or mobile number...">
+            </div>
+            <div class="form-group-inline">
+              <label for="enquiry-filter-status">Filter Status</label>
+              <select id="enquiry-filter-status">
+                <option value="All">All Statuses</option>
+                <option value="New">New</option>
+                <option value="Follow Up">Follow Up</option>
+                <option value="Booking">Booking</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-group-inline">
+              <label for="enquiry-filter-source">Filter Source</label>
+              <select id="enquiry-filter-source">
+                <option value="All">All Sources</option>
+                <option value="Walking">Walking</option>
+                <option value="Referral">Referral</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer Name</th>
+                  <th>Mobile Number</th>
+                  <th>Date</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="enquiry-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== BOOKINGS VIEW ==================== -->
+        <section id="bookings-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Bookings Management</h3>
+              <p>Manage confirmed customer bookings and payment details.</p>
+            </div>
+            <button class="btn btn-primary" id="open-add-booking-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Booking
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="form-group-inline" style="flex-grow: 2;">
+              <label for="booking-search">Search Bookings</label>
+              <input type="text" id="booking-search" placeholder="Search by customer name...">
+            </div>
+            <div class="form-group-inline">
+              <label for="booking-filter-payment">Payment Method</label>
+              <select id="booking-filter-payment">
+                <option value="All">All Methods</option>
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="Card">Card</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer Name</th>
+                  <th>Booking Date</th>
+                  <th>Booking Amount</th>
+                  <th>Payment Method</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="booking-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== BILLING VIEW ==================== -->
+        <section id="billing-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Invoicing & Billings</h3>
+              <p>Generate professional invoices with automated GST calculation.</p>
+            </div>
+            <button class="btn btn-primary" id="open-new-invoice-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Generate Invoice
+            </button>
+          </div>
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Customer Details</th>
+                  <th>Product Details</th>
+                  <th>Base Amount</th>
+                  <th>GST (18%)</th>
+                  <th>Total Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="billing-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== REPORTS VIEW ==================== -->
+        <section id="reports-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Reports Center</h3>
+              <p>Query aggregated business data and export customized reports to Excel.</p>
+            </div>
+            <button class="btn btn-success" id="export-excel-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Excel Report
+            </button>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="form-group-inline">
+              <label for="report-filter-module">Report Content</label>
+              <select id="report-filter-module">
+                <option value="Enquiries">Enquiries Report</option>
+                <option value="Bookings">Bookings Report</option>
+                <option value="Billings">Billings Report</option>
+              </select>
+            </div>
+            <div class="form-group-inline">
+              <label for="report-from-date">From Date</label>
+              <input type="date" id="report-from-date">
+            </div>
+            <div class="form-group-inline">
+              <label for="report-to-date">To Date</label>
+              <input type="date" id="report-to-date">
+            </div>
+            <button class="btn btn-secondary" id="reset-report-filters-btn" style="height: 42px;">
+              Reset Filters
+            </button>
+          </div>
+
+          <!-- Dynamic Report Table -->
+          <div class="table-responsive">
+            <table id="report-table">
+              <thead id="report-table-head">
+                <!-- Loaded based on module selection -->
+              </thead>
+              <tbody id="report-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- Footer -->
+      <footer>
+        BIOS - Building Intelligent Outcomes with Solutions
+      </footer>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. ENQUIRY MODAL (ADD / EDIT) -->
+  <div class="modal-overlay" id="enquiry-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 id="enquiry-modal-title">Add Enquiry</h4>
+        <button class="modal-close-btn" id="close-enquiry-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="enquiry-form">
+        <input type="hidden" id="enquiry-edit-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="enquiry-name">Customer Name *</label>
+            <input type="text" id="enquiry-name" required placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label for="enquiry-mobile">Mobile Number *</label>
+            <input type="tel" id="enquiry-mobile" required pattern="[0-9]{10}" placeholder="Enter 10-digit mobile number">
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="enquiry-date">Enquiry Date *</label>
+              <input type="date" id="enquiry-date" required>
+            </div>
+            <div class="form-group">
+              <label for="enquiry-source">Source *</label>
+              <select id="enquiry-source" required>
+                <option value="" disabled selected>Select Source</option>
+                <option value="Walking">Walking</option>
+                <option value="Referral">Referral</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="enquiry-status">Status *</label>
+            <select id="enquiry-status" required>
+              <option value="New">New</option>
+              <option value="Follow Up">Follow Up</option>
+              <option value="Booking">Booking</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-enquiry-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="save-enquiry-btn">Save Enquiry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. BOOKING MODAL (ADD / EDIT) -->
+  <div class="modal-overlay" id="booking-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 id="booking-modal-title">New Booking</h4>
+        <button class="modal-close-btn" id="close-booking-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="booking-form">
+        <input type="hidden" id="booking-edit-id">
+        <!-- If converted from Enquiry, link it -->
+        <input type="hidden" id="booking-enquiry-link-id">
+        
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="booking-name">Customer Name *</label>
+            <!-- Input text to search existing or type new -->
+            <input type="text" id="booking-name" required placeholder="Enter full name" list="booking-customer-suggestions">
+            <datalist id="booking-customer-suggestions">
+              <!-- Dynamically populated from Enquiries for quick autocompletion -->
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label for="booking-mobile">Mobile Number (Editable)</label>
+            <input type="tel" id="booking-mobile" placeholder="E.g., 9876543210">
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="booking-date">Booking Date *</label>
+              <input type="date" id="booking-date" required>
+            </div>
+            <div class="form-group">
+              <label for="booking-amount">Booking Amount (₹) *</label>
+              <input type="number" id="booking-amount" min="0" step="0.01" required placeholder="0.00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="booking-payment">Payment Method *</label>
+            <select id="booking-payment" required>
+              <option value="" disabled selected>Select Payment Method</option>
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-booking-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="save-booking-btn">Confirm Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. BILLING MODAL (GENERATE INVOICE) -->
+  <div class="modal-overlay" id="billing-modal-form">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4>Generate New Invoice</h4>
+        <button class="modal-close-btn" id="close-billing-form-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="billing-form-el">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group form-full-width">
+              <label for="billing-booking-select">Select Confirmed Booking (Optional - Auto Fills)</label>
+              <select id="billing-booking-select">
+                <option value="">-- Choose confirmed booking --</option>
+                <!-- Populated dynamically with bookings -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="billing-invoice-no">Invoice Number (Auto)</label>
+              <input type="text" id="billing-invoice-no" readonly style="background-color: var(--secondary-light); font-weight: 700;">
+            </div>
+            <div class="form-group">
+              <label for="billing-date">Invoice Date *</label>
+              <input type="date" id="billing-date" required>
+            </div>
+          </div>
+          
+          <div style="margin: 1rem 0; border-top: 1px solid var(--border); padding-top: 1rem;">
+            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Customer Information</h5>
+            <div class="form-group">
+              <label for="billing-customer-name">Customer Name *</label>
+              <input type="text" id="billing-customer-name" required placeholder="Customer Full Name">
+            </div>
+            <div class="form-group">
+              <label for="billing-customer-mobile">Customer Mobile</label>
+              <input type="tel" id="billing-customer-mobile" placeholder="10-digit mobile number">
+            </div>
+          </div>
+
+          <div style="margin: 1rem 0; border-top: 1px solid var(--border); padding-top: 1rem;">
+            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Product / Service details</h5>
+            <div class="form-group">
+              <label for="billing-product-name">Product / Service Name *</label>
+              <input type="text" id="billing-product-name" required placeholder="E.g., AI Software Consultation">
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="billing-amount">Base Amount (₹) *</label>
+                <input type="number" id="billing-amount" min="0" step="0.01" required placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label for="billing-gst">GST Calculation *</label>
+                <select id="billing-gst" style="background-color: var(--secondary-light); font-weight: 600;" readonly>
+                  <option value="18">18% GST (Auto added)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+              <div>GST Amount: <span id="billing-calc-gst">₹0.00</span></div>
+              <div style="color: var(--primary);">Total Invoice: <span id="billing-calc-total">₹0.00</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-billing-btn-el">Cancel</button>
+          <button type="submit" class="btn btn-primary">Generate & Print Preview</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. INVOICE VIEW & PRINT PREVIEW MODAL -->
+  <div class="modal-overlay" id="invoice-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>Invoice Print Preview</h4>
+        <button class="modal-close-btn" id="close-invoice-preview-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        
+        <!-- Document Print Area -->
+        <div class="invoice-preview-card" id="invoice-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#4f46e5" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Building Intelligent Outcomes with Solutions</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title">TAX INVOICE</div>
+              <div class="invoice-meta-label">Invoice No:</div>
+              <div class="invoice-meta-val" id="inv-preview-no">BIOS-2026-0001</div>
+              <div class="invoice-meta-label">Date:</div>
+              <div class="invoice-meta-val" id="inv-preview-date">23-Jul-2026</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">BILLED BY</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name">BIOS Inc.</div>
+                <p>123 Startup Hub, Tech District</p>
+                <p>Email: billing@bios.solutions</p>
+                <p>Phone: +91 98765 43210</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">BILLED TO</div>
+              <div class="invoice-party-details" id="inv-preview-client">
+                <div class="invoice-party-name" id="inv-preview-client-name">John Doe</div>
+                <p id="inv-preview-client-phone">Phone: +91 9988776655</p>
+              </div>
+            </div>
+          </div>
+
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Service / Product Description</th>
+                <th style="text-align: right;">Base Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 600;" id="inv-preview-product">IT Advisory & Software Consultation</td>
+                <td style="text-align: right; font-weight: 600;" id="inv-preview-base">₹10,000.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Subtotal (Base)</span>
+                <span id="inv-preview-subtotal">₹10,000.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>GST (18%)</span>
+                <span id="inv-preview-gst">₹1,800.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Grand Total</span>
+                <span id="inv-preview-total">₹11,800.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="invoice-terms">
+            <p>Thank you for choosing BIOS for your business solution requirements!</p>
+            <p style="margin-top: 0.25rem; font-weight: 500;">BIOS - Building Intelligent Outcomes with Solutions</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-invoice-modal-btn">Close</button>
+        <button type="button" class="btn btn-primary" id="print-invoice-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
