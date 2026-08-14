@@ -3,1054 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BIOS - Building Intelligent Outcomes with Solutions</title>
+  <title>BIOS - PC, Laptop & Inventory Management Software</title>
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
-<style>
-  /* Import Outfit and Inter Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
-
-:root {
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
-
-  /* Colors */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-light: #e0e7ff;
-  
-  --secondary: #64748b;
-  --secondary-hover: #475569;
-  --secondary-light: #f1f5f9;
-
-  --success: #10b981;
-  --success-light: #d1fae5;
-  --success-dark: #065f46;
-
-  --warning: #f59e0b;
-  --warning-light: #fef3c7;
-  --warning-dark: #92400e;
-
-  --danger: #ef4444;
-  --danger-light: #fee2e2;
-  --danger-dark: #991b1b;
-
-  --info: #0ea5e9;
-  --info-light: #e0f2fe;
-  --info-dark: #075985;
-
-  /* Neutral Dark Theme elements */
-  --bg-main: #f8fafc;
-  --bg-sidebar: #0f172a;
-  --sidebar-text: #94a3b8;
-  --sidebar-text-active: #ffffff;
-  --card-bg: #ffffff;
-  
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  
-  /* Layout & Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --radius-sm: 0.375rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Reset and Global Styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: var(--font-body);
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  line-height: 1.5;
-  overflow-x: hidden;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-/* App Layout Grid */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  position: relative;
-}
-
-/* Sidebar Styling */
-.sidebar {
-  width: 280px;
-  background-color: var(--bg-sidebar);
-  color: var(--sidebar-text);
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  flex-shrink: 0;
-  transition: var(--transition);
-  z-index: 100;
-}
-
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.5rem 2rem 0.5rem;
-  border-bottom: 1px solid #1e293b;
-  margin-bottom: 2rem;
-}
-
-.logo-icon {
-  width: 40px;
-  height: 40px;
-}
-
-.logo-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.logo-title {
-  color: #ffffff;
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-family: var(--font-heading);
-  letter-spacing: 0.05em;
-  line-height: 1.2;
-}
-
-.logo-subtitle {
-  color: var(--primary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.nav-links {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex-grow: 1;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
-  border-radius: var(--radius-md);
-  color: var(--sidebar-text);
-  text-decoration: none;
-  font-weight: 500;
-  transition: var(--transition);
-  cursor: pointer;
-}
-
-.nav-link svg {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  transition: var(--transition);
-}
-
-.nav-link:hover {
-  background-color: #1e293b;
-  color: #ffffff;
-}
-
-.nav-link.active {
-  background-color: var(--primary);
-  color: var(--sidebar-text-active);
-}
-
-.nav-link.active svg {
-  stroke: var(--sidebar-text-active);
-}
-
-/* Main Content Styling */
-.main-wrapper {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0; /* prevents flex items from overflowing */
-  min-height: 100vh;
-}
-
-header {
-  background-color: var(--card-bg);
-  padding: 1.25rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-.header-title-area h2 {
-  font-size: 1.5rem;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.mobile-menu-btn {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-main);
-  padding: 0.25rem;
-}
-
-.mobile-menu-btn svg {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
-  stroke-width: 2;
-}
-
-.date-indicator {
-  background-color: var(--secondary-light);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--secondary-hover);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.date-indicator svg {
-  width: 16px;
-  height: 16px;
-  stroke: currentColor;
-  stroke-width: 2;
-  fill: none;
-}
-
-/* Page Section Wrappers */
-.content-area {
-  padding: 2rem;
-  flex-grow: 1;
-}
-
-.page-section {
-  display: none;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.page-section.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Page Headers */
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.75rem;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.section-header-left h3 {
-  font-size: 1.75rem;
-}
-
-.section-header-left p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: var(--transition);
-  text-decoration: none;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  color: #ffffff;
-}
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-light);
-  color: var(--secondary-hover);
-}
-.btn-secondary:hover {
-  background-color: var(--border);
-  color: var(--text-main);
-}
-
-.btn-outline {
-  border-color: var(--border);
-  background-color: transparent;
-  color: var(--secondary-hover);
-}
-.btn-outline:hover {
-  background-color: var(--secondary-light);
-  color: var(--text-main);
-}
-
-.btn-success {
-  background-color: var(--success);
-  color: white;
-}
-.btn-success:hover {
-  background-color: #059669;
-}
-
-.btn-danger {
-  background-color: var(--danger);
-  color: white;
-}
-.btn-danger:hover {
-  background-color: #dc2626;
-}
-
-.btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
-  border-radius: var(--radius-sm);
-}
-
-/* Footer styling */
-footer {
-  text-align: center;
-  padding: 1.5rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  border-top: 1px solid var(--border);
-  margin-top: auto;
-  font-weight: 500;
-}
-
-/* --- DASHBOARD SECTION --- */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-}
-
-.stat-card.enquiries::before { background-color: var(--info); }
-.stat-card.bookings::before { background-color: var(--success); }
-.stat-card.billing::before { background-color: var(--primary); }
-
-.stat-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-label {
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
-}
-
-.stat-value {
-  font-family: var(--font-heading);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.2;
-}
-
-.stat-icon-wrapper {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stat-card.enquiries .stat-icon-wrapper {
-  background-color: var(--info-light);
-  color: var(--info);
-}
-
-.stat-card.bookings .stat-icon-wrapper {
-  background-color: var(--success-light);
-  color: var(--success);
-}
-
-.stat-card.billing .stat-icon-wrapper {
-  background-color: var(--primary-light);
-  color: var(--primary);
-}
-
-.stat-icon-wrapper svg {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
-  stroke-width: 2;
-  fill: none;
-}
-
-/* Dashboard Secondary Grid */
-.dashboard-details-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .dashboard-details-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.dashboard-card {
-  background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-.card-title-area {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.card-title-area h4 {
-  font-size: 1.15rem;
-}
-
-/* Custom Visual Status Bars for Dashboard */
-.status-breakdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.status-breakdown-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.status-label-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.status-progress-track {
-  height: 8px;
-  background-color: var(--secondary-light);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.status-progress-bar {
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 0.8s ease-out;
-}
-
-/* Data Table Filtering Controls */
-.filter-bar {
-  background-color: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  box-shadow: var(--shadow-sm);
-}
-
-.form-group-inline {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  flex-grow: 1;
-  min-width: 180px;
-}
-
-.form-group-inline label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-}
-
-/* Inputs & Form Elements */
-input, select, textarea {
-  width: 100%;
-  padding: 0.625rem 0.85rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  color: var(--text-main);
-  background-color: #ffffff;
-  outline: none;
-  transition: var(--transition);
-}
-
-input:focus, select:focus, textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-}
-
-/* Tables CSS */
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.875rem;
-}
-
-th {
-  background-color: var(--secondary-light);
-  color: var(--secondary-hover);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-
-td {
-  padding: 0.95rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-main);
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-tr:hover td {
-  background-color: var(--bg-main);
-}
-
-.no-data-msg {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 3rem 1.5rem !important;
-}
-
-.no-data-msg svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 1rem;
-  color: var(--border);
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.5;
-}
-
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-/* Badges / Pill Tags */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.65rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.badge-new {
-  background-color: var(--info-light);
-  color: var(--info-dark);
-}
-
-.badge-followup {
-  background-color: var(--warning-light);
-  color: var(--warning-dark);
-}
-
-.badge-booking {
-  background-color: var(--success-light);
-  color: var(--success-dark);
-}
-
-.badge-cancelled {
-  background-color: var(--danger-light);
-  color: var(--danger-dark);
-}
-
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 1.5rem;
-  animation: fadeIn 0.25s ease-out;
-}
-
-.modal-overlay.active {
-  display: flex;
-}
-
-.modal-content {
-  background-color: var(--card-bg);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
-  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes scaleUp {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.modal-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.modal-close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: var(--transition);
-}
-
-.modal-close-btn:hover {
-  color: var(--danger);
-}
-
-.modal-close-btn svg {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
-  stroke-width: 2;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-/* Forms general styling inside modal */
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.form-full-width {
-  grid-column: span 2;
-}
-
-@media (max-width: 576px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  .form-full-width {
-    grid-column: span 1;
-  }
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--secondary-hover);
-}
-
-/* --- INVOICE PRINT PREVIEW MODAL --- */
-.invoice-modal {
-  max-width: 800px;
-}
-
-.invoice-preview-card {
-  background: #ffffff;
-  padding: 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: #334155;
-  font-size: 0.9rem;
-}
-
-.invoice-header-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 2.5rem;
-}
-
-.invoice-title {
-  font-family: var(--font-heading);
-  font-size: 2.25rem;
-  font-weight: 800;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
-}
-
-.invoice-meta {
-  text-align: right;
-}
-
-.invoice-meta-label {
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-}
-
-.invoice-meta-val {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.invoice-details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid var(--border);
-}
-
-.invoice-party-title {
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
-}
-
-.invoice-party-details {
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.invoice-party-name {
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: var(--text-main);
-  margin-bottom: 0.25rem;
-}
-
-.invoice-table {
-  width: 100%;
-  margin-bottom: 2rem;
-}
-
-.invoice-table th {
-  background: var(--bg-main);
-  color: var(--text-main);
-  border-bottom: 2px solid var(--border);
-}
-
-.invoice-table td {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.invoice-summary-area {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.invoice-summary-box {
-  width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.invoice-summary-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-}
-
-.invoice-summary-row.total {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-main);
-  border-top: 2px solid var(--border);
-  padding-top: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.invoice-terms {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-/* Activity list in dashboard */
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.activity-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.activity-icon.enquiry { background-color: var(--info-light); color: var(--info); }
-.activity-icon.booking { background-color: var(--success-light); color: var(--success); }
-.activity-icon.billing { background-color: var(--primary-light); color: var(--primary); }
-
-.activity-icon svg {
-  width: 14px;
-  height: 14px;
-  stroke: currentColor;
-  stroke-width: 2.5;
-  fill: none;
-}
-
-.activity-desc {
-  flex-grow: 1;
-  font-size: 0.825rem;
-}
-
-.activity-desc strong {
-  color: var(--text-main);
-}
-
-.activity-time {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-/* RESPONSIVE DESIGN */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    top: 0;
-    bottom: 0;
-    height: 100vh;
-  }
-  
-  body.sidebar-open .sidebar {
-    left: 0;
-  }
-  
-  .sidebar-backdrop {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(2px);
-    z-index: 99;
-  }
-  
-  body.sidebar-open .sidebar-backdrop {
-    display: block;
-  }
-  
-  .mobile-menu-btn {
-    display: block;
-  }
-  
-  header {
-    padding: 1rem;
-  }
-  
-  .content-area {
-    padding: 1rem;
-  }
-}
-
-/* --- PRINT RULES --- */
-@media print {
-  /* Hide all elements on the page except the invoice print view */
-  body * {
-    visibility: hidden;
-  }
-  
-  #invoice-modal,
-  #invoice-modal * {
-    visibility: visible;
-  }
-  
-  #invoice-modal {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-    border: none;
-  }
-  
-  /* Hide header/buttons in the modal during print */
-  #invoice-modal .modal-header,
-  #invoice-modal .modal-footer {
-    display: none !important;
-  }
-  
-  /* Invoice content full-width */
-  #invoice-modal .modal-content {
-    border: none;
-    box-shadow: none;
-    max-width: 100% !important;
-    width: 100% !important;
-    overflow: visible;
-  }
-  
-  .invoice-preview-card {
-    padding: 0 !important;
-    border: none !important;
-  }
-  
-  /* Ensure page breaks clean */
-  .invoice-preview-card {
-    page-break-after: avoid;
-  }
-}
-
-</style>
 <body>
   <!-- Backdrop for mobile sidebar -->
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
@@ -1078,7 +34,7 @@ tr:hover td {
         </svg>
         <div class="logo-text">
           <span class="logo-title">BIOS</span>
-          <span class="logo-subtitle">Intelligent Solutions</span>
+          <span class="logo-subtitle">PC & Billing Suite</span>
         </div>
       </div>
 
@@ -1120,7 +76,54 @@ tr:hover td {
               <line x1="12" y1="1" x2="12" y2="23"/>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
             </svg>
-            Billing
+            Billing / Invoices
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="purchases">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="9" cy="21" r="1"/>
+              <circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            Purchases
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="inventory">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            Stock Availability
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="pcbuilder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="4" y="4" width="16" height="16" rx="2"/>
+              <rect x="9" y="9" width="6" height="6"/>
+              <line x1="9" y1="1" x2="9" y2="4"/>
+              <line x1="15" y1="1" x2="15" y2="4"/>
+              <line x1="9" y1="20" x2="9" y2="23"/>
+              <line x1="15" y1="20" x2="15" y2="23"/>
+              <line x1="20" y1="9" x2="23" y2="9"/>
+              <line x1="20" y1="14" x2="23" y2="14"/>
+              <line x1="1" y1="9" x2="4" y2="9"/>
+              <line x1="1" y1="14" x2="4" y2="14"/>
+            </svg>
+            PC Build / Assembly
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-target="returns">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="1 4 1 10 7 10"/>
+              <polyline points="23 20 23 14 17 14"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Returns & Suppliers
           </a>
         </li>
         <li>
@@ -1130,7 +133,7 @@ tr:hover td {
               <line x1="12" y1="20" x2="12" y2="4"/>
               <line x1="6" y1="20" x2="6" y2="14"/>
             </svg>
-            Reports
+            Reports Center
           </a>
         </li>
       </nav>
@@ -1160,7 +163,7 @@ tr:hover td {
               <line x1="8" y1="2" x2="8" y2="6"/>
               <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
-            <span id="current-date-span">July 23, 2026</span>
+            <span id="current-date-span">August 14, 2026</span>
           </div>
         </div>
       </header>
@@ -1170,6 +173,7 @@ tr:hover td {
         
         <!-- ==================== DASHBOARD VIEW ==================== -->
         <section id="dashboard-section" class="page-section active">
+          <!-- Main Stat Cards Grid -->
           <div class="dashboard-grid">
             <!-- Stat Card 1 -->
             <div class="stat-card enquiries">
@@ -1203,12 +207,36 @@ tr:hover td {
             </div>
           </div>
 
+          <!-- Inventory & Purchases Banner Cards -->
+          <div class="metric-cards-row">
+            <div class="metric-card purple">
+              <span class="metric-card-label">Total Stock Value</span>
+              <span class="metric-card-value" id="dash-stock-value">₹0.00</span>
+              <span class="metric-card-sub" id="dash-stock-items-count">0 items in catalog</span>
+            </div>
+            <div class="metric-card amber">
+              <span class="metric-card-label">Total Purchases</span>
+              <span class="metric-card-value" id="dash-total-purchases">₹0.00</span>
+              <span class="metric-card-sub" id="dash-purchase-invoices-count">0 purchase bills</span>
+            </div>
+            <div class="metric-card rose">
+              <span class="metric-card-label">Low / Out of Stock</span>
+              <span class="metric-card-value" id="dash-low-stock-count">0</span>
+              <span class="metric-card-sub">Items requiring restock</span>
+            </div>
+            <div class="metric-card emerald">
+              <span class="metric-card-label">Finished PCs in Stock</span>
+              <span class="metric-card-value" id="dash-finished-pcs-count">0</span>
+              <span class="metric-card-sub">Prebuilt & custom rigs ready</span>
+            </div>
+          </div>
+
           <!-- Secondary Grid -->
           <div class="dashboard-details-grid">
             <!-- Recent Activity -->
             <div class="dashboard-card">
               <div class="card-title-area">
-                <h4>Recent Activity</h4>
+                <h4>Recent Operations & Activity</h4>
                 <span class="badge badge-new" style="background-color: var(--secondary-light); color: var(--secondary-hover);">Live Updates</span>
               </div>
               <div class="activity-list" id="dashboard-activity-list">
@@ -1222,7 +250,7 @@ tr:hover td {
             <!-- Status & Enquiries Breakdown -->
             <div class="dashboard-card">
               <div class="card-title-area">
-                <h4>Enquiry Statuses</h4>
+                <h4>Enquiry Breakdown</h4>
               </div>
               <div class="status-breakdown-list">
                 <div class="status-breakdown-item">
@@ -1379,8 +407,8 @@ tr:hover td {
         <section id="billing-section" class="page-section">
           <div class="section-header">
             <div class="section-header-left">
-              <h3>Invoicing & Billings</h3>
-              <p>Generate professional invoices with automated GST calculation.</p>
+              <h3>Invoicing & Sales Billing</h3>
+              <p>Generate professional invoices with automated GST calculation and live stock deduction.</p>
             </div>
             <button class="btn btn-primary" id="open-new-invoice-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1395,7 +423,8 @@ tr:hover td {
                 <tr>
                   <th>Invoice No</th>
                   <th>Customer Details</th>
-                  <th>Product Details</th>
+                  <th>Product / Stock Item</th>
+                  <th>Qty</th>
                   <th>Base Amount</th>
                   <th>GST (18%)</th>
                   <th>Total Amount</th>
@@ -1409,32 +438,662 @@ tr:hover td {
           </div>
         </section>
 
+        <!-- ==================== PURCHASES VIEW ==================== -->
+        <section id="purchases-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Purchase Management</h3>
+              <p>Record inward purchases from suppliers. Stock automatically increases upon saving.</p>
+            </div>
+            <button class="btn btn-primary" id="open-new-purchase-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + New Purchase Entry
+            </button>
+          </div>
+
+          <!-- Purchase Summary Metrics -->
+          <div class="metric-cards-row">
+            <div class="metric-card amber">
+              <span class="metric-card-label">Total Purchases</span>
+              <span class="metric-card-value" id="purchase-metric-total">₹0.00</span>
+              <span class="metric-card-sub" id="purchase-metric-count">0 Invoices</span>
+            </div>
+            <div class="metric-card emerald">
+              <span class="metric-card-label">Total Paid</span>
+              <span class="metric-card-value" id="purchase-metric-paid">₹0.00</span>
+              <span class="metric-card-sub">Cleared to suppliers</span>
+            </div>
+            <div class="metric-card rose">
+              <span class="metric-card-label">Outstanding Balance</span>
+              <span class="metric-card-value" id="purchase-metric-balance">₹0.00</span>
+              <span class="metric-card-sub">Pending supplier dues</span>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="form-group-inline" style="flex-grow: 2;">
+              <label for="purchase-search">Search Purchases</label>
+              <input type="text" id="purchase-search" placeholder="Search by Supplier, Invoice No, Item Code, Brand...">
+            </div>
+            <div class="form-group-inline">
+              <label for="purchase-filter-status">Payment Status</label>
+              <select id="purchase-filter-status">
+                <option value="All">All Statuses</option>
+                <option value="Paid">Fully Paid</option>
+                <option value="Partial">Partial</option>
+                <option value="Unpaid">Unpaid</option>
+              </select>
+            </div>
+            <div class="form-group-inline">
+              <label for="purchase-filter-from">From Date</label>
+              <input type="date" id="purchase-filter-from">
+            </div>
+            <div class="form-group-inline">
+              <label for="purchase-filter-to">To Date</label>
+              <input type="date" id="purchase-filter-to">
+            </div>
+            <button class="btn btn-secondary" id="reset-purchase-filters-btn" style="height: 42px;">Reset</button>
+          </div>
+
+          <!-- Purchases Table -->
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Purchase Inv #</th>
+                  <th>Date</th>
+                  <th>Supplier</th>
+                  <th>Item Description</th>
+                  <th>Brand / Model</th>
+                  <th>Qty</th>
+                  <th>Rate (₹)</th>
+                  <th>GST</th>
+                  <th>Total (₹)</th>
+                  <th>Paid / Balance</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="purchases-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== STOCK AVAILABILITY VIEW ==================== -->
+        <section id="inventory-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Stock Availability & Inventory</h3>
+              <p>Real-time stock ledger, valuation, serial tracking, and minimum stock threshold alerts.</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" id="open-stock-adjust-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Stock Adjustment (±)
+              </button>
+              <button class="btn btn-primary" id="open-add-stock-item-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Master Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Stock Summary Badges Row -->
+          <div class="metric-cards-row">
+            <div class="metric-card purple">
+              <span class="metric-card-label">Total Inventory Value</span>
+              <span class="metric-card-value" id="stock-metric-total-val">₹0.00</span>
+              <span class="metric-card-sub" id="stock-metric-total-items">0 Unique Items</span>
+            </div>
+            <div class="metric-card emerald">
+              <span class="metric-card-label">In Stock Items</span>
+              <span class="metric-card-value" id="stock-metric-available-count">0</span>
+              <span class="metric-card-sub">Healthy inventory level</span>
+            </div>
+            <div class="metric-card amber">
+              <span class="metric-card-label">Low Stock Alerts</span>
+              <span class="metric-card-value" id="stock-metric-low-count">0</span>
+              <span class="metric-card-sub">At or below minimum threshold</span>
+            </div>
+            <div class="metric-card rose">
+              <span class="metric-card-label">Out of Stock</span>
+              <span class="metric-card-value" id="stock-metric-out-count">0</span>
+              <span class="metric-card-sub">Zero available quantity</span>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="form-group-inline" style="flex-grow: 2;">
+              <label for="stock-search">Search Inventory</label>
+              <input type="text" id="stock-search" placeholder="Search by Item Code, Name, Brand, Model...">
+            </div>
+            <div class="form-group-inline">
+              <label for="stock-filter-category">Category</label>
+              <select id="stock-filter-category">
+                <option value="All">All Categories</option>
+                <option value="CPU">CPU / Processor</option>
+                <option value="Motherboard">Motherboard</option>
+                <option value="RAM">RAM / Memory</option>
+                <option value="Storage">Storage (SSD / HDD)</option>
+                <option value="GPU">GPU / Graphics Card</option>
+                <option value="PSU">Power Supply (PSU)</option>
+                <option value="Cabinet">Cabinet / Case</option>
+                <option value="Cooler">Cooler / Fan</option>
+                <option value="Laptop">Laptop / Notebook</option>
+                <option value="Finished PC">Finished PC / Prebuilt</option>
+                <option value="Monitor">Monitor / Display</option>
+                <option value="Accessory">Accessories & Peripherals</option>
+                <option value="Spare Part">Spare Part / Component</option>
+              </select>
+            </div>
+            <div class="form-group-inline">
+              <label for="stock-filter-status">Status</label>
+              <select id="stock-filter-status">
+                <option value="All">All Statuses</option>
+                <option value="Available">Available</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="Out of Stock">Out of Stock</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" id="reset-stock-filters-btn" style="height: 42px;">Reset</button>
+          </div>
+
+          <!-- Stock Table -->
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item Code</th>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Brand / Model</th>
+                  <th style="text-align: center;">Purchase Qty</th>
+                  <th style="text-align: center;">Sales Qty</th>
+                  <th style="text-align: center;">Available Stock</th>
+                  <th>Purchase Rate</th>
+                  <th>Selling Rate</th>
+                  <th>Stock Value</th>
+                  <th style="text-align: center;">Min Stock</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== PC BUILD / ASSEMBLY VIEW ==================== -->
+        <section id="pcbuilder-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>PC Build & Assembly Module</h3>
+              <p>Configure custom PC rigs. Components stock automatically reduces and finished PC is added to stock with accurate build costing.</p>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="sub-nav-tabs">
+            <button class="sub-tab-btn active" data-pc-tab="configurator">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+              PC Assembly Configurator
+            </button>
+            <button class="sub-tab-btn" data-pc-tab="history">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Assembled PC Builds History
+            </button>
+          </div>
+
+          <!-- TAB 1: Configurator -->
+          <div id="pc-tab-configurator" class="sub-tab-pane active">
+            <form id="pc-builder-form">
+              <div class="pc-builder-container">
+                <!-- Left: Component Selection Slots -->
+                <div>
+                  <div class="dashboard-card" style="margin-bottom: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary);">1. Build & Customer Information</h4>
+                    <div class="form-grid-3">
+                      <div class="form-group">
+                        <label for="pc-build-name">Build Model / Name *</label>
+                        <input type="text" id="pc-build-name" required placeholder="e.g. Ryzen 7 RTX 4070 Gaming Beast">
+                      </div>
+                      <div class="form-group">
+                        <label for="pc-build-serial">Finished PC Serial / Tag No. *</label>
+                        <input type="text" id="pc-build-serial" required placeholder="e.g. BIOS-PC-2026-001">
+                      </div>
+                      <div class="form-group">
+                        <label for="pc-build-date">Assembly Date *</label>
+                        <input type="date" id="pc-build-date" required>
+                      </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 0.85rem;">
+                      <h5 style="margin-bottom: 0.65rem; color: var(--primary); font-size: 0.875rem;">Customer Details (Saved with Build)</h5>
+                      <div class="form-grid">
+                        <div class="form-group">
+                          <label for="pc-customer-name">Customer Name *</label>
+                          <input type="text" id="pc-customer-name" required placeholder="Customer Full Name" list="pc-customer-suggestions">
+                          <datalist id="pc-customer-suggestions"></datalist>
+                        </div>
+                        <div class="form-group">
+                          <label for="pc-customer-phone">Phone Number *</label>
+                          <input type="tel" id="pc-customer-phone" required pattern="[0-9]{10}" placeholder="10-digit mobile number">
+                        </div>
+                      </div>
+                      <div class="form-grid" style="margin-top: 0.5rem;">
+                        <div class="form-group">
+                          <label for="pc-customer-address">Address (Optional)</label>
+                          <input type="text" id="pc-customer-address" placeholder="Customer address / location">
+                        </div>
+                        <div class="form-group">
+                          <label for="pc-customer-gst">GST Number (Optional)</label>
+                          <input type="text" id="pc-customer-gst" placeholder="e.g. 29AAAAA0000A1Z5" style="text-transform: uppercase;">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="dashboard-card">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary);">2. Select Components from Stock</h4>
+                    
+                    <!-- CPU Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">CPU</span> Processor *
+                        </div>
+                        <span class="component-price-badge" id="slot-cpu-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-cpu" required class="pc-component-select">
+                        <option value="">-- Choose CPU from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- Motherboard Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">Motherboard</span> Motherboard *
+                        </div>
+                        <span class="component-price-badge" id="slot-motherboard-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-motherboard" required class="pc-component-select">
+                        <option value="">-- Choose Motherboard from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- RAM Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">RAM</span> Memory (RAM) *
+                        </div>
+                        <span class="component-price-badge" id="slot-ram-cost">₹0.00</span>
+                      </div>
+                      <div class="form-grid" style="grid-template-columns: 3fr 1fr; gap: 0.5rem;">
+                        <select id="pc-slot-ram" required class="pc-component-select">
+                          <option value="">-- Choose RAM Module from Stock --</option>
+                        </select>
+                        <select id="pc-slot-ram-qty" title="Quantity of Sticks">
+                          <option value="1">1 Stick</option>
+                          <option value="2">2 Sticks (Dual Ch)</option>
+                          <option value="4">4 Sticks (Quad Ch)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Storage SSD Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">Storage</span> Primary Storage (SSD/NVMe) *
+                        </div>
+                        <span class="component-price-badge" id="slot-storage-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-storage" required class="pc-component-select">
+                        <option value="">-- Choose SSD / NVMe from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- GPU Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">GPU</span> Graphics Card (GPU) (Optional)
+                        </div>
+                        <span class="component-price-badge" id="slot-gpu-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-gpu" class="pc-component-select">
+                        <option value="">-- No Dedicated GPU (Integrated Graphics) --</option>
+                      </select>
+                    </div>
+
+                    <!-- PSU Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">PSU</span> Power Supply Unit *
+                        </div>
+                        <span class="component-price-badge" id="slot-psu-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-psu" required class="pc-component-select">
+                        <option value="">-- Choose Power Supply from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- Cabinet Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">Cabinet</span> PC Case / Cabinet *
+                        </div>
+                        <span class="component-price-badge" id="slot-cabinet-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-cabinet" required class="pc-component-select">
+                        <option value="">-- Choose Cabinet from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- Cooler Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">Cooler</span> CPU Cooler / AIO *
+                        </div>
+                        <span class="component-price-badge" id="slot-cooler-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-cooler" required class="pc-component-select">
+                        <option value="">-- Choose Cooler from Stock --</option>
+                      </select>
+                    </div>
+
+                    <!-- Extra Component Slot -->
+                    <div class="component-slot-card">
+                      <div class="component-slot-header">
+                        <div class="component-slot-title">
+                          <span class="badge badge-category">Extra</span> Secondary Storage / Fans / Accessory (Optional)
+                        </div>
+                        <span class="component-price-badge" id="slot-extra-cost">₹0.00</span>
+                      </div>
+                      <select id="pc-slot-extra" class="pc-component-select">
+                        <option value="">-- None / Optional --</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Sticky Live Build Cost & Pricing Calculation Widget -->
+                <div>
+                  <div class="build-summary-card">
+                    <h4>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                      PC Build Cost & Pricing
+                    </h4>
+
+                    <div class="build-item-list" id="pc-build-items-summary">
+                      <div class="no-data-msg" style="padding: 0.5rem 0 !important; font-size: 0.85rem;">
+                        Select components above to preview cost breakdown.
+                      </div>
+                    </div>
+
+                    <div class="build-summary-totals">
+                      <div class="total-row">
+                        <span>Sum of Component Costs:</span>
+                        <strong id="pc-calc-components-cost">₹0.00</strong>
+                      </div>
+                      <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                        <label for="pc-labor-cost" style="font-size: 0.8rem;">Assembly & Testing Labor (₹):</label>
+                        <input type="number" id="pc-labor-cost" min="0" step="100" value="1500" style="padding: 0.4rem 0.6rem;">
+                      </div>
+                      <div class="total-row grand-total">
+                        <span>Total PC Build Cost:</span>
+                        <span id="pc-calc-total-cost">₹0.00</span>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0.25rem;">
+                        <label for="pc-selling-price" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">Target Selling Price (₹) *:</label>
+                        <input type="number" id="pc-selling-price" required min="0" step="100" placeholder="e.g. 75000" style="font-weight: 700; color: var(--primary);">
+                      </div>
+
+                      <div class="selling-recommendation">
+                        <span>Estimated Profit Margin:</span>
+                        <span id="pc-calc-margin">₹0.00 (0%)</span>
+                      </div>
+
+                      <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%; padding: 0.85rem;" id="assemble-pc-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Assemble & Add to Stock
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- TAB 2: Builds History -->
+          <div id="pc-tab-history" class="sub-tab-pane">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Build ID / Tag</th>
+                    <th>Build Date</th>
+                    <th>Customer Details</th>
+                    <th>PC Model Name</th>
+                    <th>Components Breakdown</th>
+                    <th>Total Cost (₹)</th>
+                    <th>Selling Price (₹)</th>
+                    <th>Margin</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pc-history-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== RETURNS & SUPPLIERS VIEW ==================== -->
+        <section id="returns-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Returns, Suppliers & Stock Movements</h3>
+              <p>Manage Sales Returns (restocks item), Purchase Returns (deducts stock), Suppliers directory, and full stock ledger audit trail.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-primary" id="open-purchase-return-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                + Purchase Return
+              </button>
+              <button class="btn btn-success" id="open-sales-return-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                + Sales Return
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub Tabs -->
+          <div class="sub-nav-tabs">
+            <button class="sub-tab-btn active" data-returns-tab="sales-returns">Sales Returns</button>
+            <button class="sub-tab-btn" data-returns-tab="purchase-returns">Purchase Returns</button>
+            <button class="sub-tab-btn" data-returns-tab="suppliers">Suppliers Directory</button>
+            <button class="sub-tab-btn" data-returns-tab="ledger">Comprehensive Stock Ledger</button>
+          </div>
+
+          <!-- Tab 1: Sales Returns -->
+          <div id="returns-tab-sales-returns" class="sub-tab-pane active">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Return ID</th>
+                    <th>Date</th>
+                    <th>Sales Inv #</th>
+                    <th>Customer Name</th>
+                    <th>Item Code & Name</th>
+                    <th style="text-align: center;">Returned Qty</th>
+                    <th>Refund / Credit (₹)</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="sales-returns-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab 2: Purchase Returns -->
+          <div id="returns-tab-purchase-returns" class="sub-tab-pane">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Return ID</th>
+                    <th>Date</th>
+                    <th>Purchase Inv #</th>
+                    <th>Supplier Name</th>
+                    <th>Item Code & Name</th>
+                    <th style="text-align: center;">Returned Qty</th>
+                    <th>Debit Amount (₹)</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="purchase-returns-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab 3: Suppliers Directory -->
+          <div id="returns-tab-suppliers" class="sub-tab-pane">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Supplier Name</th>
+                    <th>Contact Phone</th>
+                    <th>Email</th>
+                    <th>GSTIN</th>
+                    <th>Total Purchases</th>
+                    <th>Outstanding Dues</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="suppliers-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab 4: Comprehensive Stock Ledger -->
+          <div id="returns-tab-ledger" class="sub-tab-pane">
+            <div class="filter-bar" style="margin-bottom: 1rem;">
+              <div class="form-group-inline" style="flex-grow: 2;">
+                <label for="ledger-search">Search Ledger</label>
+                <input type="text" id="ledger-search" placeholder="Search by Item Code, Name, Ref Doc #, Type...">
+              </div>
+              <div class="form-group-inline">
+                <label for="ledger-filter-type">Movement Type</label>
+                <select id="ledger-filter-type">
+                  <option value="All">All Types</option>
+                  <option value="PURCHASE">Purchase (+)</option>
+                  <option value="SALE">Sale / Invoice (-)</option>
+                  <option value="SALES_RETURN">Sales Return (+)</option>
+                  <option value="PURCHASE_RETURN">Purchase Return (-)</option>
+                  <option value="PC_BUILD_CONSUME">PC Build Consumed (-)</option>
+                  <option value="PC_BUILD_PRODUCE">PC Build Produced (+)</option>
+                  <option value="ADJUSTMENT">Stock Adjustment (±)</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Item Code</th>
+                    <th>Item Name</th>
+                    <th>Type</th>
+                    <th>Ref Doc #</th>
+                    <th style="text-align: right;">In Qty (+)</th>
+                    <th style="text-align: right;">Out Qty (-)</th>
+                    <th style="text-align: right;">Balance Stock</th>
+                    <th>Unit Cost</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="stock-ledger-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- ==================== REPORTS VIEW ==================== -->
         <section id="reports-section" class="page-section">
           <div class="section-header">
             <div class="section-header-left">
               <h3>Reports Center</h3>
-              <p>Query aggregated business data and export customized reports to Excel.</p>
+              <p>Query aggregated business data, audit inventory movements, and export customized reports to Excel.</p>
             </div>
-            <button class="btn btn-success" id="export-excel-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Download Excel Report
-            </button>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" id="print-report-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Report
+              </button>
+              <button class="btn btn-success" id="export-excel-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download Excel Report
+              </button>
+            </div>
           </div>
 
           <!-- Filters -->
           <div class="filter-bar">
-            <div class="form-group-inline">
+            <div class="form-group-inline" style="flex-grow: 1.5;">
               <label for="report-filter-module">Report Content</label>
               <select id="report-filter-module">
-                <option value="Enquiries">Enquiries Report</option>
-                <option value="Bookings">Bookings Report</option>
-                <option value="Billings">Billings Report</option>
+                <optgroup label="Core Business Reports">
+                  <option value="Enquiries">Enquiries Report</option>
+                  <option value="Bookings">Bookings Report</option>
+                  <option value="Billings">Billings / Sales Report</option>
+                </optgroup>
+                <optgroup label="Purchase & Inventory Reports">
+                  <option value="Purchases">Purchase Report</option>
+                  <option value="StockAvailability">Stock Availability Report</option>
+                  <option value="StockMovement">Stock Movement / Ledger Report</option>
+                  <option value="LowStock">Low Stock Report</option>
+                  <option value="OutOfStock">Out of Stock Report</option>
+                  <option value="SupplierPurchase">Supplier Purchase Report</option>
+                  <option value="PurchaseReturns">Purchase Return Report</option>
+                  <option value="SalesStock">Sales / Invoice Stock Report</option>
+                  <option value="PCBuilds">PC Build Assembly Report</option>
+                  <option value="ProfitMargin">Profit / Margin Report</option>
+                </optgroup>
               </select>
+            </div>
+            <div class="form-group-inline" style="flex-grow: 1;">
+              <label for="report-search-input">Search / Filter Keyword</label>
+              <input type="text" id="report-search-input" placeholder="Search by item, name, ref #...">
             </div>
             <div class="form-group-inline">
               <label for="report-from-date">From Date</label>
@@ -1449,8 +1108,12 @@ tr:hover td {
             </button>
           </div>
 
-          <!-- Dynamic Report Table -->
-          <div class="table-responsive">
+          <!-- Dynamic Report Table Container -->
+          <div class="table-responsive" id="report-print-container">
+            <div id="report-print-header" style="display: none; padding: 1.5rem 1.5rem 0.5rem; border-bottom: 1px solid var(--border);">
+              <h3 id="report-print-title" style="margin-bottom: 0.25rem;">BIOS Report</h3>
+              <p id="report-print-subtitle" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+            </div>
             <table id="report-table">
               <thead id="report-table-head">
                 <!-- Loaded based on module selection -->
@@ -1466,7 +1129,7 @@ tr:hover td {
 
       <!-- Footer -->
       <footer>
-        BIOS - Building Intelligent Outcomes with Solutions
+        BIOS - Building Intelligent Outcomes with Solutions | PC, Laptop & Inventory Billing Suite
       </footer>
     </div>
   </div>
@@ -1581,25 +1244,18 @@ tr:hover td {
     </div>
   </div>
 
-  <!-- 3. BILLING MODAL (GENERATE INVOICE) -->
+  <!-- 3. BILLING MODAL (GENERATE INVOICE + STOCK INTEGRATION) -->
   <div class="modal-overlay" id="billing-modal-form">
-    <div class="modal-content">
+    <div class="modal-content modal-lg">
       <div class="modal-header">
-        <h4>Generate New Invoice</h4>
+        <h4>Generate Sales Invoice</h4>
         <button class="modal-close-btn" id="close-billing-form-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       <form id="billing-form-el">
         <div class="modal-body">
-          <div class="form-grid">
-            <div class="form-group form-full-width">
-              <label for="billing-booking-select">Select Confirmed Booking (Optional - Auto Fills)</label>
-              <select id="billing-booking-select">
-                <option value="">-- Choose confirmed booking --</option>
-                <!-- Populated dynamically with bookings -->
-              </select>
-            </div>
+          <div class="form-grid-3">
             <div class="form-group">
               <label for="billing-invoice-no">Invoice Number (Auto)</label>
               <input type="text" id="billing-invoice-no" readonly style="background-color: var(--secondary-light); font-weight: 700;">
@@ -1608,47 +1264,87 @@ tr:hover td {
               <label for="billing-date">Invoice Date *</label>
               <input type="date" id="billing-date" required>
             </div>
+            <div class="form-group">
+              <label for="billing-booking-select">Select Confirmed Booking (Optional)</label>
+              <select id="billing-booking-select">
+                <option value="">-- Choose confirmed booking --</option>
+              </select>
+            </div>
           </div>
           
-          <div style="margin: 1rem 0; border-top: 1px solid var(--border); padding-top: 1rem;">
+          <div style="margin: 0.75rem 0; border-top: 1px solid var(--border); padding-top: 0.75rem;">
             <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Customer Information</h5>
-            <div class="form-group">
-              <label for="billing-customer-name">Customer Name *</label>
-              <input type="text" id="billing-customer-name" required placeholder="Customer Full Name">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="billing-customer-name">Customer Name *</label>
+                <input type="text" id="billing-customer-name" required placeholder="Customer Full Name" list="billing-customer-suggestions">
+                <datalist id="billing-customer-suggestions"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="billing-customer-mobile">Phone Number *</label>
+                <input type="tel" id="billing-customer-mobile" required pattern="[0-9]{10}" placeholder="10-digit mobile number">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="billing-customer-mobile">Customer Mobile</label>
-              <input type="tel" id="billing-customer-mobile" placeholder="10-digit mobile number">
+            <div class="form-grid" style="margin-top: 0.5rem;">
+              <div class="form-group">
+                <label for="billing-customer-address">Address (Optional)</label>
+                <input type="text" id="billing-customer-address" placeholder="Door No, Street, City, Pincode">
+              </div>
+              <div class="form-group">
+                <label for="billing-customer-gst">GST Number (Optional)</label>
+                <input type="text" id="billing-customer-gst" placeholder="e.g. 29AAAAA0000A1Z5" style="text-transform: uppercase;">
+              </div>
             </div>
           </div>
 
-          <div style="margin: 1rem 0; border-top: 1px solid var(--border); padding-top: 1rem;">
-            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Product / Service details</h5>
+          <div style="margin: 0.75rem 0; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Item / Stock Selection</h5>
             <div class="form-group">
-              <label for="billing-product-name">Product / Service Name *</label>
-              <input type="text" id="billing-product-name" required placeholder="E.g., AI Software Consultation">
+              <label for="billing-inventory-select">Select Product from Stock (Auto-populates & reduces stock)</label>
+              <select id="billing-inventory-select">
+                <option value="">-- Select from Inventory (or enter custom product below) --</option>
+              </select>
             </div>
             <div class="form-grid">
               <div class="form-group">
-                <label for="billing-amount">Base Amount (₹) *</label>
+                <label for="billing-product-name">Product / Service Name *</label>
+                <input type="text" id="billing-product-name" required placeholder="E.g., ASUS ROG Strix Gaming Laptop">
+              </div>
+              <div class="form-group">
+                <label for="billing-serial-no">Serial Number (Optional)</label>
+                <input type="text" id="billing-serial-no" placeholder="e.g. SN-89482749">
+              </div>
+            </div>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="billing-qty">Quantity *</label>
+                <input type="number" id="billing-qty" min="1" step="1" value="1" required>
+              </div>
+              <div class="form-group">
+                <label for="billing-amount">Base Unit Rate (₹) *</label>
                 <input type="number" id="billing-amount" min="0" step="0.01" required placeholder="0.00">
               </div>
               <div class="form-group">
                 <label for="billing-gst">GST Calculation *</label>
-                <select id="billing-gst" style="background-color: var(--secondary-light); font-weight: 600;" readonly>
-                  <option value="18">18% GST (Auto added)</option>
+                <select id="billing-gst" style="background-color: var(--secondary-light); font-weight: 600;">
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="12">12% GST</option>
+                  <option value="28">28% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="0">0% (Nil / Exempted)</option>
                 </select>
               </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+            <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-top: 0.75rem; font-size: 0.9rem; font-weight: 600; background: var(--bg-main); padding: 0.75rem; border-radius: var(--radius-md);">
+              <div>Subtotal: <span id="billing-calc-subtotal">₹0.00</span></div>
               <div>GST Amount: <span id="billing-calc-gst">₹0.00</span></div>
-              <div style="color: var(--primary);">Total Invoice: <span id="billing-calc-total">₹0.00</span></div>
+              <div style="color: var(--primary); font-size: 1.05rem;">Grand Total: <span id="billing-calc-total">₹0.00</span></div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" id="cancel-billing-btn-el">Cancel</button>
-          <button type="submit" class="btn btn-primary">Generate & Print Preview</button>
+          <button type="submit" class="btn btn-primary">Generate Invoice & Deduct Stock</button>
         </div>
       </form>
     </div>
@@ -1678,13 +1374,14 @@ tr:hover td {
                 <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
               </div>
               <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Building Intelligent Outcomes with Solutions</p>
+              <p style="font-size: 0.75rem; color: #64748b;">Computer Systems, Laptops, Components & Accessories</p>
             </div>
             <div class="invoice-meta">
               <div class="invoice-title">TAX INVOICE</div>
               <div class="invoice-meta-label">Invoice No:</div>
               <div class="invoice-meta-val" id="inv-preview-no">BIOS-2026-0001</div>
               <div class="invoice-meta-label">Date:</div>
-              <div class="invoice-meta-val" id="inv-preview-date">23-Jul-2026</div>
+              <div class="invoice-meta-val" id="inv-preview-date">14-Aug-2026</div>
             </div>
           </div>
 
@@ -1692,10 +1389,11 @@ tr:hover td {
             <div>
               <div class="invoice-party-title">BILLED BY</div>
               <div class="invoice-party-details">
-                <div class="invoice-party-name">BIOS Inc.</div>
+                <div class="invoice-party-name">BIOS PC Solutions & Systems</div>
                 <p>123 Startup Hub, Tech District</p>
                 <p>Email: billing@bios.solutions</p>
                 <p>Phone: +91 98765 43210</p>
+                <p>GSTIN: 29AABCB1234F1Z5</p>
               </div>
             </div>
             <div>
@@ -1703,6 +1401,8 @@ tr:hover td {
               <div class="invoice-party-details" id="inv-preview-client">
                 <div class="invoice-party-name" id="inv-preview-client-name">John Doe</div>
                 <p id="inv-preview-client-phone">Phone: +91 9988776655</p>
+                <p id="inv-preview-client-address" style="display: none;"></p>
+                <p id="inv-preview-client-gst" style="display: none; font-weight: 600; color: #4f46e5;"></p>
               </div>
             </div>
           </div>
@@ -1711,12 +1411,19 @@ tr:hover td {
             <thead>
               <tr>
                 <th>Service / Product Description</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Unit Rate</th>
                 <th style="text-align: right;">Base Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style="font-weight: 600;" id="inv-preview-product">IT Advisory & Software Consultation</td>
+                <td style="font-weight: 600;">
+                  <span id="inv-preview-product">IT Advisory & Software Consultation</span>
+                  <div id="inv-preview-serial" style="font-size: 0.75rem; color: #64748b; font-family: monospace;"></div>
+                </td>
+                <td style="text-align: center;" id="inv-preview-qty">1</td>
+                <td style="text-align: right;" id="inv-preview-unit-rate">₹10,000.00</td>
                 <td style="text-align: right; font-weight: 600;" id="inv-preview-base">₹10,000.00</td>
               </tr>
             </tbody>
@@ -1729,7 +1436,7 @@ tr:hover td {
                 <span id="inv-preview-subtotal">₹10,000.00</span>
               </div>
               <div class="invoice-summary-row">
-                <span>GST (18%)</span>
+                <span>GST (<span id="inv-preview-gst-rate">18%</span>)</span>
                 <span id="inv-preview-gst">₹1,800.00</span>
               </div>
               <div class="invoice-summary-row total">
@@ -1740,8 +1447,8 @@ tr:hover td {
           </div>
 
           <div class="invoice-terms">
-            <p>Thank you for choosing BIOS for your business solution requirements!</p>
-            <p style="margin-top: 0.25rem; font-weight: 500;">BIOS - Building Intelligent Outcomes with Solutions</p>
+            <p>Thank you for choosing BIOS for your computing & IT solutions!</p>
+            <p style="margin-top: 0.25rem; font-weight: 500;">Warranty terms as per manufacturer policy. All goods received in good condition.</p>
           </div>
         </div>
 
@@ -1751,6 +1458,547 @@ tr:hover td {
         <button type="button" class="btn btn-primary" id="print-invoice-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. PURCHASE ENTRY MODAL (ADD / EDIT) -->
+  <div class="modal-overlay" id="purchase-modal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h4 id="purchase-modal-title">New Purchase Entry</h4>
+        <button class="modal-close-btn" id="close-purchase-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="purchase-form">
+        <input type="hidden" id="purchase-edit-id">
+        <div class="modal-body">
+          
+          <!-- Supplier & Invoice Headers -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Supplier & Invoice Details</h5>
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="purchase-supplier">Supplier Name *</label>
+                <input type="text" id="purchase-supplier" required placeholder="e.g. Supertron / Rashi / Ingram" list="purchase-supplier-list">
+                <datalist id="purchase-supplier-list"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="purchase-supplier-phone">Supplier Phone</label>
+                <input type="tel" id="purchase-supplier-phone" placeholder="Contact number">
+              </div>
+              <div class="form-group">
+                <label for="purchase-invoice-no">Purchase Invoice No. *</label>
+                <input type="text" id="purchase-invoice-no" required placeholder="e.g. SUP-INV-89102">
+              </div>
+              <div class="form-group">
+                <label for="purchase-date">Purchase Date *</label>
+                <input type="date" id="purchase-date" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item Specifications -->
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Product / Component Specifications</h5>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="purchase-item-code">Item Code * (Unique SKU)</label>
+                <input type="text" id="purchase-item-code" required placeholder="e.g. CPU-INTEL-13400F" list="inventory-code-list">
+                <datalist id="inventory-code-list"></datalist>
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label for="purchase-item-name">Item Name / Description *</label>
+                <input type="text" id="purchase-item-name" required placeholder="e.g. Intel Core i5-13400F 10-Core Processor">
+              </div>
+            </div>
+
+            <div class="form-grid-4" style="margin-top: 0.5rem;">
+              <div class="form-group">
+                <label for="purchase-category">Category *</label>
+                <select id="purchase-category" required>
+                  <option value="CPU">CPU / Processor</option>
+                  <option value="Motherboard">Motherboard</option>
+                  <option value="RAM">RAM / Memory</option>
+                  <option value="Storage">Storage (SSD / HDD)</option>
+                  <option value="GPU">GPU / Graphics Card</option>
+                  <option value="PSU">Power Supply (PSU)</option>
+                  <option value="Cabinet">Cabinet / Case</option>
+                  <option value="Cooler">Cooler / Fan</option>
+                  <option value="Laptop">Laptop / Notebook</option>
+                  <option value="Finished PC">Finished PC / Prebuilt</option>
+                  <option value="Monitor">Monitor / Display</option>
+                  <option value="Accessory">Accessories & Peripherals</option>
+                  <option value="Spare Part">Spare Part / Component</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="purchase-brand">Brand *</label>
+                <input type="text" id="purchase-brand" required placeholder="e.g. Intel, ASUS, Corsair">
+              </div>
+              <div class="form-group">
+                <label for="purchase-model">Model / Specs</label>
+                <input type="text" id="purchase-model" placeholder="e.g. 13400F Box Pack">
+              </div>
+              <div class="form-group">
+                <label for="purchase-min-stock">Minimum Stock Alert</label>
+                <input type="number" id="purchase-min-stock" min="1" step="1" value="2">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <label for="purchase-serial-numbers">Serial Numbers (For Laptops, GPUs, Motherboards - comma separated if multiple)</label>
+              <textarea id="purchase-serial-numbers" rows="2" placeholder="e.g. SN10001, SN10002, SN10003"></textarea>
+            </div>
+          </div>
+
+          <!-- Quantity, Cost, GST & Payment Calculations -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Pricing, GST & Supplier Payment</h5>
+            
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="purchase-qty">Purchase Quantity *</label>
+                <input type="number" id="purchase-qty" min="1" step="1" value="1" required>
+              </div>
+              <div class="form-group">
+                <label for="purchase-rate">Purchase Rate (Unit ₹) *</label>
+                <input type="number" id="purchase-rate" min="0" step="0.01" required placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label for="purchase-discount">Discount (₹ Total)</label>
+                <input type="number" id="purchase-discount" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="purchase-gst-rate">GST Rate (%) *</label>
+                <select id="purchase-gst-rate" required>
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="12">12% GST</option>
+                  <option value="28">28% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="0">0% (Nil / Exempted)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid-3" style="margin-top: 0.75rem;">
+              <div class="form-group">
+                <label for="purchase-selling-rate">Selling Rate / MRP (Unit ₹)</label>
+                <input type="number" id="purchase-selling-rate" min="0" step="0.01" placeholder="For stock & invoice autofill">
+              </div>
+              <div class="form-group">
+                <label for="purchase-paid-amount">Paid Amount (₹) *</label>
+                <input type="number" id="purchase-paid-amount" min="0" step="0.01" required value="0">
+              </div>
+              <div class="form-group">
+                <label for="purchase-balance-amount">Balance Amount (Auto ₹)</label>
+                <input type="text" id="purchase-balance-amount" readonly style="background-color: #ffffff; font-weight: 700; color: var(--danger-dark);">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-top: 1rem; font-size: 0.95rem; font-weight: 700; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+              <div>Taxable Value: <span id="purchase-calc-taxable">₹0.00</span></div>
+              <div>GST: <span id="purchase-calc-gst">₹0.00</span></div>
+              <div style="color: var(--primary); font-size: 1.15rem;">Total Purchase Amount: <span id="purchase-calc-total">₹0.00</span></div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-purchase-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="save-purchase-btn">Save Purchase & Increase Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. STOCK ADJUSTMENT MODAL -->
+  <div class="modal-overlay" id="stock-adjust-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4>Stock Adjustment (±)</h4>
+        <button class="modal-close-btn" id="close-stock-adjust-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="stock-adjust-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="adjust-item-select">Select Inventory Item *</label>
+            <select id="adjust-item-select" required>
+              <option value="">-- Choose item to adjust --</option>
+            </select>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="adjust-type">Adjustment Action *</label>
+              <select id="adjust-type" required>
+                <option value="ADD">Add Stock (+ Qty)</option>
+                <option value="DEDUCT">Deduct Stock (- Qty)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="adjust-qty">Quantity *</label>
+              <input type="number" id="adjust-qty" min="1" step="1" value="1" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="adjust-reason">Adjustment Reason *</label>
+            <select id="adjust-reason" required>
+              <option value="Physical Count Correction">Physical Inventory Count Correction</option>
+              <option value="Damaged / Defective Part">Damaged / Defective Part</option>
+              <option value="Demo / Testing Unit">Demo / Shop Display Unit</option>
+              <option value="Internal Use">Internal Office / Testing Use</option>
+              <option value="Stock Audit Reconciliation">Stock Audit Reconciliation</option>
+              <option value="Other">Other Reason</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="adjust-remarks">Remarks / Reference Note</label>
+            <input type="text" id="adjust-remarks" placeholder="Optional details">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-stock-adjust-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Stock Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. SALES RETURN MODAL -->
+  <div class="modal-overlay" id="sales-return-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4>New Sales Return (Restock Item)</h4>
+        <button class="modal-close-btn" id="close-sales-return-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="sales-return-form">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="sales-return-inv">Select Sales Invoice *</label>
+              <select id="sales-return-inv" required>
+                <option value="">-- Choose Sales Invoice --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sales-return-date">Return Date *</label>
+              <input type="date" id="sales-return-date" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="sales-return-item-name">Product / Item Name</label>
+            <input type="text" id="sales-return-item-name" readonly style="background-color: var(--secondary-light);">
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="sales-return-qty">Return Quantity *</label>
+              <input type="number" id="sales-return-qty" min="1" step="1" value="1" required>
+            </div>
+            <div class="form-group">
+              <label for="sales-return-refund">Refund / Credit Amount (₹) *</label>
+              <input type="number" id="sales-return-refund" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="sales-return-reason">Reason for Return *</label>
+            <input type="text" id="sales-return-reason" required placeholder="e.g. Customer returned, defective swap, wrong specs">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-sales-return-btn">Cancel</button>
+          <button type="submit" class="btn btn-success">Save Return & Increase Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. PURCHASE RETURN MODAL -->
+  <div class="modal-overlay" id="purchase-return-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4>New Purchase Return (Debit to Supplier)</h4>
+        <button class="modal-close-btn" id="close-purchase-return-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="purchase-return-form">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="purchase-return-inv">Select Purchase Bill *</label>
+              <select id="purchase-return-inv" required>
+                <option value="">-- Choose Purchase Invoice --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="purchase-return-date">Return Date *</label>
+              <input type="date" id="purchase-return-date" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="purchase-return-item-desc">Item Description</label>
+            <input type="text" id="purchase-return-item-desc" readonly style="background-color: var(--secondary-light);">
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="purchase-return-qty">Return Qty *</label>
+              <input type="number" id="purchase-return-qty" min="1" step="1" value="1" required>
+            </div>
+            <div class="form-group">
+              <label for="purchase-return-amount">Debit / Refund Amount (₹) *</label>
+              <input type="number" id="purchase-return-amount" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="purchase-return-reason">Reason for Return *</label>
+            <input type="text" id="purchase-return-reason" required placeholder="e.g. DOA / Dead on Arrival, Warranty RMA, Wrong Part">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-purchase-return-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Return & Deduct Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. SERIAL NUMBERS VIEWER MODAL -->
+  <div class="modal-overlay" id="serial-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4 id="serial-modal-title">Tracked Serial Numbers</h4>
+        <button class="modal-close-btn" id="close-serial-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;" id="serial-modal-subtitle"></p>
+        <div class="serial-tags-container" id="serial-tags-list" style="max-height: 250px;">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-serial-modal-btn2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. PURCHASE INVOICE PRINT PREVIEW MODAL -->
+  <div class="modal-overlay" id="purchase-view-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>Purchase Goods Receipt Voucher</h4>
+        <button class="modal-close-btn" id="close-purchase-view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        <div class="invoice-preview-card" id="purchase-invoice-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#f59e0b" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Inward Goods Receipt & Purchase Voucher</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title" style="color: #f59e0b;">PURCHASE BILL</div>
+              <div class="invoice-meta-label">Purchase Inv #:</div>
+              <div class="invoice-meta-val" id="purch-prev-inv">--</div>
+              <div class="invoice-meta-label">Date:</div>
+              <div class="invoice-meta-val" id="purch-prev-date">--</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">SUPPLIER DETAILS</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="purch-prev-supplier">Supplier Name</div>
+                <p id="purch-prev-supplier-phone">Phone: --</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">RECEIVED AT STORE</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name">BIOS Store & Warehouse</div>
+                <p>123 Startup Hub, Tech District</p>
+                <p>Status: Inward Stock Recorded</p>
+              </div>
+            </div>
+          </div>
+
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Item Code & Name</th>
+                <th>Brand / Model</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Unit Rate</th>
+                <th style="text-align: right;">Total Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 600;">
+                  <span id="purch-prev-item">Processor</span>
+                  <div id="purch-prev-serials" style="font-size: 0.75rem; color: #64748b; font-family: monospace;"></div>
+                </td>
+                <td id="purch-prev-brand-model">Intel</td>
+                <td style="text-align: center;" id="purch-prev-qty">1</td>
+                <td style="text-align: right;" id="purch-prev-rate">₹0.00</td>
+                <td style="text-align: right; font-weight: 600;" id="purch-prev-total">₹0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Taxable Value</span>
+                <span id="purch-prev-taxable">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>GST (<span id="purch-prev-gst-rate">18%</span>)</span>
+                <span id="purch-prev-gst">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Bill Total</span>
+                <span id="purch-prev-grand">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row" style="margin-top: 0.25rem;">
+                <span>Paid Amount</span>
+                <span id="purch-prev-paid" style="color: var(--success-dark); font-weight: 700;">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row" style="border-top: 1px solid var(--border); padding-top: 0.25rem;">
+                <span>Balance Due</span>
+                <span id="purch-prev-balance" style="color: var(--danger-dark); font-weight: 700;">₹0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-purchase-view-btn2">Close</button>
+        <button type="button" class="btn btn-primary" id="print-purchase-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Purchase Voucher
+        </button>
+      </div>
+    </div>
+  <!-- 11. PC BUILD QUOTATION & SPEC SHEET PRINT PREVIEW MODAL -->
+  <div class="modal-overlay" id="pc-view-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>PC Build Quotation & Specification</h4>
+        <button class="modal-close-btn" id="close-pc-view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        <div class="invoice-preview-card" id="pc-build-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#6366f1" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Custom Rig Assembly & System Specification Sheet</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title" style="color: #6366f1;">PC SPEC SHEET</div>
+              <div class="invoice-meta-label">Build ID:</div>
+              <div class="invoice-meta-val" id="pc-prev-build-id">--</div>
+              <div class="invoice-meta-label">Assembly Date:</div>
+              <div class="invoice-meta-val" id="pc-prev-date">--</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">ASSEMBLED BY</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name">BIOS Custom Rig Lab</div>
+                <p>123 Startup Hub, Tech District</p>
+                <p>Email: support@bios.solutions</p>
+                <p>Phone: +91 98765 43210</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">CUSTOMER DETAILS</div>
+              <div class="invoice-party-details" id="pc-prev-client">
+                <div class="invoice-party-name" id="pc-prev-client-name">Shop Display Build</div>
+                <p id="pc-prev-client-phone">Phone: --</p>
+                <p id="pc-prev-client-address" style="display: none;"></p>
+                <p id="pc-prev-client-gst" style="display: none; font-weight: 600; color: #6366f1;"></p>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-main); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; color: var(--text-muted);">PC Rig Model:</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);" id="pc-prev-model-name">--</div>
+            <div style="font-size: 0.8rem; font-family: monospace; color: var(--text-muted);" id="pc-prev-serial">Serial / Tag: --</div>
+          </div>
+
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Component / Slot</th>
+                <th>Hardware Specification</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Unit Price (₹)</th>
+                <th style="text-align: right;">Total (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="pc-prev-components-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Components Subtotal</span>
+                <span id="pc-prev-comp-total">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Assembly & Stress-Testing Labor</span>
+                <span id="pc-prev-labor">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Final Price / Quotation</span>
+                <span id="pc-prev-final-price">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="invoice-terms">
+            <p>100% genuine components with official manufacturer warranty.</p>
+            <p style="margin-top: 0.25rem; font-weight: 500;">Rig assembled and thoroughly burn-in stress tested by BIOS Certified Engineers.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-pc-view-btn2">Close</button>
+        <button type="button" class="btn btn-primary" id="print-pc-spec-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Spec Sheet / Quotation
         </button>
       </div>
     </div>
