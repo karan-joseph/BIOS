@@ -495,6 +495,15 @@ function calculateAvailableStock(item) {
 }
 
 // Get Stock Status: Available / Low Stock / Out of Stock
+function ensureSufficientStock(item, qty, actionLabel = 'Transaction') {
+  const required = parseFloat(qty || 0);
+  const available = parseFloat(item?.availableStock || 0);
+  if (!item) { alert(`❌ ${actionLabel}: Item was not found in inventory.`); return false; }
+  if (!Number.isFinite(required) || required <= 0) { alert(`❌ ${actionLabel}: Quantity must be greater than zero.`); return false; }
+  if (required > available) { alert(`❌ ${actionLabel}: Insufficient stock for "${item.itemName}".\nAvailable: ${available}\nRequired: ${required}`); return false; }
+  return true;
+}
+
 function getStockStatus(availableStock, minStock) {
   const stock = parseFloat(availableStock || 0);
   const min = parseFloat(minStock || 0);
@@ -540,10 +549,14 @@ function recordStockMovement({ itemCode, itemName, category, type, refNo, inQty 
     if (unitCost > 0) item.purchaseRate = unitCost;
   } else if (type === 'SALE') {
     item.salesQty = (parseFloat(item.salesQty || 0) + outQty);
+  } else if (type === 'SALE_REVERSAL') {
+    item.salesQty = Math.max(0, parseFloat(item.salesQty || 0) - inQty);
   } else if (type === 'SALES_RETURN') {
     item.salesReturnQty = (parseFloat(item.salesReturnQty || 0) + inQty);
   } else if (type === 'PURCHASE_RETURN') {
     item.purchaseReturnQty = (parseFloat(item.purchaseReturnQty || 0) + outQty);
+  } else if (type === 'PURCHASE_REVERSAL') {
+    item.purchaseQty = Math.max(0, parseFloat(item.purchaseQty || 0) - outQty);
   } else if (type === 'ADJUSTMENT') {
     if (inQty > 0) {
       item.adjustmentQty = (parseFloat(item.adjustmentQty || 0) + inQty);
@@ -1705,8 +1718,18 @@ function handleBillingSubmit(e) {
     matchedItem = state.inventory.find(i => i.itemName.toLowerCase() === productName.toLowerCase());
   }
 
-  const costPrice = matchedItem ? (matchedItem.purchaseRate || 0) : (unitRate * 0.8);
+  const costPrice = matchedItem ? (matchedItem.purchaseRate || 0) : 0;
   const itemCode = matchedItem ? matchedItem.itemCode : ('ITEM-' + Date.now());
+
+  if (!invoiceNo || !customerName || !productName) { alert('❌ Invoice No, Customer Name and Product Name are required.'); return; }
+  if (!Number.isFinite(qty) || qty <= 0) { alert('❌ Billing quantity must be greater than zero.'); return; }
+  if (!Number.isFinite(unitRate) || unitRate < 0) { alert('❌ Invalid selling rate.'); return; }
+  if (state.billings.some(b => b.invoiceNo === invoiceNo)) { alert(`❌ Invoice ${invoiceNo} already exists.`); return; }
+  if (matchedItem && !ensureSufficientStock(matchedItem, qty, 'Sales Invoice')) return;
+  if (matchedItem && Array.isArray(matchedItem.serials) && matchedItem.serials.length > 0) {
+    if (qty > matchedItem.serials.length) { alert(`❌ Not enough serial numbers available for ${productName}.`); return; }
+    if (serialNo && !matchedItem.serials.includes(serialNo)) { alert(`❌ Serial number ${serialNo} is not available in stock.`); return; }
+  }
 
   // 1. Automatically reduce stock and record in Stock Ledger
   recordStockMovement({
@@ -1720,6 +1743,12 @@ function handleBillingSubmit(e) {
     unitCost: costPrice,
     remarks: `Sales Invoice ${invoiceNo} to ${customerName}`
   });
+
+  if (matchedItem && Array.isArray(matchedItem.serials) && matchedItem.serials.length > 0) {
+    const removeSerials = serialNo ? [serialNo] : matchedItem.serials.slice(0, qty);
+    matchedItem.serials = matchedItem.serials.filter(sn => !removeSerials.includes(sn));
+    saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
+  }
 
   // 2. Save Invoice record with complete customer details
   const newInvoice = {
@@ -1740,6 +1769,9 @@ function handleBillingSubmit(e) {
     gstAmount,
     totalAmount,
     costPrice,
+    paidAmount: 0,
+    balanceAmount: totalAmount,
+    status: 'Unpaid',
     bookingId: bookingId || null
   };
 
@@ -1855,7 +1887,7 @@ window.deleteInvoice = function(id) {
     recordStockMovement({
       itemCode: item.itemCode,
       itemName: item.productName,
-      type: 'SALES_RETURN',
+      type: 'SALE_REVERSAL',
       refNo: `REVERSAL-${item.invoiceNo}`,
       inQty: item.qty || 1,
       outQty: 0,
@@ -1907,7 +1939,6 @@ function calculatePurchaseTotals() {
 
 function handlePurchaseSubmit(e) {
   e.preventDefault();
-
   const editId = document.getElementById('purchase-edit-id').value;
   const supplier = document.getElementById('purchase-supplier').value.trim();
   const supplierPhone = document.getElementById('purchase-supplier-phone').value.trim();
@@ -1921,102 +1952,55 @@ function handlePurchaseSubmit(e) {
   const minStock = parseFloat(document.getElementById('purchase-min-stock').value || 2);
   const serialRaw = document.getElementById('purchase-serial-numbers').value.trim();
   const serials = serialRaw ? serialRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
-
   const qty = parseFloat(document.getElementById('purchase-qty').value || 1);
   const rate = parseFloat(document.getElementById('purchase-rate').value || 0);
   const discount = parseFloat(document.getElementById('purchase-discount').value || 0);
   const gstRate = parseFloat(document.getElementById('purchase-gst-rate').value || 18);
   const sellingRateInput = parseFloat(document.getElementById('purchase-selling-rate').value || 0);
   const paidAmount = parseFloat(document.getElementById('purchase-paid-amount').value || 0);
-
   const taxableAmount = Math.max(0, (qty * rate) - discount);
   const gstAmount = taxableAmount * (gstRate / 100);
   const totalAmount = taxableAmount + gstAmount;
   const balanceAmount = Math.max(0, totalAmount - paidAmount);
   const status = balanceAmount <= 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Unpaid');
 
-  // 1. Automatically increase stock and record in Stock Ledger
-  const item = recordStockMovement({
-    itemCode,
-    itemName,
-    category,
-    type: 'PURCHASE',
-    refNo: invoiceNo,
-    inQty: qty,
-    outQty: 0,
-    unitCost: rate,
-    remarks: `Inward Purchase from ${supplier} (Inv: ${invoiceNo})`
-  });
+  if (!supplier || !invoiceNo || !itemCode || !itemName) { alert('❌ Supplier, Invoice No, Item Code and Item Name are required.'); return; }
+  if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(rate) || rate < 0) { alert('❌ Invalid purchase quantity or rate.'); return; }
+  if (paidAmount < 0 || paidAmount > totalAmount) { alert('❌ Paid amount cannot be negative or greater than the invoice total.'); return; }
+  if (state.purchases.some(p => p.invoiceNo === invoiceNo && p.id !== editId)) { alert(`❌ Purchase invoice ${invoiceNo} already exists.`); return; }
 
-  // Update additional metadata on Master Item
-  item.brand = brand;
-  item.model = model;
-  item.minStock = minStock;
-  if (sellingRateInput > 0) item.sellingRate = sellingRateInput;
-  if (serials.length > 0) {
-    item.serials = [...new Set([...(item.serials || []), ...serials])];
+  const oldPurchase = editId ? state.purchases.find(p => p.id === editId) : null;
+  if (oldPurchase) {
+    const oldItem = state.inventory.find(i => i.itemCode === oldPurchase.itemCode);
+    if (oldItem) {
+      recordStockMovement({ itemCode: oldPurchase.itemCode, itemName: oldPurchase.itemName, category: oldPurchase.category, type: 'PURCHASE_REVERSAL', refNo: `EDIT-REVERSAL-${oldPurchase.invoiceNo}`, outQty: oldPurchase.qty || 0, unitCost: oldPurchase.rate || 0, remarks: `Reversed old purchase ${oldPurchase.invoiceNo} before editing` });
+      oldItem.serials = (oldItem.serials || []).filter(sn => !(oldPurchase.serials || []).includes(sn));
+    }
+    const oldSup = state.suppliers.find(x => x.name.toLowerCase() === oldPurchase.supplier.toLowerCase());
+    if (oldSup) {
+      oldSup.totalPurchases = Math.max(0, parseFloat(oldSup.totalPurchases || 0) - parseFloat(oldPurchase.totalAmount || 0));
+      oldSup.balanceDue = Math.max(0, parseFloat(oldSup.balanceDue || 0) - parseFloat(oldPurchase.balanceAmount || 0));
+    }
   }
+
+  const item = recordStockMovement({ itemCode, itemName, category, type: 'PURCHASE', refNo: invoiceNo, inQty: qty, unitCost: rate, remarks: `Inward Purchase from ${supplier} (Inv: ${invoiceNo})` });
+  item.brand = brand; item.model = model; item.minStock = minStock;
+  if (sellingRateInput > 0) item.sellingRate = sellingRateInput;
+  if (serials.length > 0) item.serials = [...new Set([...(item.serials || []), ...serials])];
   saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
 
-  // 2. Update Supplier record
-  let sup = state.suppliers.find(s => s.name.toLowerCase() === supplier.toLowerCase());
-  if (!sup) {
-    sup = {
-      name: supplier,
-      phone: supplierPhone,
-      email: '',
-      gstin: '',
-      totalPurchases: totalAmount,
-      balanceDue: balanceAmount
-    };
-    state.suppliers.push(sup);
-  } else {
-    sup.totalPurchases = (parseFloat(sup.totalPurchases || 0) + totalAmount);
-    sup.balanceDue = (parseFloat(sup.balanceDue || 0) + balanceAmount);
-    if (supplierPhone) sup.phone = supplierPhone;
-  }
+  let sup = state.suppliers.find(x => x.name.toLowerCase() === supplier.toLowerCase());
+  if (!sup) { sup = { name: supplier, phone: supplierPhone, email: '', gstin: '', totalPurchases: totalAmount, balanceDue: balanceAmount, creditBalance: 0 }; state.suppliers.push(sup); }
+  else { sup.totalPurchases = parseFloat(sup.totalPurchases || 0) + totalAmount; sup.balanceDue = parseFloat(sup.balanceDue || 0) + balanceAmount; if (supplierPhone) sup.phone = supplierPhone; }
   saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
 
-  // 3. Save Purchase record
-  const newPurchase = {
-    id: editId || ('PUR-' + Date.now()),
-    invoiceNo,
-    date,
-    supplier,
-    supplierPhone,
-    itemCode,
-    itemName,
-    category,
-    brand,
-    model,
-    qty,
-    rate,
-    discount,
-    gstRate,
-    taxableAmount,
-    gstAmount,
-    totalAmount,
-    paidAmount,
-    balanceAmount,
-    status,
-    serials
-  };
-
-  if (editId) {
-    const idx = state.purchases.findIndex(p => p.id === editId);
-    if (idx !== -1) state.purchases[idx] = newPurchase;
-  } else {
-    state.purchases.push(newPurchase);
-  }
-
+  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials };
+  if (editId) { const idx = state.purchases.findIndex(p => p.id === editId); if (idx !== -1) state.purchases[idx] = newPurchase; }
+  else state.purchases.push(newPurchase);
   saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
   addActivity('purchase', `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
-
   document.getElementById('purchase-modal').classList.remove('active');
-  renderPurchasesTable();
-  renderInventoryTable();
-  renderDashboard();
-  renderReports();
+  renderPurchasesTable(); renderInventoryTable(); renderDashboard(); renderReports();
 }
 
 function renderPurchasesTable() {
@@ -2162,6 +2146,12 @@ window.deletePurchase = function(id) {
       remarks: `Purchase Bill ${item.invoiceNo} deleted - Inward stock reversed`
     });
 
+    const sup = state.suppliers.find(x => x.name.toLowerCase() === item.supplier.toLowerCase());
+    if (sup) {
+      sup.totalPurchases = Math.max(0, parseFloat(sup.totalPurchases || 0) - parseFloat(item.totalAmount || 0));
+      sup.balanceDue = Math.max(0, parseFloat(sup.balanceDue || 0) - parseFloat(item.balanceAmount || 0));
+      saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+    }
     state.purchases = state.purchases.filter(p => p.id !== id);
     saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
     addActivity('purchase', `Deleted Purchase Bill <strong>${item.invoiceNo}</strong> (Stock Deducted)`);
@@ -2512,36 +2502,28 @@ function handlePCBuildSubmit(e) {
     { id: 'pc-slot-extra', name: 'Extra', qty: 1 }
   ];
 
-  const selectedComponents = [];
-  let totalComponentsCost = 0;
+  if (!buildName || !serialNo) { alert('❌ PC Build Name and Serial / Tag are required.'); return; }
+  if (state.inventory.some(i => (i.serials || []).includes(serialNo)) || state.pcBuilds.some(b => b.serialNo === serialNo)) { alert(`❌ Serial / Tag ${serialNo} already exists.`); return; }
 
-  // Verify stock availability for each selected component
+  const selectedComponents = [];
+  const requirements = new Map();
+  const requiredSlots = ['pc-slot-cpu','pc-slot-motherboard','pc-slot-ram','pc-slot-storage'];
+  if (requiredSlots.some(id => !document.getElementById(id)?.value)) { alert('❌ CPU, Motherboard, RAM and Storage are mandatory.'); return; }
+
   for (const slot of slotIds) {
     const select = document.getElementById(slot.id);
     const itemCode = select ? select.value : '';
-    if (itemCode) {
-      const item = state.inventory.find(i => i.itemCode === itemCode);
-      if (!item) continue;
-      if (item.availableStock < slot.qty) {
-        alert(`❌ Cannot build PC: Component "${item.itemName}" does not have enough stock (Available: ${item.availableStock}, Required: ${slot.qty}). Please restock before assembly.`);
-        return;
-      }
-      const cost = (item.purchaseRate || 0) * slot.qty;
-      totalComponentsCost += cost;
-      selectedComponents.push({
-        category: item.category,
-        itemCode: item.itemCode,
-        itemName: item.itemName,
-        cost: item.purchaseRate,
-        qty: slot.qty
-      });
-    }
+    if (!itemCode) continue;
+    const item = state.inventory.find(i => i.itemCode === itemCode);
+    if (!item) { alert(`❌ Selected component ${itemCode} was not found.`); return; }
+    requirements.set(itemCode, (requirements.get(itemCode) || 0) + slot.qty);
+    selectedComponents.push({ category:item.category, itemCode:item.itemCode, itemName:item.itemName, cost:item.purchaseRate || 0, qty:slot.qty });
   }
-
-  if (selectedComponents.length < 4) {
-    alert("Please select at least CPU, Motherboard, RAM, and Storage to assemble a PC.");
-    return;
+  for (const [itemCode, requiredQty] of requirements) {
+    if (!ensureSufficientStock(state.inventory.find(i => i.itemCode === itemCode), requiredQty, 'PC Build')) return;
   }
+  if (selectedComponents.length < 4) { alert('❌ Please select CPU, Motherboard, RAM and Storage.'); return; }
+  const totalComponentsCost = selectedComponents.reduce((sum,c) => sum + c.cost * c.qty, 0);
 
   const buildId = 'BUILD-' + Date.now().toString().slice(-6);
   const totalCost = totalComponentsCost + laborCost;
@@ -2755,7 +2737,14 @@ function handleSalesReturnSubmit(e) {
   const reason = document.getElementById('sales-return-reason').value.trim();
 
   const invoice = state.billings.find(b => b.invoiceNo === invNo);
-  const itemCode = invoice ? invoice.itemCode : ('ITEM-' + Date.now());
+  if (!invoice) { alert('❌ Sales invoice not found.'); return; }
+  if (!Number.isFinite(qty) || qty <= 0) { alert('❌ Return quantity must be greater than zero.'); return; }
+  const itemCode = invoice.itemCode;
+  const previousReturned = state.returns.filter(r => r.type === 'SALES_RETURN' && r.invNo === invNo).reduce((sum, r) => sum + (parseFloat(r.qty) || 0), 0);
+  const remainingReturnQty = Math.max(0, (parseFloat(invoice.qty) || 0) - previousReturned);
+  if (qty > remainingReturnQty) { alert(`❌ Cannot return ${qty}. Remaining returnable quantity is ${remainingReturnQty}.`); return; }
+  const stockItem = state.inventory.find(i => i.itemCode === itemCode);
+  if (!stockItem) { alert('❌ Inventory item for this invoice was not found.'); return; }
 
   // 1. Sales Return automatically increases stock
   recordStockMovement({
@@ -2768,6 +2757,11 @@ function handleSalesReturnSubmit(e) {
     unitCost: invoice ? (invoice.costPrice || 0) : 0,
     remarks: `Sales Return on Inv ${invNo} (${reason})`
   });
+
+  if (invoice.serialNo && stockItem.serials && !stockItem.serials.includes(invoice.serialNo)) {
+    stockItem.serials.push(invoice.serialNo);
+    saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
+  }
 
   const returnRecord = {
     id: 'SR-' + Date.now(),
@@ -2803,7 +2797,14 @@ function handlePurchaseReturnSubmit(e) {
   const reason = document.getElementById('purchase-return-reason').value.trim();
 
   const purchase = state.purchases.find(p => p.invoiceNo === invNo);
-  const itemCode = purchase ? purchase.itemCode : ('ITEM-' + Date.now());
+  if (!purchase) { alert('❌ Purchase invoice not found.'); return; }
+  if (!Number.isFinite(qty) || qty <= 0) { alert('❌ Return quantity must be greater than zero.'); return; }
+  const previousReturned = state.returns.filter(r => r.type === 'PURCHASE_RETURN' && r.invNo === invNo).reduce((sum, r) => sum + (parseFloat(r.qty) || 0), 0);
+  const remainingReturnQty = Math.max(0, (parseFloat(purchase.qty) || 0) - previousReturned);
+  if (qty > remainingReturnQty) { alert(`❌ Cannot return ${qty}. Remaining returnable quantity is ${remainingReturnQty}.`); return; }
+  const itemCode = purchase.itemCode;
+  const stockItem = state.inventory.find(i => i.itemCode === itemCode);
+  if (!ensureSufficientStock(stockItem, qty, 'Purchase Return')) return;
 
   // 1. Purchase Return automatically decreases stock
   recordStockMovement({
@@ -2821,7 +2822,10 @@ function handlePurchaseReturnSubmit(e) {
   if (purchase) {
     const sup = state.suppliers.find(s => s.name.toLowerCase() === purchase.supplier.toLowerCase());
     if (sup) {
-      sup.balanceDue = Math.max(0, parseFloat(sup.balanceDue || 0) - debitAmount);
+      const due = parseFloat(sup.balanceDue || 0);
+      const reduction = Math.min(due, debitAmount);
+      sup.balanceDue = due - reduction;
+      sup.creditBalance = parseFloat(sup.creditBalance || 0) + Math.max(0, debitAmount - reduction);
       saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
     }
   }
