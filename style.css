@@ -1411,4 +1411,151 @@ body.printing-modal {
     display: none !important;
   }
 }
+/* =========================================================
+   MOBILE INVOICE PREVIEW FIX
+   ========================================================= */
+@media (max-width: 600px) {
+
+  /* Invoice popup should fit phone screen */
+  .invoice-modal {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    margin: 8px !important;
+  }
+
+  .invoice-modal .modal-body {
+    padding: 8px !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Invoice paper */
+  .invoice-preview-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 1rem !important;
+    margin: 0 !important;
+    border-radius: 6px !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Header becomes vertical */
+  .invoice-header-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .invoice-meta {
+    text-align: left !important;
+  }
+
+  .invoice-title {
+    font-size: 1.45rem !important;
+  }
+
+  .invoice-meta-label {
+    font-size: 0.68rem !important;
+  }
+
+  .invoice-meta-val {
+    font-size: 0.8rem !important;
+  }
+
+  /* Billed by / Billed to */
+  .invoice-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    margin-bottom: 1.25rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .invoice-party-details {
+    font-size: 0.78rem !important;
+  }
+
+  .invoice-party-name {
+    font-size: 0.9rem !important;
+  }
+
+  /* Product table */
+  .invoice-table {
+    width: 100% !important;
+    margin-bottom: 1.25rem !important;
+    table-layout: fixed !important;
+  }
+
+  .invoice-table th,
+  .invoice-table td {
+    padding: 0.55rem 0.35rem !important;
+    font-size: 0.68rem !important;
+    word-break: break-word !important;
+  }
+
+  .invoice-table th:nth-child(1),
+  .invoice-table td:nth-child(1) {
+    width: 42% !important;
+  }
+
+  .invoice-table th:nth-child(2),
+  .invoice-table td:nth-child(2) {
+    width: 12% !important;
+  }
+
+  .invoice-table th:nth-child(3),
+  .invoice-table td:nth-child(3) {
+    width: 23% !important;
+  }
+
+  .invoice-table th:nth-child(4),
+  .invoice-table td:nth-child(4) {
+    width: 23% !important;
+  }
+
+  /* Summary */
+  .invoice-summary-area {
+    justify-content: flex-end !important;
+  }
+
+  .invoice-summary-box {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .invoice-summary-row {
+    font-size: 0.78rem !important;
+  }
+
+  .invoice-summary-row.total {
+    font-size: 1rem !important;
+  }
+
+  /* Terms */
+  .invoice-terms {
+    margin-top: 1.5rem !important;
+    padding-top: 1rem !important;
+    font-size: 0.65rem !important;
+  }
+
+  /* Modal header/footer */
+  .invoice-modal .modal-header {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .invoice-modal .modal-header h4 {
+    font-size: 0.95rem !important;
+  }
+
+  .invoice-modal .modal-footer {
+    padding: 0.75rem 1rem !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+  }
+
+  .invoice-modal .modal-footer .btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+}
 
