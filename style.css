@@ -1559,3 +1559,201 @@ body.printing-modal {
   }
 }
 
+/* =========================================================
+   SERVICE & REPAIRS MODULE STYLES
+   ========================================================= */
+
+/* Service Status Badges */
+.badge-open {
+  background-color: var(--warning-light);
+  color: var(--warning-dark);
+}
+
+.badge-under-service {
+  background-color: #ede9fe;
+  color: #6b21a8;
+}
+
+.badge-ready {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+}
+
+.badge-delivered {
+  background-color: var(--info-light);
+  color: var(--info-dark);
+}
+
+.badge-closed {
+  background-color: var(--secondary-light);
+  color: var(--secondary-hover);
+}
+
+.badge-draft {
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+}
+
+.badge-approved {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+}
+
+.badge-rejected {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+}
+
+.badge-paid {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+}
+
+.badge-partial {
+  background-color: var(--warning-light);
+  color: var(--warning-dark);
+}
+
+.badge-pending {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+}
+
+/* Metric card color themes */
+.metric-card.cyan {
+  border-left-color: #06b6d4;
+}
+
+.metric-card.indigo {
+  border-left-color: #6366f1;
+}
+
+.metric-card.secondary-card {
+  border-left-color: #64748b;
+}
+
+/* Dynamic Repeater Row (Labour & Parts) */
+.service-repeater-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  background: var(--card-bg);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.service-repeater-row.labour-row {
+  grid-template-columns: 3fr 1.5fr 40px;
+}
+
+@media (max-width: 768px) {
+  .service-repeater-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+  .service-repeater-row.labour-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-remove-row {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.btn-remove-row:hover {
+  background: var(--danger-light);
+}
+
+/* Service History Container & Cards */
+.history-customer-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.history-customer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.history-customer-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--primary-light);
+  margin-left: 0.5rem;
+}
+
+.history-event-item {
+  position: relative;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.history-event-item::before {
+  content: '';
+  position: absolute;
+  left: -1.75rem;
+  top: 1.25rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #ffffff;
+}
+
+.history-event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.device-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--secondary-light);
+  color: var(--secondary-hover);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
