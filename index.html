@@ -80,6 +80,14 @@
           </a>
         </li>
         <li>
+          <a class="nav-link" data-target="service">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            Service / Repairs
+          </a>
+        </li>
+        <li>
           <a class="nav-link" data-target="purchases">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="9" cy="21" r="1"/>
@@ -228,6 +236,11 @@
               <span class="metric-card-label">Finished PCs in Stock</span>
               <span class="metric-card-value" id="dash-finished-pcs-count">0</span>
               <span class="metric-card-sub">Prebuilt & custom rigs ready</span>
+            </div>
+            <div class="metric-card cyan">
+              <span class="metric-card-label">Active Service Jobs</span>
+              <span class="metric-card-value" id="dash-active-jobs-count">0</span>
+              <span class="metric-card-sub" id="dash-service-ready-count">0 ready for delivery</span>
             </div>
           </div>
 
@@ -435,6 +448,274 @@
                 <!-- Populated dynamically -->
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- ==================== SERVICE / REPAIRS VIEW ==================== -->
+        <section id="service-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Laptop & PC Service Management</h3>
+              <p>Create job cards, estimations, service invoices, track customer repairs, and manage spare parts with live stock deduction.</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="open-new-estimation-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                + New Estimation
+              </button>
+              <button type="button" class="btn btn-primary" id="open-new-jobcard-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + New Service / Job Card
+              </button>
+            </div>
+          </div>
+
+          <!-- Service Dashboard Stats Banner (7 KPIs) -->
+          <div class="metric-cards-row">
+            <div class="metric-card amber">
+              <span class="metric-card-label">Open Jobs</span>
+              <span class="metric-card-value" id="svc-metric-open-count">0</span>
+              <span class="metric-card-sub">Waiting for inspection</span>
+            </div>
+            <div class="metric-card purple">
+              <span class="metric-card-label">Under Service</span>
+              <span class="metric-card-value" id="svc-metric-underservice-count">0</span>
+              <span class="metric-card-sub">In progress by tech</span>
+            </div>
+            <div class="metric-card emerald">
+              <span class="metric-card-label">Ready for Delivery</span>
+              <span class="metric-card-value" id="svc-metric-ready-count">0</span>
+              <span class="metric-card-sub">Completed & tested</span>
+            </div>
+            <div class="metric-card secondary-card">
+              <span class="metric-card-label">Closed Jobs</span>
+              <span class="metric-card-value" id="svc-metric-closed-count">0</span>
+              <span class="metric-card-sub">Delivered & closed</span>
+            </div>
+            <div class="metric-card cyan">
+              <span class="metric-card-label">Today's Services</span>
+              <span class="metric-card-value" id="svc-metric-today-count">0</span>
+              <span class="metric-card-sub">Received today</span>
+            </div>
+            <div class="metric-card rose">
+              <span class="metric-card-label">Pending Payments</span>
+              <span class="metric-card-value" id="svc-metric-pending-pay">₹0.00</span>
+              <span class="metric-card-sub" id="svc-metric-pending-count">0 pending bills</span>
+            </div>
+            <div class="metric-card indigo">
+              <span class="metric-card-label">Today's Service Amount</span>
+              <span class="metric-card-value" id="svc-metric-today-amt">₹0.00</span>
+              <span class="metric-card-sub">Billed today</span>
+            </div>
+          </div>
+
+          <!-- Service Sub-Nav Tabs -->
+          <div class="sub-nav-tabs">
+            <button class="sub-tab-btn active" data-service-tab="jobcards">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Job Cards
+            </button>
+            <button class="sub-tab-btn" data-service-tab="estimations">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Estimations & Quotations
+            </button>
+            <button class="sub-tab-btn" data-service-tab="invoices">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Service Invoices & Billing
+            </button>
+            <button class="sub-tab-btn" data-service-tab="history">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Service History Search
+            </button>
+            <button class="sub-tab-btn" data-service-tab="customers">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Customer & Device Directory
+            </button>
+          </div>
+
+          <!-- TAB 1: Job Cards -->
+          <div id="service-tab-jobcards" class="sub-tab-pane active">
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 2;">
+                <label for="jobcard-search">Search Job Cards</label>
+                <input type="text" id="jobcard-search" placeholder="Search by Job Card #, Customer Name, Mobile, Serial #, Brand...">
+              </div>
+              <div class="form-group-inline">
+                <label for="jobcard-filter-status">Filter Status</label>
+                <select id="jobcard-filter-status">
+                  <option value="All">All Statuses</option>
+                  <option value="Open">Open</option>
+                  <option value="Under Service">Under Service</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <div class="form-group-inline">
+                <label for="jobcard-filter-type">Device Type</label>
+                <select id="jobcard-filter-type">
+                  <option value="All">All Types</option>
+                  <option value="Laptop">Laptop</option>
+                  <option value="Desktop">Desktop / PC</option>
+                  <option value="All-in-One">All-in-One</option>
+                  <option value="Other">Other Device</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary" id="reset-jobcard-filters-btn" style="height: 42px;">Reset</button>
+            </div>
+
+            <!-- Job Cards Table -->
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Job Card #</th>
+                    <th>Date & Exp. Delv</th>
+                    <th>Customer Name & Mobile</th>
+                    <th>Device (Type / Brand / Model)</th>
+                    <th>Serial #</th>
+                    <th>Customer Complaint</th>
+                    <th>Technician</th>
+                    <th>Labour & Parts (₹)</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="jobcard-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 2: Estimations -->
+          <div id="service-tab-estimations" class="sub-tab-pane">
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 2;">
+                <label for="estimation-search">Search Estimations</label>
+                <input type="text" id="estimation-search" placeholder="Search by Estimate #, Customer Name, Mobile, Device...">
+              </div>
+              <div class="form-group-inline">
+                <label for="estimation-filter-status">Approval Status</label>
+                <select id="estimation-filter-status">
+                  <option value="All">All</option>
+                  <option value="Draft">Draft / Pending Approval</option>
+                  <option value="Approved">Approved (Converted to Job Card)</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Estimate #</th>
+                    <th>Date</th>
+                    <th>Customer Name & Mobile</th>
+                    <th>Device Details</th>
+                    <th>Labour</th>
+                    <th>Parts & Accessories</th>
+                    <th>GST (₹)</th>
+                    <th>Total Estimate (₹)</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="estimation-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: Service Invoices -->
+          <div id="service-tab-invoices" class="sub-tab-pane">
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 2;">
+                <label for="svc-inv-search">Search Service Invoices</label>
+                <input type="text" id="svc-inv-search" placeholder="Search by Invoice #, Job Card #, Customer, Mobile...">
+              </div>
+              <div class="form-group-inline">
+                <label for="svc-inv-filter-payment">Payment Status</label>
+                <select id="svc-inv-filter-payment">
+                  <option value="All">All Statuses</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Partially Paid">Partially Paid</option>
+                  <option value="Pending">Pending</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Service Inv #</th>
+                    <th>Date</th>
+                    <th>Job Card #</th>
+                    <th>Customer Details</th>
+                    <th>Device Specs</th>
+                    <th>Labour Charges</th>
+                    <th>Parts Charges</th>
+                    <th>GST</th>
+                    <th>Grand Total</th>
+                    <th>Payment Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="svc-invoice-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 4: Service History Search -->
+          <div id="service-tab-history" class="sub-tab-pane">
+            <div class="filter-bar" style="background: var(--card-bg); border: 1px solid var(--border); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+              <div class="form-group-inline" style="flex-grow: 3;">
+                <label for="history-search-input" style="font-weight: 700; font-size: 0.95rem; color: var(--primary);">
+                  🔍 Search Service History (by Customer Name, Mobile Number, Job Card #, Serial Number, or Invoice #)
+                </label>
+                <input type="text" id="history-search-input" placeholder="Type customer name, 10-digit mobile, serial number, JC-2026-..., or SINV-2026-..." style="font-size: 1rem; padding: 0.65rem 0.85rem;">
+              </div>
+              <button class="btn btn-secondary" id="clear-history-search-btn" style="height: 44px; margin-top: 1.45rem;">Clear Search</button>
+            </div>
+
+            <div id="service-history-results-container">
+              <!-- Rendered dynamically: Device history cards and timeline -->
+            </div>
+          </div>
+
+          <!-- TAB 5: Customers & Devices Directory -->
+          <div id="service-tab-customers" class="sub-tab-pane">
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 2;">
+                <label for="svc-customer-search">Search Customers</label>
+                <input type="text" id="svc-customer-search" placeholder="Search by customer name, phone, device serial...">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Mobile Number</th>
+                    <th>Address</th>
+                    <th>Registered Devices</th>
+                    <th>Total Services</th>
+                    <th>Total Spent</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="svc-customers-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -1088,6 +1369,12 @@
                   <option value="SalesStock">Sales / Invoice Stock Report</option>
                   <option value="PCBuilds">PC Build Assembly Report</option>
                   <option value="ProfitMargin">Profit / Margin Report</option>
+                </optgroup>
+                <optgroup label="Service & Repair Reports">
+                  <option value="ServiceJobCards">Service Job Cards Report</option>
+                  <option value="ServiceInvoices">Service Invoices & Payments Report</option>
+                  <option value="ServiceParts">Service Parts Consumption Report</option>
+                  <option value="ServiceEstimations">Service Estimations Report</option>
                 </optgroup>
               </select>
             </div>
@@ -1897,6 +2184,8 @@
         </button>
       </div>
     </div>
+  </div>
+
   <!-- 11. PC BUILD QUOTATION & SPEC SHEET PRINT PREVIEW MODAL -->
   <div class="modal-overlay" id="pc-view-modal">
     <div class="modal-content invoice-modal">
@@ -1999,6 +2288,892 @@
         <button type="button" class="btn btn-primary" id="print-pc-spec-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Spec Sheet / Quotation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. SERVICE JOB CARD MODAL (ADD / EDIT) -->
+  <div class="modal-overlay" id="jobcard-modal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h4 id="jobcard-modal-title">New Service Job Card</h4>
+        <button class="modal-close-btn" id="close-jobcard-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="jobcard-form">
+        <input type="hidden" id="jobcard-edit-id">
+        <input type="hidden" id="jobcard-from-estimation-id">
+        <div class="modal-body">
+          
+          <!-- Job Info & Dates -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="jobcard-number">Job Card # (Auto)</label>
+                <input type="text" id="jobcard-number" readonly style="background-color: var(--secondary-light); font-weight: 700; font-family: monospace;">
+              </div>
+              <div class="form-group">
+                <label for="jobcard-date">Received Date *</label>
+                <input type="date" id="jobcard-date" required>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-delivery-date">Expected Delivery Date *</label>
+                <input type="date" id="jobcard-delivery-date" required>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-status">Service Status *</label>
+                <select id="jobcard-status" required style="font-weight: 700;">
+                  <option value="Open">Open</option>
+                  <option value="Under Service">Under Service</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Details -->
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">1. Customer Details</h5>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="jobcard-customer-name">Customer Name *</label>
+                <input type="text" id="jobcard-customer-name" required placeholder="Enter customer full name" list="service-customer-list">
+                <datalist id="service-customer-list"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-customer-mobile">Mobile Number *</label>
+                <input type="tel" id="jobcard-customer-mobile" required pattern="[0-9]{10}" placeholder="10-digit mobile number">
+              </div>
+              <div class="form-group">
+                <label for="jobcard-customer-address">Address / Location</label>
+                <input type="text" id="jobcard-customer-address" placeholder="Door No, Street, City">
+              </div>
+            </div>
+          </div>
+
+          <!-- Device Specifications & Issue -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">2. Device Details & Customer Complaint</h5>
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="jobcard-device-type">Device Type *</label>
+                <select id="jobcard-device-type" required>
+                  <option value="Laptop">Laptop</option>
+                  <option value="Desktop">Desktop / PC</option>
+                  <option value="All-in-One">All-in-One PC</option>
+                  <option value="MacBook">MacBook / Apple</option>
+                  <option value="Workstation / Server">Workstation / Server</option>
+                  <option value="Other">Other Device</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-device-brand">Brand *</label>
+                <input type="text" id="jobcard-device-brand" required placeholder="e.g. Dell / HP / Lenovo / ASUS / Acer / Apple" list="brand-suggestions">
+                <datalist id="brand-suggestions">
+                  <option value="Dell">
+                  <option value="HP">
+                  <option value="Lenovo">
+                  <option value="ASUS">
+                  <option value="Acer">
+                  <option value="Apple">
+                  <option value="MSI">
+                  <option value="Samsung">
+                  <option value="Custom Built PC">
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-device-model">Model *</label>
+                <input type="text" id="jobcard-device-model" required placeholder="e.g. Inspiron 15 3520 / ThinkPad E14 / Vivobook">
+              </div>
+              <div class="form-group">
+                <label for="jobcard-device-serial">Serial Number / Service Tag</label>
+                <input type="text" id="jobcard-device-serial" placeholder="e.g. 8H3G9X2 / SN-8928174">
+              </div>
+            </div>
+
+            <div class="form-grid" style="margin-top: 0.75rem;">
+              <div class="form-group">
+                <label for="jobcard-complaint">Problem / Customer Complaint *</label>
+                <textarea id="jobcard-complaint" required rows="2" placeholder="e.g. Display blinking, Blue Screen error on startup, Hinges broken, Slow performance & overheating, RAM upgrade needed"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-technician">Technician / Assigned Person *</label>
+                <input type="text" id="jobcard-technician" required placeholder="e.g. Alex (Hardware Specialist)" list="technician-list">
+                <datalist id="technician-list">
+                  <option value="Senior Hardware Engineer">
+                  <option value="Laptop Chip-Level Technician">
+                  <option value="Software & OS Specialist">
+                  <option value="General Service Engineer">
+                </datalist>
+                <label for="jobcard-tech-remarks" style="margin-top: 0.5rem;">Diagnostic & Technical Remarks</label>
+                <input type="text" id="jobcard-tech-remarks" placeholder="Diagnosis findings, physical condition, accessories received (Charger/Bag)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Labour Charges Section -->
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h5 style="margin: 0; color: var(--primary);">3. Labour Charges</h5>
+              <button type="button" class="btn btn-secondary btn-sm" id="add-jobcard-labour-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Labour Item
+              </button>
+            </div>
+            <div id="jobcard-labour-container">
+              <!-- Dynamic labour rows -->
+            </div>
+            <div style="text-align: right; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem;">
+              Total Labour: <span id="jobcard-calc-labour-total" style="color: var(--primary);">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Spare Parts Section (Connected to Stock Maintenance) -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div>
+                <h5 style="margin: 0; color: var(--primary);">4. Spare Parts & Components (Integrated with Live Stock)</h5>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Select parts from inventory. Stock automatically decreases upon saving.</p>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="add-jobcard-part-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Spare Part from Stock
+              </button>
+            </div>
+            <div id="jobcard-parts-container">
+              <!-- Dynamic parts rows -->
+            </div>
+            <div style="text-align: right; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem;">
+              Total Parts: <span id="jobcard-calc-parts-total" style="color: var(--primary);">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Discount, Tax & Grand Total -->
+          <div style="background: var(--card-bg); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="jobcard-discount">Discount (₹ Total)</label>
+                <input type="number" id="jobcard-discount" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="jobcard-tax-rate">GST Tax Rate (%)</label>
+                <select id="jobcard-tax-rate">
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="12">12% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="28">28% GST</option>
+                  <option value="0">0% (Exempted / Nil)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="jobcard-tax-amount">GST Amount (Auto ₹)</label>
+                <input type="text" id="jobcard-tax-amount" readonly style="background-color: var(--secondary-light); font-weight: 700;">
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 2rem; margin-top: 0.75rem; font-size: 1rem; font-weight: 700; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+              <div>Subtotal (Labour + Parts): <span id="jobcard-calc-subtotal">₹0.00</span></div>
+              <div style="color: var(--primary); font-size: 1.2rem;">Grand Total: <span id="jobcard-calc-grand-total">₹0.00</span></div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-jobcard-btn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="close-jobcard-direct-btn" style="display: none;" onclick="handleDirectCloseFromModal()">Close Job Card</button>
+          <button type="submit" class="btn btn-primary" id="save-jobcard-btn">Save Job Card & Update Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 13. ESTIMATION MODAL (ADD / EDIT / QUOTATIONS) -->
+  <div class="modal-overlay" id="estimation-modal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h4 id="estimation-modal-title">New Repair & Service Estimation</h4>
+        <button class="modal-close-btn" id="close-estimation-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="estimation-form">
+        <input type="hidden" id="estimation-edit-id">
+        <div class="modal-body">
+          <div class="form-grid-3" style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div class="form-group">
+              <label for="estimation-number">Estimation # (Auto)</label>
+              <input type="text" id="estimation-number" readonly style="background-color: var(--secondary-light); font-weight: 700; font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label for="estimation-date">Estimation Date *</label>
+              <input type="date" id="estimation-date" required>
+            </div>
+            <div class="form-group">
+              <label for="estimation-status">Approval Status *</label>
+              <select id="estimation-status" required>
+                <option value="Draft">Draft / Pending Customer Approval</option>
+                <option value="Approved">Customer Approved</option>
+                <option value="Rejected">Rejected / Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Customer & Device Details</h5>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="estimation-customer-name">Customer Name *</label>
+                <input type="text" id="estimation-customer-name" required placeholder="Enter customer full name">
+              </div>
+              <div class="form-group">
+                <label for="estimation-customer-mobile">Mobile Number *</label>
+                <input type="text" id="estimation-customer-mobile" required placeholder="Mobile number">
+              </div>
+              <div class="form-group">
+                <label for="estimation-customer-address">Address</label>
+                <input type="text" id="estimation-customer-address" placeholder="Location / Address">
+              </div>
+            </div>
+
+            <div class="form-grid-4" style="margin-top: 0.5rem;">
+              <div class="form-group">
+                <label for="estimation-device-type">Device Type *</label>
+                <select id="estimation-device-type" required>
+                  <option value="Laptop">Laptop</option>
+                  <option value="Desktop">Desktop / PC</option>
+                  <option value="All-in-One">All-in-One PC</option>
+                  <option value="MacBook">MacBook / Apple</option>
+                  <option value="Other">Other Device</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="estimation-device-brand">Brand *</label>
+                <input type="text" id="estimation-device-brand" required placeholder="e.g. Dell, HP, ASUS">
+              </div>
+              <div class="form-group">
+                <label for="estimation-device-model">Model *</label>
+                <input type="text" id="estimation-device-model" required placeholder="e.g. Latitude 3420">
+              </div>
+              <div class="form-group">
+                <label for="estimation-device-serial">Serial Number</label>
+                <input type="text" id="estimation-device-serial" placeholder="Serial / Tag">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <label for="estimation-complaint">Reported Problem / Work Required *</label>
+              <input type="text" id="estimation-complaint" required placeholder="e.g. Screen replacement, Hinges repair, OS reinstall, Battery change">
+            </div>
+          </div>
+
+          <!-- Estimation Labour Breakdown -->
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h5 style="margin: 0; color: var(--primary);">Estimated Labour Charges</h5>
+              <button type="button" class="btn btn-secondary btn-sm" id="add-est-labour-btn">
+                + Add Labour Item
+              </button>
+            </div>
+            <div id="estimation-labour-container">
+              <!-- Dynamic estimation labour rows -->
+            </div>
+            <div style="text-align: right; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem;">
+              Total Estimated Labour: <span id="est-calc-labour-total" style="color: var(--primary);">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Estimation Spare Parts Breakdown -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div>
+                <h5 style="margin: 0; color: var(--primary);">Estimated Spare Parts (From Stock Catalog)</h5>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Choose parts to quote customer.</p>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="add-est-part-btn">
+                + Add Spare Part
+              </button>
+            </div>
+            <div id="estimation-parts-container">
+              <!-- Dynamic estimation parts rows -->
+            </div>
+            <div style="text-align: right; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem;">
+              Total Estimated Parts: <span id="est-calc-parts-total" style="color: var(--primary);">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Other Charges & Grand Total -->
+          <div style="background: var(--card-bg); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="estimation-accessories">Accessories / Adapters (₹)</label>
+                <input type="number" id="estimation-accessories" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="estimation-other-charges">Other Charges (₹)</label>
+                <input type="number" id="estimation-other-charges" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="estimation-discount">Discount (₹)</label>
+                <input type="number" id="estimation-discount" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="estimation-tax-rate">GST Tax Rate (%)</label>
+                <select id="estimation-tax-rate">
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="12">12% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="28">28% GST</option>
+                  <option value="0">0% (Nil / Exempted)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.75rem;">
+              <label for="estimation-notes">Estimation Remarks / Notes for Customer</label>
+              <input type="text" id="estimation-notes" placeholder="e.g. Genuine screen with 1 year warranty. Delivery within 2 days after confirmation.">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 2rem; margin-top: 0.75rem; font-size: 1rem; font-weight: 700; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+              <div>Taxable Subtotal: <span id="estimation-calc-subtotal">₹0.00</span></div>
+              <div>GST Amount: <span id="estimation-calc-gst-amt">₹0.00</span></div>
+              <div style="color: var(--primary); font-size: 1.2rem;">Total Estimated Amount: <span id="estimation-calc-grand-total">₹0.00</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-estimation-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="save-estimation-btn">Save Estimation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 14. SERVICE INVOICE MODAL (GENERATE / EDIT) -->
+  <div class="modal-overlay" id="svc-invoice-modal">
+    <div class="modal-content modal-xl">
+      <div class="modal-header">
+        <h4 id="svc-invoice-modal-title">Generate Service Invoice</h4>
+        <button class="modal-close-btn" id="close-svc-inv-modal-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="svc-invoice-form">
+        <input type="hidden" id="svc-inv-edit-id">
+        <input type="hidden" id="svc-inv-jobcard-id">
+        <div class="modal-body">
+          <div class="form-grid-3" style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <div class="form-group">
+              <label for="svc-inv-number">Service Invoice # (Auto)</label>
+              <input type="text" id="svc-inv-number" readonly style="background-color: var(--secondary-light); font-weight: 700; font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label for="svc-inv-date">Invoice Date *</label>
+              <input type="date" id="svc-inv-date" required>
+            </div>
+            <div class="form-group">
+              <label for="svc-inv-jobcard-select">Link Job Card (Auto-fills Details)</label>
+              <select id="svc-inv-jobcard-select">
+                <option value="">-- Direct Service Billing / Select Job Card --</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Customer & Device Information</h5>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="svc-inv-cust-name">Customer Name *</label>
+                <input type="text" id="svc-inv-cust-name" required placeholder="Customer Full Name">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-cust-mobile">Mobile Number *</label>
+                <input type="tel" id="svc-inv-cust-mobile" required pattern="[0-9]{10}" placeholder="10-digit mobile">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-cust-address">Address</label>
+                <input type="text" id="svc-inv-cust-address" placeholder="Address">
+              </div>
+            </div>
+            <div class="form-grid-4" style="margin-top: 0.5rem;">
+              <div class="form-group">
+                <label for="svc-inv-device-type">Device Type *</label>
+                <input type="text" id="svc-inv-device-type" required placeholder="Laptop / Desktop / PC">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-device-brand">Brand *</label>
+                <input type="text" id="svc-inv-device-brand" required placeholder="e.g. Dell / HP / Lenovo">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-device-model">Model *</label>
+                <input type="text" id="svc-inv-device-model" required placeholder="Model number">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-device-serial">Serial Number</label>
+                <input type="text" id="svc-inv-device-serial" placeholder="Serial / Tag">
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing Items Breakdown Summary -->
+          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
+            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Service Charges & Costing</h5>
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="svc-inv-labour-amt">Total Labour Charges (₹) *</label>
+                <input type="number" id="svc-inv-labour-amt" min="0" step="0.01" value="0" required>
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-parts-amt">Total Parts Charges (₹) *</label>
+                <input type="number" id="svc-inv-parts-amt" min="0" step="0.01" value="0" required>
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-discount">Discount (₹)</label>
+                <input type="number" id="svc-inv-discount" min="0" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-gst-rate">GST Tax Rate (%)</label>
+                <select id="svc-inv-gst-rate">
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="12">12% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="28">28% GST</option>
+                  <option value="0">0% (Nil / Exempted)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="form-grid-4" style="margin-top: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
+              <div class="form-group">
+                <label for="svc-inv-payment-status">Payment Status *</label>
+                <select id="svc-inv-payment-status" required style="font-weight: 700;">
+                  <option value="Paid">Paid (Full)</option>
+                  <option value="Partially Paid">Partially Paid</option>
+                  <option value="Pending">Pending / Unpaid</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-payment-method">Payment Method *</label>
+                <select id="svc-inv-payment-method" required>
+                  <option value="UPI">UPI / GPay / PhonePe</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                  <option value="Net Banking">Net Banking</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-paid-amt">Amount Paid (₹) *</label>
+                <input type="number" id="svc-inv-paid-amt" min="0" step="0.01" value="0" required>
+              </div>
+              <div class="form-group">
+                <label for="svc-inv-balance-amt">Balance Due (Auto ₹)</label>
+                <input type="text" id="svc-inv-balance-amt" readonly style="background-color: #ffffff; font-weight: 700; color: var(--danger-dark);">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 2rem; margin-top: 0.75rem; font-size: 1rem; font-weight: 700; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+              <div>Taxable Subtotal: <span id="svc-inv-calc-taxable">₹0.00</span></div>
+              <div>GST: <span id="svc-inv-calc-gst">₹0.00</span></div>
+              <div style="color: var(--primary); font-size: 1.2rem;">Grand Total: <span id="svc-inv-calc-grand-total">₹0.00</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-svc-inv-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="save-svc-inv-btn">Save & Issue Service Invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 15. JOB CARD PRINT PREVIEW MODAL (CLEAN A4) -->
+  <div class="modal-overlay" id="jobcard-view-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>Job Card Print Preview</h4>
+        <button class="modal-close-btn" id="close-jobcard-view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        <div class="invoice-preview-card" id="jobcard-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#4f46e5" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Laptop, Desktop & PC Service Center</p>
+              <p style="font-size: 0.75rem; color: #64748b;">123 Startup Hub, Tech District | Support: +91 98765 43210</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title" style="color: #4f46e5;">SERVICE JOB CARD</div>
+              <div class="invoice-meta-label">Job Card #:</div>
+              <div class="invoice-meta-val" id="jc-prev-number">JC-2026-0001</div>
+              <div class="invoice-meta-label">Date Received:</div>
+              <div class="invoice-meta-val" id="jc-prev-date">--</div>
+              <div class="invoice-meta-label">Exp. Delivery:</div>
+              <div class="invoice-meta-val" id="jc-prev-delv" style="font-weight: 700; color: #4f46e5;">--</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">CUSTOMER DETAILS</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="jc-prev-cust-name">--</div>
+                <p id="jc-prev-cust-phone">Phone: --</p>
+                <p id="jc-prev-cust-address">Address: --</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">DEVICE SPECIFICATIONS</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="jc-prev-device-model">--</div>
+                <p id="jc-prev-device-type">Type: --</p>
+                <p id="jc-prev-device-serial">Serial / Tag: --</p>
+                <p>Status: <span id="jc-prev-status-badge" style="font-weight: 700; color: #4f46e5;">Open</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Problem & Tech Section -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem;">
+            <div style="margin-bottom: 0.35rem;">
+              <strong style="color: #0f172a;">Customer Reported Problem / Complaint:</strong>
+              <div id="jc-prev-complaint" style="color: #334155; margin-top: 0.15rem;">--</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 0.35rem; margin-top: 0.35rem;">
+              <div><strong>Assigned Technician:</strong> <span id="jc-prev-technician">--</span></div>
+              <div><strong>Tech Remarks:</strong> <span id="jc-prev-remarks">--</span></div>
+            </div>
+          </div>
+
+          <!-- Service Scope Table (Labour & Parts) -->
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Service Description / Spare Part</th>
+                <th>Type</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Rate (₹)</th>
+                <th style="text-align: right;">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="jc-prev-items-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Total Labour Charges</span>
+                <span id="jc-prev-total-labour">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Total Spare Parts & Components</span>
+                <span id="jc-prev-total-parts">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Discount</span>
+                <span id="jc-prev-discount">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>GST (<span id="jc-prev-tax-rate">18%</span>)</span>
+                <span id="jc-prev-tax-amt">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Estimated / Total Amount</span>
+                <span id="jc-prev-grand-total">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signatures & Disclaimer -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem;">
+            <div>
+              <p style="font-weight: 600; color: #0f172a; margin-bottom: 2rem;">Customer Acknowledgment & Signature:</p>
+              <div style="border-top: 1px dashed #94a3b8; width: 80%; padding-top: 0.25rem; color: #64748b;">Signature / Date</div>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-weight: 600; color: #0f172a; margin-bottom: 2rem;">For BIOS Service Center:</p>
+              <div style="border-top: 1px dashed #94a3b8; width: 80%; margin-left: auto; padding-top: 0.25rem; color: #64748b;">Authorized Signatory</div>
+            </div>
+          </div>
+
+          <div class="invoice-terms">
+            <p>1. Estimate is valid for 7 days. Devices not collected within 30 days of completion are subject to storage charges.</p>
+            <p style="margin-top: 0.25rem;">2. Backup your data prior to hardware/OS service. BIOS is not responsible for pre-existing software data loss.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-jobcard-view-btn2">Close</button>
+        <button type="button" class="btn btn-primary" id="print-jobcard-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Job Card
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16. ESTIMATION PRINT PREVIEW MODAL (CLEAN A4) -->
+  <div class="modal-overlay" id="estimation-view-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>Estimation Print Preview</h4>
+        <button class="modal-close-btn" id="close-estimation-view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        <div class="invoice-preview-card" id="estimation-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#0ea5e9" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Service & Repair Cost Estimation</p>
+              <p style="font-size: 0.75rem; color: #64748b;">123 Startup Hub, Tech District | Support: +91 98765 43210</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title" style="color: #0ea5e9;">SERVICE ESTIMATION</div>
+              <div class="invoice-meta-label">Estimate #:</div>
+              <div class="invoice-meta-val" id="est-prev-number">EST-2026-0001</div>
+              <div class="invoice-meta-label">Date:</div>
+              <div class="invoice-meta-val" id="est-prev-date">--</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">ESTIMATION FOR</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="est-prev-cust-name">--</div>
+                <p id="est-prev-cust-phone">Phone: --</p>
+                <p id="est-prev-cust-address">Address: --</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">DEVICE DETAILS</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="est-prev-device-model">--</div>
+                <p id="est-prev-device-type">Type: --</p>
+                <p id="est-prev-device-serial">Serial: --</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem;">
+            <strong>Customer Complaint / Requested Service:</strong>
+            <div id="est-prev-complaint" style="color: #334155; margin-top: 0.15rem;">--</div>
+          </div>
+
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Particulars / Scope of Service</th>
+                <th style="text-align: right;">Estimated Cost (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Labour Charges</strong> (Repair, Installation & Testing)</td>
+                <td style="text-align: right;" id="est-prev-labour">₹0.00</td>
+              </tr>
+              <tr>
+                <td><strong>Spare Parts & Components</strong></td>
+                <td style="text-align: right;" id="est-prev-parts">₹0.00</td>
+              </tr>
+              <tr>
+                <td><strong>Accessories / Adapters</strong></td>
+                <td style="text-align: right;" id="est-prev-accessories">₹0.00</td>
+              </tr>
+              <tr>
+                <td><strong>Other Charges / Diagnostics</strong></td>
+                <td style="text-align: right;" id="est-prev-other">₹0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Subtotal</span>
+                <span id="est-prev-subtotal">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Discount</span>
+                <span id="est-prev-discount">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>GST (<span id="est-prev-tax-rate">18%</span>)</span>
+                <span id="est-prev-tax-amt">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Total Estimated Amount</span>
+                <span id="est-prev-grand-total">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; display: flex; justify-content: space-between;">
+            <div>
+              <p style="font-weight: 600; color: #0f172a; margin-bottom: 2rem;">Customer Approval Signature:</p>
+              <div style="border-top: 1px dashed #94a3b8; width: 180px; padding-top: 0.25rem; color: #64748b;">Sign to Proceed with Repair</div>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-weight: 600; color: #0f172a; margin-bottom: 2rem;">Prepared By:</p>
+              <div style="border-top: 1px dashed #94a3b8; width: 180px; margin-left: auto; padding-top: 0.25rem; color: #64748b;">BIOS Service Advisor</div>
+            </div>
+          </div>
+
+          <div class="invoice-terms">
+            <p>This estimation is an approximation of costs. Upon customer approval, this estimate is converted directly to a Service Job Card.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-estimation-view-btn2">Close</button>
+        <button type="button" class="btn btn-primary" id="print-estimation-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Estimation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 17. SERVICE INVOICE PRINT PREVIEW MODAL (CLEAN A4) -->
+  <div class="modal-overlay" id="svc-invoice-view-modal">
+    <div class="modal-content invoice-modal">
+      <div class="modal-header">
+        <h4>Service Tax Invoice Print Preview</h4>
+        <button class="modal-close-btn" id="close-svc-inv-view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="background-color: #f1f5f9;">
+        <div class="invoice-preview-card" id="svc-invoice-print-area">
+          <div class="invoice-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="25" y="25" width="50" height="50" rx="12" fill="#4f46e5" />
+                  <circle cx="50" cy="50" r="16" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="8 4" />
+                  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+                </svg>
+                <span style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #0f172a;">BIOS</span>
+              </div>
+              <p style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Building Intelligent Outcomes with Solutions</p>
+              <p style="font-size: 0.75rem; color: #64748b;">PC, Laptop & Hardware Repair Center | GSTIN: 29AABCB1234F1Z5</p>
+            </div>
+            <div class="invoice-meta">
+              <div class="invoice-title" style="color: #4f46e5;">SERVICE TAX INVOICE</div>
+              <div class="invoice-meta-label">Invoice No:</div>
+              <div class="invoice-meta-val" id="sinv-prev-number">SINV-2026-0001</div>
+              <div class="invoice-meta-label">Date:</div>
+              <div class="invoice-meta-val" id="sinv-prev-date">--</div>
+              <div class="invoice-meta-label">Job Card Ref:</div>
+              <div class="invoice-meta-val" id="sinv-prev-jc-ref" style="font-weight: 700;">--</div>
+            </div>
+          </div>
+
+          <div class="invoice-details-grid">
+            <div>
+              <div class="invoice-party-title">BILLED BY</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name">BIOS Service & Solutions</div>
+                <p>123 Startup Hub, Tech District</p>
+                <p>Phone: +91 98765 43210</p>
+                <p>Email: service@bios.solutions</p>
+              </div>
+            </div>
+            <div>
+              <div class="invoice-party-title">BILLED TO</div>
+              <div class="invoice-party-details">
+                <div class="invoice-party-name" id="sinv-prev-cust-name">--</div>
+                <p id="sinv-prev-cust-phone">Phone: --</p>
+                <p id="sinv-prev-cust-address">Address: --</p>
+                <p><strong>Device:</strong> <span id="sinv-prev-device-info">--</span></p>
+              </div>
+            </div>
+          </div>
+
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Service Particulars / Spare Parts</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Rate (₹)</th>
+                <th style="text-align: right;">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="sinv-prev-items-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+
+          <div class="invoice-summary-area">
+            <div class="invoice-summary-box">
+              <div class="invoice-summary-row">
+                <span>Labour Charges</span>
+                <span id="sinv-prev-labour">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Parts & Materials</span>
+                <span id="sinv-prev-parts">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Discount</span>
+                <span id="sinv-prev-discount">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>GST (<span id="sinv-prev-gst-rate">18%</span>)</span>
+                <span id="sinv-prev-gst-amt">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row total">
+                <span>Grand Total</span>
+                <span id="sinv-prev-grand-total">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row" style="margin-top: 0.25rem;">
+                <span>Payment Status</span>
+                <span id="sinv-prev-pay-status" style="font-weight: 700;">Paid</span>
+              </div>
+              <div class="invoice-summary-row">
+                <span>Paid Amount</span>
+                <span id="sinv-prev-paid-amt" style="color: var(--success-dark); font-weight: 700;">₹0.00</span>
+              </div>
+              <div class="invoice-summary-row" style="border-top: 1px solid var(--border); padding-top: 0.25rem;">
+                <span>Balance Due</span>
+                <span id="sinv-prev-balance-amt" style="color: var(--danger-dark); font-weight: 700;">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="invoice-terms">
+            <p>1. 30 days service warranty for the specific repair carried out.</p>
+            <p style="margin-top: 0.25rem;">2. Replacement spare parts warranty is covered as per respective manufacturer policies.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="close-svc-inv-view-btn2">Close</button>
+        <button type="button" class="btn btn-primary" id="print-svc-inv-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Service Invoice
         </button>
       </div>
     </div>
