@@ -9,12 +9,15 @@ let state = {
   bookings: [],
   billings: [],
   activities: [],
-  inventory: [],      // Stock items master
-  purchases: [],      // Inward purchases
-  suppliers: [],      // Supplier directory
-  pcBuilds: [],       // Assembled PC builds
-  returns: [],        // Sales and Purchase returns
-  stockLedger: []     // Complete stock movement history
+  inventory: [],          // Stock items master
+  purchases: [],          // Inward purchases
+  suppliers: [],          // Supplier directory
+  pcBuilds: [],           // Assembled PC builds
+  returns: [],            // Sales and Purchase returns
+  stockLedger: [],        // Complete stock movement history
+  serviceJobCards: [],    // Service & Repair Job Cards
+  serviceEstimations: [], // Service Quotations & Estimations
+  serviceInvoices: []     // Service Bills & Invoices
 };
 
 // LocalStorage Keys
@@ -28,7 +31,10 @@ const STORAGE_KEYS = {
   SUPPLIERS: 'bios_suppliers',
   PC_BUILDS: 'bios_pc_builds',
   RETURNS: 'bios_returns',
-  STOCK_LEDGER: 'bios_stock_ledger'
+  STOCK_LEDGER: 'bios_stock_ledger',
+  SERVICE_JOB_CARDS: 'bios_service_job_cards',
+  SERVICE_ESTIMATIONS: 'bios_service_estimations',
+  SERVICE_INVOICES: 'bios_service_invoices'
 };
 
 // ==========================================================================
@@ -53,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPCBuilderDropdowns();
   renderPCBuildHistoryTable();
   renderReturnsTables();
+  renderServiceModule();
   renderReports();
 });
 
@@ -69,6 +76,9 @@ function loadFromStorage() {
     state.pcBuilds = JSON.parse(localStorage.getItem(STORAGE_KEYS.PC_BUILDS)) || [];
     state.returns = JSON.parse(localStorage.getItem(STORAGE_KEYS.RETURNS)) || [];
     state.stockLedger = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_LEDGER)) || [];
+    state.serviceJobCards = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_JOB_CARDS)) || [];
+    state.serviceEstimations = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_ESTIMATIONS)) || [];
+    state.serviceInvoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_INVOICES)) || [];
   } catch (e) {
     console.error('Error loading data from LocalStorage:', e);
   }
@@ -85,8 +95,6 @@ function saveToStorage(key, data) {
 
 // Seed Initial Inventory with Realistic Computer Components & Laptops if empty
 function seedInitialInventoryIfEmpty() {
-  if (state.inventory && state.inventory.length > 0) return;
-
   const starterItems = [
     {
       itemCode: 'CPU-INTEL-13400F',
@@ -281,43 +289,168 @@ function seedInitialInventoryIfEmpty() {
       adjustmentQty: 0,
       pcConsumedQty: 0,
       pcProducedQty: 0,
+      serviceConsumedQty: 0,
       openingStock: 0,
       availableStock: 2,
       purchaseRate: 68500,
       sellingRate: 78990,
       minStock: 1,
       serials: ['LAP-ASUS-99120', 'LAP-ASUS-99121']
+    },
+    {
+      itemCode: 'PART-LAP-KB-DELL',
+      itemName: 'Dell Inspiron 15 Replacement Keyboard (Backlit UK/US)',
+      category: 'Spare Part',
+      brand: 'Dell OEM',
+      model: 'Inspiron 3520 / 3511 / 5510',
+      purchaseQty: 8,
+      salesQty: 0,
+      salesReturnQty: 0,
+      purchaseReturnQty: 0,
+      adjustmentQty: 0,
+      pcConsumedQty: 0,
+      pcProducedQty: 0,
+      serviceConsumedQty: 1,
+      openingStock: 0,
+      availableStock: 7,
+      purchaseRate: 1200,
+      sellingRate: 1850,
+      minStock: 2,
+      serials: []
+    },
+    {
+      itemCode: 'PART-THERMAL-MX4',
+      itemName: 'Arctic MX-4 High-Performance Thermal Compound (4g Syringe)',
+      category: 'Spare Part',
+      brand: 'Arctic',
+      model: 'MX-4 4g Edition',
+      purchaseQty: 15,
+      salesQty: 0,
+      salesReturnQty: 0,
+      purchaseReturnQty: 0,
+      adjustmentQty: 0,
+      pcConsumedQty: 0,
+      pcProducedQty: 0,
+      serviceConsumedQty: 2,
+      openingStock: 0,
+      availableStock: 13,
+      purchaseRate: 450,
+      sellingRate: 750,
+      minStock: 3,
+      serials: []
+    },
+    {
+      itemCode: 'PART-SCREEN-156-FHD',
+      itemName: '15.6" Full HD (1920x1080) IPS 30-Pin Slim LED Laptop Screen Panel',
+      category: 'Spare Part',
+      brand: 'BOE / LG Display',
+      model: 'NV156FHM-N48 30Pin',
+      purchaseQty: 5,
+      salesQty: 0,
+      salesReturnQty: 0,
+      purchaseReturnQty: 0,
+      adjustmentQty: 0,
+      pcConsumedQty: 0,
+      pcProducedQty: 0,
+      serviceConsumedQty: 1,
+      openingStock: 0,
+      availableStock: 4,
+      purchaseRate: 3600,
+      sellingRate: 4950,
+      minStock: 2,
+      serials: ['SCR-156-8821', 'SCR-156-8822', 'SCR-156-8823', 'SCR-156-8824']
+    },
+    {
+      itemCode: 'PART-BAT-HP-HT03XL',
+      itemName: 'HP Original HT03XL 3-Cell 41.04Wh Laptop Replacement Battery',
+      category: 'Spare Part',
+      brand: 'HP OEM',
+      model: 'HT03XL L11119-855',
+      purchaseQty: 6,
+      salesQty: 0,
+      salesReturnQty: 0,
+      purchaseReturnQty: 0,
+      adjustmentQty: 0,
+      pcConsumedQty: 0,
+      pcProducedQty: 0,
+      serviceConsumedQty: 0,
+      openingStock: 0,
+      availableStock: 6,
+      purchaseRate: 2100,
+      sellingRate: 2950,
+      minStock: 2,
+      serials: ['BAT-HP-44910', 'BAT-HP-44911']
+    },
+    {
+      itemCode: 'PART-CHARGER-65W-TYPEC',
+      itemName: 'Universal 65W Type-C Laptop Power Adapter Charger (PD 3.0)',
+      category: 'Accessory',
+      brand: 'BIOS Power',
+      model: '65W USB-C GaN',
+      purchaseQty: 10,
+      salesQty: 1,
+      salesReturnQty: 0,
+      purchaseReturnQty: 0,
+      adjustmentQty: 0,
+      pcConsumedQty: 0,
+      pcProducedQty: 0,
+      serviceConsumedQty: 1,
+      openingStock: 0,
+      availableStock: 8,
+      purchaseRate: 950,
+      sellingRate: 1550,
+      minStock: 3,
+      serials: []
     }
   ];
 
-  state.inventory = starterItems;
+  if (!state.inventory || state.inventory.length === 0) {
+    state.inventory = starterItems;
+  } else {
+    starterItems.forEach(si => {
+      if (!state.inventory.some(i => i.itemCode === si.itemCode)) {
+        state.inventory.push(si);
+      }
+    });
+  }
   saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
 
   // Initial Suppliers
-  state.suppliers = [
-    {
-      name: 'Supertron Infotech Pvt Ltd',
-      phone: '9845012345',
-      email: 'sales@supertron.in',
-      gstin: '29AABCS8812K1Z9',
-      totalPurchases: 184500,
-      balanceDue: 0
-    },
-    {
-      name: 'Rashi Peripherals Ltd',
-      phone: '9845098765',
-      email: 'bangalore@rptechindia.com',
-      gstin: '29AABCR1122M1Z3',
-      totalPurchases: 145000,
-      balanceDue: 25000
-    }
-  ];
-  saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+  if (!state.suppliers || state.suppliers.length === 0) {
+    state.suppliers = [
+      {
+        name: 'Supertron Infotech Pvt Ltd',
+        phone: '9845012345',
+        email: 'sales@supertron.in',
+        gstin: '29AABCS8812K1Z9',
+        totalPurchases: 184500,
+        balanceDue: 0
+      },
+      {
+        name: 'Rashi Peripherals Ltd',
+        phone: '9845098765',
+        email: 'bangalore@rptechindia.com',
+        gstin: '29AABCR1122M1Z3',
+        totalPurchases: 145000,
+        balanceDue: 25000
+      },
+      {
+        name: 'Compuage Spare & Parts Hub',
+        phone: '9845112233',
+        email: 'serviceparts@compuage.in',
+        gstin: '29AABCC4455P1Z8',
+        totalPurchases: 45000,
+        balanceDue: 0
+      }
+    ];
+    saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+  }
 
   // Initial Purchases
   const todayStr = getTodayDateString();
-  state.purchases = [
-    {
+  if (!state.purchases || state.purchases.length === 0) {
+    state.purchases = [
+      {
       id: 'PUR-1001',
       invoiceNo: 'SUP-INV-8821',
       date: todayStr,
@@ -362,125 +495,358 @@ function seedInitialInventoryIfEmpty() {
       balanceAmount: 25000,
       status: 'Partial',
       serials: ['GPU-ZOT-7701', 'GPU-ZOT-7702']
+    },
+    {
+      id: 'PUR-1003',
+      invoiceNo: 'COMP-SP-2041',
+      date: todayStr,
+      supplier: 'Compuage Spare & Parts Hub',
+      supplierPhone: '9845112233',
+      itemCode: 'PART-SCREEN-156-FHD',
+      itemName: '15.6" Full HD IPS 30-Pin Laptop Display Panel',
+      category: 'Spare Part',
+      brand: 'BOE / LG Display',
+      model: 'NV156FHM-N48',
+      qty: 5,
+      rate: 3600,
+      discount: 0,
+      gstRate: 18,
+      taxableAmount: 18000,
+      gstAmount: 3240,
+      totalAmount: 21240,
+      paidAmount: 21240,
+      balanceAmount: 0,
+      status: 'Paid',
+      serials: ['SCR-156-8821', 'SCR-156-8822', 'SCR-156-8823', 'SCR-156-8824', 'SCR-156-8825']
     }
   ];
-  saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
+    saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
+  }
 
   // Initial Assembled PC Build
-  const starterBuild = {
-    id: 'BUILD-2026-001',
-    name: 'BIOS Core i5 RTX 4070 Gaming Rig',
-    serialNo: 'BIOS-PC-2026-001',
-    date: todayStr,
-    componentsCost: 119300,
-    laborCost: 1500,
-    totalCost: 120800,
-    sellingPrice: 139900,
-    marginAmount: 19100,
-    marginPercent: 13.65,
-    components: [
-      { category: 'CPU', itemCode: 'CPU-INTEL-13400F', itemName: 'Intel Core i5-13400F', cost: 16500, qty: 1 },
-      { category: 'Motherboard', itemCode: 'MB-ASUS-B760M', itemName: 'ASUS TUF B760M-PLUS', cost: 15200, qty: 1 },
-      { category: 'RAM', itemCode: 'RAM-CORSAIR-16G-D5', itemName: 'Corsair Vengeance 16GB DDR5', cost: 4100, qty: 2 },
-      { category: 'Storage', itemCode: 'SSD-SAMS-980P-1TB', itemName: 'Samsung 980 Pro 1TB NVMe', cost: 7800, qty: 1 },
-      { category: 'GPU', itemCode: 'GPU-RTX-4070-12G', itemName: 'ZOTAC RTX 4070 12GB', cost: 49500, qty: 1 },
-      { category: 'PSU', itemCode: 'PSU-DEEPCOOL-750W', itemName: 'DeepCool PM750D 750W Gold', cost: 5400, qty: 1 },
-      { category: 'Cabinet', itemCode: 'CAB-NZXT-H5-FLOW', itemName: 'NZXT H5 Flow Black', cost: 6900, qty: 1 },
-      { category: 'Cooler', itemCode: 'CLR-DEEPCOOL-AK400', itemName: 'DeepCool AK400 Air Cooler', cost: 2100, qty: 1 }
-    ]
-  };
-  state.pcBuilds = [starterBuild];
-  saveToStorage(STORAGE_KEYS.PC_BUILDS, state.pcBuilds);
+  if (!state.pcBuilds || state.pcBuilds.length === 0) {
+    const starterBuild = {
+      id: 'BUILD-2026-001',
+      name: 'BIOS Core i5 RTX 4070 Gaming Rig',
+      serialNo: 'BIOS-PC-2026-001',
+      date: todayStr,
+      componentsCost: 119300,
+      laborCost: 1500,
+      totalCost: 120800,
+      sellingPrice: 139900,
+      marginAmount: 19100,
+      marginPercent: 13.65,
+      components: [
+        { category: 'CPU', itemCode: 'CPU-INTEL-13400F', itemName: 'Intel Core i5-13400F', cost: 16500, qty: 1 },
+        { category: 'Motherboard', itemCode: 'MB-ASUS-B760M', itemName: 'ASUS TUF B760M-PLUS', cost: 15200, qty: 1 },
+        { category: 'RAM', itemCode: 'RAM-CORSAIR-16G-D5', itemName: 'Corsair Vengeance 16GB DDR5', cost: 4100, qty: 2 },
+        { category: 'Storage', itemCode: 'SSD-SAMS-980P-1TB', itemName: 'Samsung 980 Pro 1TB NVMe', cost: 7800, qty: 1 },
+        { category: 'GPU', itemCode: 'GPU-RTX-4070-12G', itemName: 'ZOTAC RTX 4070 12GB', cost: 49500, qty: 1 },
+        { category: 'PSU', itemCode: 'PSU-DEEPCOOL-750W', itemName: 'DeepCool PM750D 750W Gold', cost: 5400, qty: 1 },
+        { category: 'Cabinet', itemCode: 'CAB-NZXT-H5-FLOW', itemName: 'NZXT H5 Flow Black', cost: 6900, qty: 1 },
+        { category: 'Cooler', itemCode: 'CLR-DEEPCOOL-AK400', itemName: 'DeepCool AK400 Air Cooler', cost: 2100, qty: 1 }
+      ]
+    };
+    state.pcBuilds = [starterBuild];
+    saveToStorage(STORAGE_KEYS.PC_BUILDS, state.pcBuilds);
 
-  // Add the Finished PC to Inventory
-  state.inventory.push({
-    itemCode: 'PC-BUILD-2026-001',
-    itemName: 'BIOS Core i5 RTX 4070 Gaming Rig (i5-13400F / 32GB / 1TB / RTX 4070)',
-    category: 'Finished PC',
-    brand: 'BIOS Custom',
-    model: 'BIOS-PC-2026-001',
-    purchaseQty: 0,
-    salesQty: 0,
-    salesReturnQty: 0,
-    purchaseReturnQty: 0,
-    adjustmentQty: 0,
-    pcConsumedQty: 0,
-    pcProducedQty: 1,
-    openingStock: 0,
-    availableStock: 1,
-    purchaseRate: 120800,
-    sellingRate: 139900,
-    minStock: 1,
-    serials: ['BIOS-PC-2026-001']
-  });
-  saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
+    // Add the Finished PC to Inventory
+    if (!state.inventory.some(i => i.itemCode === 'PC-BUILD-2026-001')) {
+      state.inventory.push({
+        itemCode: 'PC-BUILD-2026-001',
+        itemName: 'BIOS Core i5 RTX 4070 Gaming Rig (i5-13400F / 32GB / 1TB / RTX 4070)',
+        category: 'Finished PC',
+        brand: 'BIOS Custom',
+        model: 'BIOS-PC-2026-001',
+        purchaseQty: 0,
+        salesQty: 0,
+        salesReturnQty: 0,
+        purchaseReturnQty: 0,
+        adjustmentQty: 0,
+        pcConsumedQty: 0,
+        pcProducedQty: 1,
+        serviceConsumedQty: 0,
+        openingStock: 0,
+        availableStock: 1,
+        purchaseRate: 120800,
+        sellingRate: 139900,
+        minStock: 1,
+        serials: ['BIOS-PC-2026-001']
+      });
+      saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
+    }
+  }
 
   // Seed Initial Stock Ledger
-  state.stockLedger = [
-    {
-      id: 'LEDGER-001',
-      timestamp: new Date().toISOString(),
-      itemCode: 'CPU-INTEL-13400F',
-      itemName: 'Intel Core i5-13400F 10-Core Processor',
-      category: 'CPU',
-      type: 'PURCHASE',
-      refNo: 'SUP-INV-8821',
-      inQty: 6,
-      outQty: 0,
-      balanceStock: 6,
-      unitCost: 16500,
-      remarks: 'Purchased from Supertron Infotech Pvt Ltd'
-    },
-    {
-      id: 'LEDGER-002',
-      timestamp: new Date().toISOString(),
-      itemCode: 'GPU-RTX-4070-12G',
-      itemName: 'ZOTAC Gaming GeForce RTX 4070 Twin Edge 12GB',
-      category: 'GPU',
-      type: 'PURCHASE',
-      refNo: 'RP-BLR-4491',
-      inQty: 3,
-      outQty: 0,
-      balanceStock: 3,
-      unitCost: 49500,
-      remarks: 'Purchased from Rashi Peripherals Ltd'
-    },
-    {
-      id: 'LEDGER-003',
-      timestamp: new Date().toISOString(),
-      itemCode: 'CPU-INTEL-13400F',
-      itemName: 'Intel Core i5-13400F',
-      category: 'CPU',
-      type: 'PC_BUILD_CONSUME',
-      refNo: 'BUILD-2026-001',
-      inQty: 0,
-      outQty: 1,
-      balanceStock: 4,
-      unitCost: 16500,
-      remarks: 'Consumed in PC Assembly: BIOS-PC-2026-001'
-    },
-    {
-      id: 'LEDGER-004',
-      timestamp: new Date().toISOString(),
-      itemCode: 'PC-BUILD-2026-001',
-      itemName: 'BIOS Core i5 RTX 4070 Gaming Rig',
-      category: 'Finished PC',
-      type: 'PC_BUILD_PRODUCE',
-      refNo: 'BUILD-2026-001',
-      inQty: 1,
-      outQty: 0,
-      balanceStock: 1,
-      unitCost: 120800,
-      remarks: 'Custom PC Assembled & Added to Finished Stock'
-    }
-  ];
-  saveToStorage(STORAGE_KEYS.STOCK_LEDGER, state.stockLedger);
+  if (!state.stockLedger || state.stockLedger.length === 0) {
+    state.stockLedger = [
+      {
+        id: 'LEDGER-001',
+        timestamp: new Date().toISOString(),
+        itemCode: 'CPU-INTEL-13400F',
+        itemName: 'Intel Core i5-13400F 10-Core Processor',
+        category: 'CPU',
+        type: 'PURCHASE',
+        refNo: 'SUP-INV-8821',
+        inQty: 6,
+        outQty: 0,
+        balanceStock: 6,
+        unitCost: 16500,
+        remarks: 'Purchased from Supertron Infotech Pvt Ltd'
+      },
+      {
+        id: 'LEDGER-002',
+        timestamp: new Date().toISOString(),
+        itemCode: 'GPU-RTX-4070-12G',
+        itemName: 'ZOTAC Gaming GeForce RTX 4070 Twin Edge 12GB',
+        category: 'GPU',
+        type: 'PURCHASE',
+        refNo: 'RP-BLR-4491',
+        inQty: 3,
+        outQty: 0,
+        balanceStock: 3,
+        unitCost: 49500,
+        remarks: 'Purchased from Rashi Peripherals Ltd'
+      },
+      {
+        id: 'LEDGER-003',
+        timestamp: new Date().toISOString(),
+        itemCode: 'PART-SCREEN-156-FHD',
+        itemName: '15.6" Full HD IPS 30-Pin Laptop Display Panel',
+        category: 'Spare Part',
+        type: 'PURCHASE',
+        refNo: 'COMP-SP-2041',
+        inQty: 5,
+        outQty: 0,
+        balanceStock: 5,
+        unitCost: 3600,
+        remarks: 'Purchased from Compuage Spare & Parts Hub'
+      },
+      {
+        id: 'LEDGER-004',
+        timestamp: new Date().toISOString(),
+        itemCode: 'CPU-INTEL-13400F',
+        itemName: 'Intel Core i5-13400F',
+        category: 'CPU',
+        type: 'PC_BUILD_CONSUME',
+        refNo: 'BUILD-2026-001',
+        inQty: 0,
+        outQty: 1,
+        balanceStock: 4,
+        unitCost: 16500,
+        remarks: 'Consumed in PC Assembly: BIOS-PC-2026-001'
+      },
+      {
+        id: 'LEDGER-005',
+        timestamp: new Date().toISOString(),
+        itemCode: 'PC-BUILD-2026-001',
+        itemName: 'BIOS Core i5 RTX 4070 Gaming Rig',
+        category: 'Finished PC',
+        type: 'PC_BUILD_PRODUCE',
+        refNo: 'BUILD-2026-001',
+        inQty: 1,
+        outQty: 0,
+        balanceStock: 1,
+        unitCost: 120800,
+        remarks: 'Custom PC Assembled & Added to Finished Stock'
+      },
+      {
+        id: 'LEDGER-006',
+        timestamp: new Date().toISOString(),
+        itemCode: 'PART-SCREEN-156-FHD',
+        itemName: '15.6" Full HD IPS 30-Pin Laptop Display Panel',
+        category: 'Spare Part',
+        type: 'SERVICE_CONSUME',
+        refNo: 'JC-2026-0001',
+        inQty: 0,
+        outQty: 1,
+        balanceStock: 4,
+        unitCost: 3600,
+        remarks: 'Installed in Laptop Service Job Card: JC-2026-0001 (Vikram Patel)'
+      }
+    ];
+    saveToStorage(STORAGE_KEYS.STOCK_LEDGER, state.stockLedger);
+  }
+
+  // Seed Initial Service Job Cards
+  if (!state.serviceJobCards || state.serviceJobCards.length === 0) {
+    state.serviceJobCards = [
+      {
+        id: 'JC-2026-0001',
+        date: todayStr,
+        deliveryDate: todayStr,
+        customerName: 'Vikram Patel',
+        customerMobile: '9845011223',
+        customerAddress: 'Indiranagar 100ft Rd, Bangalore',
+        deviceType: 'Laptop',
+        deviceBrand: 'Dell',
+        deviceModel: 'Inspiron 15 3520',
+        deviceSerial: '8H3G9X2',
+        complaint: 'Screen flickering with horizontal lines & laptop overheating after 30 mins use.',
+        technician: 'Senior Hardware Engineer',
+        techRemarks: 'FHD IPS screen replacement done and thermal paste re-applied with internal heatsink clean.',
+        status: 'Ready',
+        labourItems: [
+          { description: 'Screen Panel Replacement Labour & Diagnostics', amount: 650 },
+          { description: 'Complete Thermal Paste Re-application & Cooling Fan Servicing', amount: 500 }
+        ],
+        partsItems: [
+          { itemCode: 'PART-SCREEN-156-FHD', partName: '15.6" Full HD IPS 30-Pin Laptop Display Panel', qty: 1, rate: 4950, amount: 4950 },
+          { itemCode: 'PART-THERMAL-MX4', partName: 'Arctic MX-4 High-Performance Thermal Compound', qty: 1, rate: 750, amount: 750 }
+        ],
+        totalLabour: 1150,
+        totalParts: 5700,
+        subtotal: 6850,
+        discount: 250,
+        taxRate: 18,
+        taxAmount: 1188,
+        grandTotal: 7788,
+        invoiceId: 'SINV-2026-0001'
+      },
+      {
+        id: 'JC-2026-0002',
+        date: todayStr,
+        deliveryDate: getTodayDateString(),
+        customerName: 'Ananya Sharma',
+        customerMobile: '9988776655',
+        customerAddress: 'Koramangala 4th Block, Bangalore',
+        deviceType: 'Laptop',
+        deviceBrand: 'HP',
+        deviceModel: 'Pavilion 14-dv0054TU',
+        deviceSerial: '5CD129848K',
+        complaint: 'Battery draining in 15 minutes, keyboard keys "E" and "Spacebar" not responding.',
+        technician: 'Laptop Chip-Level Technician',
+        techRemarks: 'Original battery replacement and keyboard testing.',
+        status: 'Under Service',
+        labourItems: [
+          { description: 'Internal Battery Replacement & Calibration', amount: 450 }
+        ],
+        partsItems: [
+          { itemCode: 'PART-BAT-HP-HT03XL', partName: 'HP Original HT03XL 3-Cell Laptop Battery', qty: 1, rate: 2950, amount: 2950 }
+        ],
+        totalLabour: 450,
+        totalParts: 2950,
+        subtotal: 3400,
+        discount: 0,
+        taxRate: 18,
+        taxAmount: 612,
+        grandTotal: 4012,
+        invoiceId: null
+      },
+      {
+        id: 'JC-2026-0003',
+        date: todayStr,
+        deliveryDate: todayStr,
+        customerName: 'Kiran Rao',
+        customerMobile: '9741234567',
+        customerAddress: 'Whitefield Main Rd, Bangalore',
+        deviceType: 'Desktop',
+        deviceBrand: 'Custom PC',
+        deviceModel: 'Intel Core i5 Workstation Rig',
+        deviceSerial: 'RIG-2025-998',
+        complaint: 'Windows BSOD (Blue Screen 0x0000007E) on startup, RAM upgrade to 32GB requested.',
+        technician: 'Software & OS Specialist',
+        techRemarks: 'Corrupt OS drivers repaired, BIOS updated, RAM installed and dual channel memtested.',
+        status: 'Open',
+        labourItems: [
+          { description: 'OS Driver Recovery, Malware Removal & BIOS Flash', amount: 800 }
+        ],
+        partsItems: [
+          { itemCode: 'RAM-CORSAIR-16G-D5', partName: 'Corsair Vengeance 16GB DDR5 5600MHz RAM', qty: 1, rate: 5200, amount: 5200 }
+        ],
+        totalLabour: 800,
+        totalParts: 5200,
+        subtotal: 6000,
+        discount: 0,
+        taxRate: 18,
+        taxAmount: 1080,
+        grandTotal: 7080,
+        invoiceId: null
+      }
+    ];
+    saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+  }
+
+  // Seed Initial Estimations
+  if (!state.serviceEstimations || state.serviceEstimations.length === 0) {
+    state.serviceEstimations = [
+      {
+        id: 'EST-2026-0001',
+        date: todayStr,
+        customerName: 'Siddharth Roy',
+        customerMobile: '9845667788',
+        customerAddress: 'HSR Layout Sector 2, Bangalore',
+        deviceType: 'Laptop',
+        deviceBrand: 'Lenovo',
+        deviceModel: 'IdeaPad Gaming 3',
+        deviceSerial: 'MP23K8L',
+        complaint: 'Liquid spill on keyboard, fan making loud rattling noise.',
+        labourAmount: 950,
+        partsAmount: 3200,
+        accessoriesAmount: 0,
+        otherCharges: 200,
+        subtotal: 4350,
+        discount: 150,
+        taxRate: 18,
+        taxAmount: 756,
+        totalAmount: 4956,
+        notes: 'Includes motherboard chemical wash & fan lubrication. Replacement keyboard is genuine Lenovo OEM with 6 months warranty.',
+        status: 'Draft',
+        convertedJobCardId: null,
+        labourItems: [
+          { description: 'Motherboard Chemical Decontamination & Ultrasonic Wash', amount: 650 },
+          { description: 'Fan Lubrication & Deep Cleaning Labour', amount: 300 }
+        ],
+        partsItems: [
+          { itemCode: 'PART-LAP-KB-DELL', partName: 'Lenovo IdeaPad Replacement Keyboard', qty: 1, rate: 3200, amount: 3200 }
+        ]
+      }
+    ];
+    saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+  }
+
+  // Seed Initial Service Invoices
+  if (!state.serviceInvoices || state.serviceInvoices.length === 0) {
+    state.serviceInvoices = [
+      {
+        id: 'SINV-2026-0001',
+        invoiceNo: 'SINV-2026-0001',
+        jobCardId: 'JC-2026-0001',
+        date: todayStr,
+        customerName: 'Vikram Patel',
+        customerMobile: '9845011223',
+        customerAddress: 'Indiranagar 100ft Rd, Bangalore',
+        deviceType: 'Laptop',
+        deviceBrand: 'Dell',
+        deviceModel: 'Inspiron 15 3520',
+        deviceSerial: '8H3G9X2',
+        labourAmount: 1150,
+        partsAmount: 5700,
+        subtotal: 6850,
+        discount: 250,
+        gstRate: 18,
+        gstAmount: 1188,
+        grandTotal: 7788,
+        paymentStatus: 'Paid',
+        paymentMethod: 'UPI',
+        paidAmount: 7788,
+        balanceAmount: 0,
+        items: [
+          { name: 'Screen Panel Replacement Labour & Diagnostics', type: 'Labour', qty: 1, rate: 650, amount: 650 },
+          { name: 'Thermal Paste Re-application & Cooling Fan Servicing', type: 'Labour', qty: 1, rate: 500, amount: 500 },
+          { name: '15.6" Full HD IPS 30-Pin Laptop Display Panel', type: 'Spare Part', qty: 1, rate: 4950, amount: 4950 },
+          { name: 'Arctic MX-4 High-Performance Thermal Compound', type: 'Spare Part', qty: 1, rate: 750, amount: 750 }
+        ]
+      }
+    ];
+    saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
+  }
 }
 
 // ==========================================================================
 // CENTRAL STOCK CALCULATION ENGINE & LEDGER
 // ==========================================================================
-// Stock Formula: Available Stock = Opening + Purchase + Sales Return - Sales - Purchase Return +/- Adjustment - PC Consumed + PC Produced
+// Stock Formula: Available Stock = Opening + Purchase + Sales Return - Sales - Purchase Return +/- Adjustment - PC Consumed + PC Produced - Service Consumed
 function calculateAvailableStock(item) {
   const opening = parseFloat(item.openingStock || 0);
   const purchase = parseFloat(item.purchaseQty || 0);
@@ -490,8 +856,9 @@ function calculateAvailableStock(item) {
   const adjustment = parseFloat(item.adjustmentQty || 0);
   const pcConsumed = parseFloat(item.pcConsumedQty || 0);
   const pcProduced = parseFloat(item.pcProducedQty || 0);
+  const serviceConsumed = parseFloat(item.serviceConsumedQty || 0);
 
-  return opening + purchase + salesReturn - sales - purchaseReturn + adjustment - pcConsumed + pcProduced;
+  return opening + purchase + salesReturn - sales - purchaseReturn + adjustment - pcConsumed + pcProduced - serviceConsumed;
 }
 
 // Get Stock Status: Available / Low Stock / Out of Stock
@@ -533,6 +900,7 @@ function recordStockMovement({ itemCode, itemName, category, type, refNo, inQty 
       adjustmentQty: 0,
       pcConsumedQty: 0,
       pcProducedQty: 0,
+      serviceConsumedQty: 0,
       openingStock: 0,
       availableStock: 0,
       purchaseRate: unitCost,
@@ -568,6 +936,10 @@ function recordStockMovement({ itemCode, itemName, category, type, refNo, inQty 
   } else if (type === 'PC_BUILD_PRODUCE') {
     item.pcProducedQty = (parseFloat(item.pcProducedQty || 0) + inQty);
     if (unitCost > 0) item.purchaseRate = unitCost;
+  } else if (type === 'SERVICE_CONSUME') {
+    item.serviceConsumedQty = (parseFloat(item.serviceConsumedQty || 0) + outQty);
+  } else if (type === 'SERVICE_REVERSAL') {
+    item.serviceConsumedQty = Math.max(0, parseFloat(item.serviceConsumedQty || 0) - inQty);
   }
 
   // Recalculate Available Stock
@@ -601,7 +973,7 @@ function recordStockMovement({ itemCode, itemName, category, type, refNo, inQty 
 function addActivity(type, description) {
   const newActivity = {
     id: 'ACT-' + Date.now(),
-    type: type, // 'enquiry', 'booking', 'billing', 'purchase', 'inventory', 'pcbuild', 'return'
+    type: type, // 'enquiry', 'booking', 'billing', 'purchase', 'inventory', 'pcbuild', 'return', 'service'
     description: description,
     timestamp: new Date().toISOString()
   };
@@ -690,6 +1062,8 @@ function setupNavigation() {
       // Trigger context re-renders
       if (targetSectionId === 'dashboard') {
         renderDashboard();
+      } else if (targetSectionId === 'service') {
+        renderServiceModule();
       } else if (targetSectionId === 'purchases') {
         renderPurchasesTable();
       } else if (targetSectionId === 'inventory') {
@@ -751,6 +1125,25 @@ function setupSubTabs() {
       if (targetPane) targetPane.classList.add('active');
     });
   });
+
+  // Service Sub-Tabs
+  const serviceTabs = document.querySelectorAll('[data-service-tab]');
+  serviceTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      serviceTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-service-tab');
+      document.querySelectorAll('#service-section .sub-tab-pane').forEach(p => p.classList.remove('active'));
+      const targetPane = document.getElementById(`service-tab-${target}`);
+      if (targetPane) targetPane.classList.add('active');
+
+      if (target === 'jobcards') renderJobCardsTable();
+      else if (target === 'estimations') renderEstimationsTable();
+      else if (target === 'invoices') renderServiceInvoicesTable();
+      else if (target === 'history') renderServiceHistorySearch();
+      else if (target === 'customers') renderServiceCustomersTable();
+    });
+  });
 }
 
 // Helper to handle Modal Opening/Closing
@@ -790,6 +1183,38 @@ function setupEventListeners() {
   setupModalToggle(null, 'close-purchase-view-btn', 'close-purchase-view-btn2', 'purchase-view-modal');
   setupModalToggle(null, 'close-pc-view-btn', 'close-pc-view-btn2', 'pc-view-modal');
   setupModalToggle(null, 'close-serial-modal-btn', 'close-serial-modal-btn2', 'serial-modal');
+
+  // Service modals: close/cancel only. Open buttons must call openJobCardModal / openEstimationModal
+  // (those reset the form, generate numbers, and then show the modal). Do not also bind
+  // setupModalToggle on the New buttons — that only adds .active and duplicates listeners.
+  setupModalToggle(null, 'close-jobcard-modal-btn', 'cancel-jobcard-btn', 'jobcard-modal');
+  setupModalToggle(null, 'close-estimation-modal-btn', 'cancel-estimation-btn', 'estimation-modal');
+  setupModalToggle(null, 'close-svc-inv-modal-btn', 'cancel-svc-inv-btn', 'svc-invoice-modal');
+  setupModalToggle(null, 'close-jobcard-view-btn', 'close-jobcard-view-btn2', 'jobcard-view-modal');
+  setupModalToggle(null, 'close-estimation-view-btn', 'close-estimation-view-btn2', 'estimation-view-modal');
+  setupModalToggle(null, 'close-svc-inv-view-btn', 'close-svc-inv-view-btn2', 'svc-invoice-view-modal');
+
+  // Service Print Buttons
+  const printJobCardBtn = document.getElementById('print-jobcard-btn');
+  if (printJobCardBtn) printJobCardBtn.addEventListener('click', () => {
+    document.body.classList.add('printing-modal');
+    window.print();
+    window.addEventListener('afterprint', () => document.body.classList.remove('printing-modal'), { once: true });
+  });
+
+  const printEstimationBtn = document.getElementById('print-estimation-btn');
+  if (printEstimationBtn) printEstimationBtn.addEventListener('click', () => {
+    document.body.classList.add('printing-modal');
+    window.print();
+    window.addEventListener('afterprint', () => document.body.classList.remove('printing-modal'), { once: true });
+  });
+
+  const printSvcInvBtn = document.getElementById('print-svc-inv-btn');
+  if (printSvcInvBtn) printSvcInvBtn.addEventListener('click', () => {
+    document.body.classList.add('printing-modal');
+    window.print();
+    window.addEventListener('afterprint', () => document.body.classList.remove('printing-modal'), { once: true });
+  });
 
   const printPCSpecBtn = document.getElementById('print-pc-spec-btn');
   if (printPCSpecBtn) printPCSpecBtn.addEventListener('click', () => {
@@ -1104,6 +1529,116 @@ function setupEventListeners() {
 
   if (reportExportBtn) reportExportBtn.addEventListener('click', handleReportExport);
   if (reportPrintBtn) reportPrintBtn.addEventListener('click', handleReportPrint);
+
+  // --- Service Module Listeners ---
+  setupCustomerAutoFill('jobcard-customer-name', 'jobcard-customer-mobile', 'jobcard-customer-address');
+  setupCustomerAutoFill('estimation-customer-name', 'estimation-customer-mobile', 'estimation-customer-address');
+
+  const openJobCardBtn = document.getElementById('open-new-jobcard-btn');
+  if (openJobCardBtn) {
+    openJobCardBtn.addEventListener('click', () => {
+      openJobCardModal();
+    });
+  }
+
+  const openEstBtn = document.getElementById('open-new-estimation-btn');
+  if (openEstBtn) {
+    openEstBtn.addEventListener('click', () => {
+      openEstimationModal();
+    });
+  }
+
+  // Job Card Dynamic Row Adders
+  const addJcLabourBtn = document.getElementById('add-jobcard-labour-btn');
+  if (addJcLabourBtn) addJcLabourBtn.addEventListener('click', () => addJobCardLabourRow());
+
+  const addJcPartBtn = document.getElementById('add-jobcard-part-btn');
+  if (addJcPartBtn) addJcPartBtn.addEventListener('click', () => addJobCardPartRow());
+
+  // Job Card Form & Recalculations
+  const jobcardForm = document.getElementById('jobcard-form');
+  if (jobcardForm) jobcardForm.addEventListener('submit', handleJobCardSubmit);
+
+  const jobcardDiscount = document.getElementById('jobcard-discount');
+  const jobcardTaxRate = document.getElementById('jobcard-tax-rate');
+  if (jobcardDiscount) jobcardDiscount.addEventListener('input', recalcJobCardTotals);
+  if (jobcardTaxRate) jobcardTaxRate.addEventListener('change', recalcJobCardTotals);
+
+  // Job Card Filters
+  const jobcardSearch = document.getElementById('jobcard-search');
+  const jobcardFilterStatus = document.getElementById('jobcard-filter-status');
+  const jobcardFilterType = document.getElementById('jobcard-filter-type');
+  const resetJobcardFiltersBtn = document.getElementById('reset-jobcard-filters-btn');
+
+  if (jobcardSearch) jobcardSearch.addEventListener('input', renderJobCardsTable);
+  if (jobcardFilterStatus) jobcardFilterStatus.addEventListener('change', renderJobCardsTable);
+  if (jobcardFilterType) jobcardFilterType.addEventListener('change', renderJobCardsTable);
+  if (resetJobcardFiltersBtn) {
+    resetJobcardFiltersBtn.addEventListener('click', () => {
+      if (jobcardSearch) jobcardSearch.value = '';
+      if (jobcardFilterStatus) jobcardFilterStatus.value = 'All';
+      if (jobcardFilterType) jobcardFilterType.value = 'All';
+      renderJobCardsTable();
+    });
+  }
+
+  // Estimation Form & Calculators
+  const estimationForm = document.getElementById('estimation-form');
+  if (estimationForm) estimationForm.addEventListener('submit', handleEstimationSubmit);
+
+  // Estimation Add Row Buttons
+  const addEstLabourBtn = document.getElementById('add-est-labour-btn');
+  if (addEstLabourBtn) addEstLabourBtn.addEventListener('click', () => addEstimationLabourRow());
+
+  const addEstPartBtn = document.getElementById('add-est-part-btn');
+  if (addEstPartBtn) addEstPartBtn.addEventListener('click', () => addEstimationPartRow());
+
+  // Estimation static inputs that trigger recalc
+  ['estimation-accessories', 'estimation-other-charges', 'estimation-discount'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalcEstimationTotals);
+  });
+  const estTaxRate = document.getElementById('estimation-tax-rate');
+  if (estTaxRate) estTaxRate.addEventListener('change', recalcEstimationTotals);
+
+  const estimationSearch = document.getElementById('estimation-search');
+  const estimationFilterStatus = document.getElementById('estimation-filter-status');
+  if (estimationSearch) estimationSearch.addEventListener('input', renderEstimationsTable);
+  if (estimationFilterStatus) estimationFilterStatus.addEventListener('change', renderEstimationsTable);
+
+  // Service Invoice Form & Calculators
+  const svcInvForm = document.getElementById('svc-invoice-form');
+  if (svcInvForm) svcInvForm.addEventListener('submit', handleServiceInvoiceSubmit);
+
+  const svcInvJobCardSelect = document.getElementById('svc-inv-jobcard-select');
+  if (svcInvJobCardSelect) svcInvJobCardSelect.addEventListener('change', handleServiceInvoiceJobCardSelection);
+
+  ['svc-inv-labour-amt', 'svc-inv-parts-amt', 'svc-inv-discount', 'svc-inv-paid-amt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalcServiceInvoiceTotals);
+  });
+  const svcInvGstRate = document.getElementById('svc-inv-gst-rate');
+  if (svcInvGstRate) svcInvGstRate.addEventListener('change', recalcServiceInvoiceTotals);
+
+  const svcInvSearch = document.getElementById('svc-inv-search');
+  const svcInvFilterPay = document.getElementById('svc-inv-filter-payment');
+  if (svcInvSearch) svcInvSearch.addEventListener('input', renderServiceInvoicesTable);
+  if (svcInvFilterPay) svcInvFilterPay.addEventListener('change', renderServiceInvoicesTable);
+
+  // Service History Search
+  const historySearchInput = document.getElementById('history-search-input');
+  const clearHistorySearchBtn = document.getElementById('clear-history-search-btn');
+  if (historySearchInput) historySearchInput.addEventListener('input', renderServiceHistorySearch);
+  if (clearHistorySearchBtn) {
+    clearHistorySearchBtn.addEventListener('click', () => {
+      if (historySearchInput) historySearchInput.value = '';
+      renderServiceHistorySearch();
+    });
+  }
+
+  // Service Customer Search
+  const svcCustomerSearch = document.getElementById('svc-customer-search');
+  if (svcCustomerSearch) svcCustomerSearch.addEventListener('input', renderServiceCustomersTable);
 }
 
 // ==========================================================================
@@ -1129,6 +1664,10 @@ function renderDashboard() {
     if (item.category === 'Finished PC') finishedPCCount += Math.max(0, avail);
   });
 
+  // Service Dashboard summary for main page
+  const activeServiceJobs = (state.serviceJobCards || []).filter(j => j.status !== 'Closed' && j.status !== 'Delivered').length;
+  const readyServiceJobs = (state.serviceJobCards || []).filter(j => j.status === 'Ready').length;
+
   // DOM Elements
   const elEnq = document.getElementById('dash-total-enquiries');
   const elBkg = document.getElementById('dash-total-bookings');
@@ -1139,6 +1678,8 @@ function renderDashboard() {
   const elPurchCount = document.getElementById('dash-purchase-invoices-count');
   const elLowStock = document.getElementById('dash-low-stock-count');
   const elFinishedPCs = document.getElementById('dash-finished-pcs-count');
+  const elActiveService = document.getElementById('dash-active-jobs-count');
+  const elReadyService = document.getElementById('dash-service-ready-count');
 
   if (elEnq) elEnq.textContent = totalEnquiriesCount;
   if (elBkg) elBkg.textContent = totalBookingsCount;
@@ -1149,6 +1690,8 @@ function renderDashboard() {
   if (elPurchCount) elPurchCount.textContent = `${state.purchases.length} purchase bills`;
   if (elLowStock) elLowStock.textContent = lowStockCount;
   if (elFinishedPCs) elFinishedPCs.textContent = finishedPCCount;
+  if (elActiveService) elActiveService.textContent = activeServiceJobs;
+  if (elReadyService) elReadyService.textContent = `${readyServiceJobs} ready for delivery`;
 
   // Enquiry breakdown
   const counts = { New: 0, 'Follow Up': 0, Booking: 0, Cancelled: 0 };
@@ -1186,6 +1729,8 @@ function renderDashboard() {
           iconSvg = `<svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`;
         } else if (act.type === 'pcbuild') {
           iconSvg = `<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>`;
+        } else if (act.type === 'service') {
+          iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
         } else {
           iconSvg = `<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
         }
@@ -2975,6 +3520,1830 @@ function renderStockLedgerTable() {
   }).join('');
 }
 
+// ==========================================================================
+// SERVICE & REPAIR MODULE CONTROLLER
+// ==========================================================================
+
+function renderServiceModule() {
+  renderServiceDashboard();
+  renderJobCardsTable();
+  renderEstimationsTable();
+  renderServiceInvoicesTable();
+  renderServiceHistorySearch();
+  renderServiceCustomersTable();
+  populateServiceCustomerSuggestions();
+}
+
+// 1. Service Dashboard Metrics
+function renderServiceDashboard() {
+  const jobCards = state.serviceJobCards || [];
+  const invoices = state.serviceInvoices || [];
+  const todayStr = getTodayDateString();
+
+  const openCount = jobCards.filter(j => j.status === 'Open').length;
+  const underServiceCount = jobCards.filter(j => j.status === 'Under Service').length;
+  const readyCount = jobCards.filter(j => j.status === 'Ready').length;
+  const closedCount = jobCards.filter(j => j.status === 'Closed' || j.status === 'Delivered').length;
+  const todayCount = jobCards.filter(j => j.date === todayStr).length;
+
+  // Pending Payments
+  const pendingInvoices = invoices.filter(inv => inv.paymentStatus === 'Pending' || inv.paymentStatus === 'Partially Paid');
+  const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
+
+  // Today's Service Revenue
+  const todayRevenue = invoices.filter(inv => inv.date === todayStr).reduce((sum, inv) => sum + (parseFloat(inv.grandTotal) || 0), 0);
+
+  const elOpen = document.getElementById('svc-metric-open-count');
+  const elUnder = document.getElementById('svc-metric-underservice-count');
+  const elReady = document.getElementById('svc-metric-ready-count');
+  const elClosed = document.getElementById('svc-metric-closed-count');
+  const elToday = document.getElementById('svc-metric-today-count');
+  const elPendingPay = document.getElementById('svc-metric-pending-pay');
+  const elPendingCount = document.getElementById('svc-metric-pending-count');
+  const elTodayAmt = document.getElementById('svc-metric-today-amt');
+
+  if (elOpen) elOpen.textContent = openCount;
+  if (elUnder) elUnder.textContent = underServiceCount;
+  if (elReady) elReady.textContent = readyCount;
+  if (elClosed) elClosed.textContent = closedCount;
+  if (elToday) elToday.textContent = todayCount;
+  if (elPendingPay) elPendingPay.textContent = formatCurrency(pendingAmount);
+  if (elPendingCount) elPendingCount.textContent = `${pendingInvoices.length} pending / partial bills`;
+  if (elTodayAmt) elTodayAmt.textContent = formatCurrency(todayRevenue);
+}
+
+// 2. ID Generators
+function generateJobCardNumber() {
+  const currentYear = new Date().getFullYear();
+  const list = state.serviceJobCards || [];
+  const nextNum = list.length + 1;
+  return `JC-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+}
+
+function generateEstimationNumber() {
+  const currentYear = new Date().getFullYear();
+  const list = state.serviceEstimations || [];
+  const nextNum = list.length + 1;
+  return `EST-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+}
+
+function generateServiceInvoiceNumber() {
+  const currentYear = new Date().getFullYear();
+  const list = state.serviceInvoices || [];
+  const nextNum = list.length + 1;
+  return `SINV-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+}
+
+// 3. Render Job Cards Table
+function renderJobCardsTable() {
+  const tableBody = document.getElementById('jobcard-table-body');
+  if (!tableBody) return;
+
+  const searchVal = document.getElementById('jobcard-search') ? document.getElementById('jobcard-search').value.toLowerCase().trim() : '';
+  const statusFilter = document.getElementById('jobcard-filter-status') ? document.getElementById('jobcard-filter-status').value : 'All';
+  const typeFilter = document.getElementById('jobcard-filter-type') ? document.getElementById('jobcard-filter-type').value : 'All';
+
+  let filtered = (state.serviceJobCards || []).filter(jc => {
+    const matchSearch = (jc.id || '').toLowerCase().includes(searchVal) ||
+      (jc.customerName || '').toLowerCase().includes(searchVal) ||
+      (jc.customerMobile || '').includes(searchVal) ||
+      (jc.deviceSerial || '').toLowerCase().includes(searchVal) ||
+      (jc.deviceBrand || '').toLowerCase().includes(searchVal) ||
+      (jc.deviceModel || '').toLowerCase().includes(searchVal);
+
+    const matchStatus = statusFilter === 'All' || jc.status === statusFilter;
+    const matchType = typeFilter === 'All' || jc.deviceType === typeFilter;
+
+    return matchSearch && matchStatus && matchType;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="10" class="no-data-msg">No Job Cards found matching criteria.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(jc => {
+    let statusClass = 'badge-open';
+    if (jc.status === 'Under Service') statusClass = 'badge-under-service';
+    if (jc.status === 'Ready') statusClass = 'badge-ready';
+    if (jc.status === 'Delivered') statusClass = 'badge-delivered';
+    if (jc.status === 'Closed') statusClass = 'badge-closed';
+
+    const hasInvoice = !!jc.invoiceId;
+
+    return `
+      <tr>
+        <td>
+          <a href="#" onclick="openJobCardPrintModal('${jc.id}'); return false;" style="font-family: monospace; font-weight: 700; color: var(--primary); text-decoration: underline;">
+            ${jc.id}
+          </a>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${formatDate(jc.date)}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Exp: ${formatDate(jc.deliveryDate || jc.date)}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${jc.customerName}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">${jc.customerMobile}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${jc.deviceBrand} ${jc.deviceModel}</div>
+          <span class="device-chip">${jc.deviceType || 'Device'}</span>
+        </td>
+        <td style="font-family: monospace; font-size: 0.8rem;">${jc.deviceSerial || '--'}</td>
+        <td style="max-width: 200px; font-size: 0.82rem;" title="${jc.complaint}">
+          ${(jc.complaint || '').length > 45 ? jc.complaint.substring(0, 45) + '...' : jc.complaint}
+        </td>
+        <td style="font-size: 0.85rem;">${jc.technician}</td>
+        <td style="font-weight: 700; color: var(--primary);">
+          ${formatCurrency(jc.grandTotal || (parseFloat(jc.totalLabour || 0) + parseFloat(jc.totalParts || 0)))}
+        </td>
+        <td>
+          <select class="status-select-badge ${statusClass}" onchange="updateJobCardStatus('${jc.id}', this.value)" style="border-radius: 9999px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 700; border: none; cursor: pointer;">
+            <option value="Open" ${jc.status === 'Open' ? 'selected' : ''}>Open</option>
+            <option value="Under Service" ${jc.status === 'Under Service' ? 'selected' : ''}>Under Service</option>
+            <option value="Ready" ${jc.status === 'Ready' ? 'selected' : ''}>Ready</option>
+            <option value="Delivered" ${jc.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+            <option value="Closed" ${jc.status === 'Closed' ? 'selected' : ''}>Closed</option>
+          </select>
+        </td>
+        <td>
+          <div class="action-btn-group" style="display: flex; gap: 0.35rem; align-items: center;">
+            <button class="btn btn-secondary btn-sm" onclick="openJobCardPrintModal('${jc.id}')" title="Print Job Sheet / Job Card">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="openJobCardModal('${jc.id}')" title="Edit Job Card">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            ${!hasInvoice ? `
+              <button class="btn btn-primary btn-sm" onclick="openServiceInvoiceModal(null, '${jc.id}')" title="Generate Service Bill / Invoice">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </button>
+            ` : `
+              <button class="btn btn-success btn-sm" onclick="openServiceInvoicePrintModal('${jc.invoiceId}')" title="View Service Invoice (${jc.invoiceId})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </button>
+            `}
+            <button class="btn btn-danger btn-sm" onclick="deleteJobCard('${jc.id}')" title="Delete Job Card">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// 4. Render Estimations Table
+function renderEstimationsTable() {
+  const tableBody = document.getElementById('estimation-table-body');
+  if (!tableBody) return;
+
+  const searchVal = document.getElementById('estimation-search') ? document.getElementById('estimation-search').value.toLowerCase().trim() : '';
+  const statusFilter = document.getElementById('estimation-filter-status') ? document.getElementById('estimation-filter-status').value : 'All';
+
+  let filtered = (state.serviceEstimations || []).filter(est => {
+    const matchSearch = (est.id || '').toLowerCase().includes(searchVal) ||
+      (est.customerName || '').toLowerCase().includes(searchVal) ||
+      (est.customerMobile || '').includes(searchVal) ||
+      (est.deviceBrand || '').toLowerCase().includes(searchVal) ||
+      (est.deviceModel || '').toLowerCase().includes(searchVal);
+
+    const matchStatus = statusFilter === 'All' || est.status === statusFilter;
+    return matchSearch && matchStatus;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="10" class="no-data-msg">No estimations found.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(est => {
+    let badgeClass = 'badge-draft';
+    if (est.status === 'Approved') badgeClass = 'badge-approved';
+    if (est.status === 'Rejected') badgeClass = 'badge-rejected';
+
+    const partsAndAcc = (parseFloat(est.partsAmount || 0) + parseFloat(est.accessoriesAmount || 0) + parseFloat(est.otherCharges || 0));
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--primary);">${est.id}</td>
+        <td>${formatDate(est.date)}</td>
+        <td>
+          <div style="font-weight: 600;">${est.customerName}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">${est.customerMobile}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${est.deviceBrand} ${est.deviceModel}</div>
+          <span class="device-chip">${est.deviceType}</span>
+        </td>
+        <td>${formatCurrency(est.labourAmount)}</td>
+        <td>${formatCurrency(partsAndAcc)}</td>
+        <td>${formatCurrency(est.taxAmount)}</td>
+        <td style="font-weight: 700; color: var(--primary); font-size: 1rem;">${formatCurrency(est.totalAmount)}</td>
+        <td><span class="badge ${badgeClass}">${est.status}</span></td>
+        <td>
+          <div class="action-btn-group" style="display: flex; gap: 0.35rem; align-items: center;">
+            <button class="btn btn-secondary btn-sm" onclick="openEstimationPrintModal('${est.id}')" title="Print Quotation / Estimate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </button>
+            ${est.status !== 'Approved' ? `
+              <button class="btn btn-success btn-sm" onclick="convertEstimationToJobCard('${est.id}')" title="Convert to Job Card (Customer Approved)">
+                ⚡ Convert to Job Card
+              </button>
+            ` : `
+              <span class="badge badge-ready" title="Job Card Created: ${est.convertedJobCardId || ''}">Job Card Active</span>
+            `}
+            <button class="btn btn-secondary btn-sm" onclick="openEstimationModal('${est.id}')" title="Edit Estimate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEstimation('${est.id}')" title="Delete Estimate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// 5. Render Service Invoices Table
+function renderServiceInvoicesTable() {
+  const tableBody = document.getElementById('svc-invoice-table-body');
+  if (!tableBody) return;
+
+  const searchVal = document.getElementById('svc-inv-search') ? document.getElementById('svc-inv-search').value.toLowerCase().trim() : '';
+  const paymentFilter = document.getElementById('svc-inv-filter-payment') ? document.getElementById('svc-inv-filter-payment').value : 'All';
+
+  let filtered = (state.serviceInvoices || []).filter(inv => {
+    const matchSearch = (inv.invoiceNo || '').toLowerCase().includes(searchVal) ||
+      (inv.jobCardId || '').toLowerCase().includes(searchVal) ||
+      (inv.customerName || '').toLowerCase().includes(searchVal) ||
+      (inv.customerMobile || '').includes(searchVal);
+
+    const matchPayment = paymentFilter === 'All' || inv.paymentStatus === paymentFilter;
+    return matchSearch && matchPayment;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="11" class="no-data-msg">No Service Invoices found.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(inv => {
+    let payClass = 'badge-paid';
+    if (inv.paymentStatus === 'Partially Paid') payClass = 'badge-partial';
+    if (inv.paymentStatus === 'Pending') payClass = 'badge-pending';
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--primary);">${inv.invoiceNo}</td>
+        <td>${formatDate(inv.date)}</td>
+        <td style="font-family: monospace;">${inv.jobCardId || '--'}</td>
+        <td>
+          <div style="font-weight: 600;">${inv.customerName}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">${inv.customerMobile}</div>
+        </td>
+        <td>
+          <div>${inv.deviceBrand} ${inv.deviceModel}</div>
+          <span class="device-chip">${inv.deviceType}</span>
+        </td>
+        <td>${formatCurrency(inv.labourAmount)}</td>
+        <td>${formatCurrency(inv.partsAmount)}</td>
+        <td>${formatCurrency(inv.gstAmount)}</td>
+        <td style="font-weight: 800; color: var(--primary);">${formatCurrency(inv.grandTotal)}</td>
+        <td>
+          <span class="badge ${payClass}">${inv.paymentStatus}</span>
+          ${inv.paymentStatus === 'Partially Paid' ? `<div style="font-size:0.75rem; color:var(--danger-dark); font-weight:600;">Bal: ${formatCurrency(inv.balanceAmount)}</div>` : ''}
+        </td>
+        <td>
+          <div class="action-btn-group" style="display: flex; gap: 0.35rem; align-items: center;">
+            <button class="btn btn-primary btn-sm" onclick="openServiceInvoicePrintModal('${inv.id || inv.invoiceNo}')" title="Print Service Invoice">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="openServiceInvoiceModal('${inv.id || inv.invoiceNo}')" title="Edit / Update Payment">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteServiceInvoice('${inv.id || inv.invoiceNo}')" title="Delete Invoice">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// 6. Render Service History Search (Customer / Device History)
+function renderServiceHistorySearch() {
+  const container = document.getElementById('service-history-results-container');
+  if (!container) return;
+
+  const searchInput = document.getElementById('history-search-input');
+  const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+  const jobCards = state.serviceJobCards || [];
+  const invoices = state.serviceInvoices || [];
+
+  if (jobCards.length === 0) {
+    container.innerHTML = `<div class="no-data-msg" style="padding: 2rem;">No service history records yet.</div>`;
+    return;
+  }
+
+  // Filter job cards
+  let matchedCards = jobCards.filter(jc => {
+    if (!searchVal) return true; // Show all when empty
+    return (jc.customerName || '').toLowerCase().includes(searchVal) ||
+      (jc.customerMobile || '').includes(searchVal) ||
+      (jc.deviceSerial || '').toLowerCase().includes(searchVal) ||
+      (jc.id || '').toLowerCase().includes(searchVal) ||
+      (jc.invoiceId || '').toLowerCase().includes(searchVal) ||
+      (jc.deviceBrand || '').toLowerCase().includes(searchVal) ||
+      (jc.deviceModel || '').toLowerCase().includes(searchVal);
+  });
+
+  if (matchedCards.length === 0) {
+    container.innerHTML = `
+      <div class="no-data-msg" style="padding: 2.5rem; text-align: center;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.75rem; color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <h4>No Service History Records Found</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">No repairs matching "${searchVal}". Try searching with customer mobile number, serial tag, or Job Card #.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Group matched job cards by Customer & Device
+  const groups = {};
+  matchedCards.forEach(jc => {
+    const key = `${jc.customerMobile || jc.customerName}_${jc.deviceSerial || jc.deviceModel}`;
+    if (!groups[key]) {
+      groups[key] = {
+        customerName: jc.customerName,
+        customerMobile: jc.customerMobile,
+        customerAddress: jc.customerAddress,
+        deviceType: jc.deviceType,
+        deviceBrand: jc.deviceBrand,
+        deviceModel: jc.deviceModel,
+        deviceSerial: jc.deviceSerial,
+        services: []
+      };
+    }
+    groups[key].services.push(jc);
+  });
+
+  container.innerHTML = Object.values(groups).map(grp => {
+    const totalVisits = grp.services.length;
+    const totalSpent = grp.services.reduce((sum, s) => sum + (parseFloat(s.grandTotal) || 0), 0);
+
+    const timelineItems = grp.services.sort((a, b) => new Date(b.date) - new Date(a.date)).map(s => {
+      let statusBadge = 'badge-open';
+      if (s.status === 'Under Service') statusBadge = 'badge-under-service';
+      if (s.status === 'Ready') statusBadge = 'badge-ready';
+      if (s.status === 'Delivered') statusBadge = 'badge-delivered';
+      if (s.status === 'Closed') statusBadge = 'badge-closed';
+
+      const partsListHtml = (s.partsItems || []).map(p => `
+        <div style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 0.2rem;">
+          • <strong>${p.partName || p.itemCode}</strong> (Qty: ${p.qty || 1} @ ${formatCurrency(p.rate)}) = <strong>${formatCurrency(p.amount)}</strong>
+        </div>
+      `).join('');
+
+      const labourListHtml = (s.labourItems || []).map(l => `
+        <div style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 0.2rem;">
+          • ${l.description} = <strong>${formatCurrency(l.amount)}</strong>
+        </div>
+      `).join('');
+
+      return `
+        <div class="history-event-item">
+          <div class="history-event-header">
+            <div>
+              <span style="font-family: monospace; font-weight: 700; color: var(--primary); font-size: 0.95rem;">${s.id}</span>
+              <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 0.5rem;">${formatDate(s.date)}</span>
+            </div>
+            <span class="badge ${statusBadge}">${s.status}</span>
+          </div>
+
+          <div style="margin-bottom: 0.5rem; font-size: 0.85rem;">
+            <strong>Customer Complaint:</strong> <span style="color: var(--text-muted);">${s.complaint}</span>
+          </div>
+          
+          <div style="margin-bottom: 0.5rem; font-size: 0.85rem;">
+            <strong>Technician:</strong> ${s.technician || '--'}
+            ${s.techRemarks ? ` | <em>${s.techRemarks}</em>` : ''}
+          </div>
+
+          <!-- Parts & Labour Breakdown -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); margin: 0.5rem 0;">
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 0.35rem;">Labour Details</div>
+              ${labourListHtml || '<div style="font-size: 0.8rem; color: var(--text-muted);">No labour line items</div>'}
+              <div style="font-size: 0.8rem; font-weight: 700; margin-top: 0.25rem;">Total Labour: ${formatCurrency(s.totalLabour)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 0.35rem;">Parts Replaced from Stock</div>
+              ${partsListHtml || '<div style="font-size: 0.8rem; color: var(--text-muted);">No spare parts used</div>'}
+              <div style="font-size: 0.8rem; font-weight: 700; margin-top: 0.25rem;">Total Parts: ${formatCurrency(s.totalParts)}</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.9rem;">
+            <div><strong>Service Total Amount:</strong> <span style="color: var(--primary); font-weight: 800; font-size: 1.05rem;">${formatCurrency(s.grandTotal)}</span></div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary btn-sm" onclick="openJobCardPrintModal('${s.id}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Job Sheet
+              </button>
+              ${s.invoiceId ? `
+                <button class="btn btn-primary btn-sm" onclick="openServiceInvoicePrintModal('${s.invoiceId}')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  View Invoice (${s.invoiceId})
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="history-customer-card">
+        <div class="history-customer-header">
+          <div>
+            <div class="history-customer-title">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              ${grp.deviceBrand} ${grp.deviceModel}
+              <span class="device-chip">${grp.deviceType}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+              Serial / Service Tag: <strong style="font-family: monospace; color: var(--text-main);">${grp.deviceSerial || 'N/A'}</strong> | Owner: <strong>${grp.customerName}</strong> (${grp.customerMobile})
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${totalVisits} Service Job(s) Recorded</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">Total Spent: ${formatCurrency(totalSpent)}</div>
+          </div>
+        </div>
+
+        <!-- Timeline of Services -->
+        <div class="history-timeline">
+          ${timelineItems}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 7. Render Service Customers Table
+function renderServiceCustomersTable() {
+  const tableBody = document.getElementById('svc-customers-table-body');
+  if (!tableBody) return;
+
+  const searchVal = document.getElementById('svc-customer-search') ? document.getElementById('svc-customer-search').value.toLowerCase().trim() : '';
+
+  const jobCards = state.serviceJobCards || [];
+  const customerMap = {};
+
+  jobCards.forEach(jc => {
+    const key = jc.customerMobile || jc.customerName;
+    if (!key) return;
+
+    if (!customerMap[key]) {
+      customerMap[key] = {
+        name: jc.customerName,
+        mobile: jc.customerMobile,
+        address: jc.customerAddress || '',
+        devices: new Set(),
+        totalServices: 0,
+        totalSpent: 0
+      };
+    }
+
+    customerMap[key].devices.add(`${jc.deviceBrand} ${jc.deviceModel} (${jc.deviceSerial || jc.deviceType})`);
+    customerMap[key].totalServices++;
+    customerMap[key].totalSpent += (parseFloat(jc.grandTotal) || 0);
+  });
+
+  let list = Object.values(customerMap).filter(c => {
+    return c.name.toLowerCase().includes(searchVal) ||
+      c.mobile.includes(searchVal) ||
+      Array.from(c.devices).some(d => d.toLowerCase().includes(searchVal));
+  });
+
+  if (list.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="7" class="no-data-msg">No service customer records found.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = list.map(c => {
+    const devicesList = Array.from(c.devices).map(d => `<span class="device-chip" style="margin-right: 0.35rem; margin-bottom: 0.25rem;">${d}</span>`).join('');
+
+    return `
+      <tr>
+        <td style="font-weight: 700;">${c.name}</td>
+        <td>${c.mobile}</td>
+        <td>${c.address || '--'}</td>
+        <td style="max-width: 250px;">${devicesList}</td>
+        <td style="text-align: center; font-weight: 700;">${c.totalServices}</td>
+        <td style="font-weight: 700; color: var(--primary);">${formatCurrency(c.totalSpent)}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="openNewJobCardForCustomer('${c.name}', '${c.mobile}', '${c.address}')">
+            + New Service
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.openNewJobCardForCustomer = function(name, mobile, address) {
+  openJobCardModal();
+  document.getElementById('jobcard-customer-name').value = name;
+  document.getElementById('jobcard-customer-mobile').value = mobile;
+  document.getElementById('jobcard-customer-address').value = address || '';
+};
+
+// 8. Datalist Auto-completion for Service Customers & Devices
+function populateServiceCustomerSuggestions() {
+  const dataList = document.getElementById('service-customer-list');
+  if (!dataList) return;
+
+  const names = new Set();
+  (state.enquiries || []).forEach(e => { if (e.name) names.add(e.name); });
+  (state.bookings || []).forEach(b => { if (b.name) names.add(b.name); });
+  (state.serviceJobCards || []).forEach(j => { if (j.customerName) names.add(j.customerName); });
+
+  dataList.innerHTML = Array.from(names).map(n => `<option value="${n}">`).join('');
+}
+
+// 9. Job Card Dynamic Rows (Labour & Parts)
+function addJobCardLabourRow(description = '', amount = 0) {
+  const container = document.getElementById('jobcard-labour-container');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'service-repeater-row labour-row';
+  row.innerHTML = `
+    <div>
+      <input type="text" class="jc-labour-desc" placeholder="e.g. OS Installation / Screen Replacement Labour / General Service" required value="${description}" style="font-size: 0.85rem;">
+    </div>
+    <div>
+      <input type="number" class="jc-labour-amt" placeholder="Rate ₹" min="0" step="0.01" value="${amount || ''}" required style="font-size: 0.85rem;" oninput="recalcJobCardTotals()">
+    </div>
+    <div>
+      <button type="button" class="btn-remove-row" onclick="this.closest('.service-repeater-row').remove(); recalcJobCardTotals();" title="Remove row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(row);
+  recalcJobCardTotals();
+}
+
+function addJobCardPartRow(itemCode = '', partName = '', qty = 1, rate = 0) {
+  const container = document.getElementById('jobcard-parts-container');
+  if (!container) return;
+
+  // Build stock item options
+  const stockOptions = state.inventory.map(item => {
+    const avail = calculateAvailableStock(item);
+    const selected = item.itemCode === itemCode ? 'selected' : '';
+    return `<option value="${item.itemCode}" data-name="${item.itemName}" data-rate="${item.sellingRate || item.purchaseRate}" data-avail="${avail}" ${selected}>
+      [Stock: ${avail}] ${item.itemName} - ₹${item.sellingRate || item.purchaseRate}
+    </option>`;
+  }).join('');
+
+  const row = document.createElement('div');
+  row.className = 'service-repeater-row part-row';
+  row.innerHTML = `
+    <div>
+      <select class="jc-part-select" onchange="handleJobCardPartSelect(this)" style="font-size: 0.85rem; width: 100%;">
+        <option value="">-- Choose Spare Part from Stock (or type custom) --</option>
+        ${stockOptions}
+      </select>
+      <input type="text" class="jc-part-custom-name" placeholder="Part description" value="${partName}" style="font-size: 0.82rem; margin-top: 0.25rem;">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Qty</label>
+      <input type="number" class="jc-part-qty" min="1" step="1" value="${qty || 1}" required style="font-size: 0.85rem;" oninput="handleJobCardPartQtyOrRateChange(this)">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Unit Rate (₹)</label>
+      <input type="number" class="jc-part-rate" min="0" step="0.01" value="${rate || ''}" required style="font-size: 0.85rem;" oninput="handleJobCardPartQtyOrRateChange(this)">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Amount (₹)</label>
+      <input type="text" class="jc-part-amount" readonly value="${(qty * rate).toFixed(2)}" style="font-size: 0.85rem; background: var(--secondary-light); font-weight: 700;">
+    </div>
+    <div>
+      <button type="button" class="btn-remove-row" onclick="this.closest('.service-repeater-row').remove(); recalcJobCardTotals();" title="Remove part" style="margin-top: 1rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(row);
+  recalcJobCardTotals();
+}
+
+window.handleJobCardPartSelect = function(selectEl) {
+  const row = selectEl.closest('.service-repeater-row');
+  if (!row) return;
+
+  const selectedOpt = selectEl.options[selectEl.selectedIndex];
+  if (selectedOpt && selectedOpt.value) {
+    const itemName = selectedOpt.getAttribute('data-name');
+    const rate = parseFloat(selectedOpt.getAttribute('data-rate') || 0);
+    const avail = parseFloat(selectedOpt.getAttribute('data-avail') || 0);
+
+    const nameInput = row.querySelector('.jc-part-custom-name');
+    const rateInput = row.querySelector('.jc-part-rate');
+    const qtyInput = row.querySelector('.jc-part-qty');
+    const amtInput = row.querySelector('.jc-part-amount');
+
+    if (nameInput) nameInput.value = itemName;
+    if (rateInput) rateInput.value = rate;
+    const qty = parseFloat(qtyInput?.value || 1);
+    if (amtInput) amtInput.value = (qty * rate).toFixed(2);
+
+    if (avail <= 0) {
+      alert(`⚠️ Note: Selected item currently has 0 available stock. Please restock via Purchase module.`);
+    }
+  }
+  recalcJobCardTotals();
+};
+
+window.handleJobCardPartQtyOrRateChange = function(inputEl) {
+  const row = inputEl.closest('.service-repeater-row');
+  if (!row) return;
+  const qty = parseFloat(row.querySelector('.jc-part-qty')?.value || 0);
+  const rate = parseFloat(row.querySelector('.jc-part-rate')?.value || 0);
+  const amtInput = row.querySelector('.jc-part-amount');
+  if (amtInput) amtInput.value = (qty * rate).toFixed(2);
+  recalcJobCardTotals();
+};
+
+// 10. Recalculate Job Card Totals
+function recalcJobCardTotals() {
+  let totalLabour = 0;
+  document.querySelectorAll('#jobcard-labour-container .jc-labour-amt').forEach(el => {
+    totalLabour += parseFloat(el.value || 0);
+  });
+
+  let totalParts = 0;
+  document.querySelectorAll('#jobcard-parts-container .jc-part-amount').forEach(el => {
+    totalParts += parseFloat(el.value || 0);
+  });
+
+  const discount = parseFloat(document.getElementById('jobcard-discount')?.value || 0);
+  const taxRate = parseFloat(document.getElementById('jobcard-tax-rate')?.value || 18);
+
+  const subtotal = Math.max(0, totalLabour + totalParts - discount);
+  const taxAmount = (subtotal * taxRate) / 100;
+  const grandTotal = subtotal + taxAmount;
+
+  const elLabour = document.getElementById('jobcard-calc-labour-total');
+  const elParts = document.getElementById('jobcard-calc-parts-total');
+  const elSubtotal = document.getElementById('jobcard-calc-subtotal');
+  const elTax = document.getElementById('jobcard-tax-amount');
+  const elGrand = document.getElementById('jobcard-calc-grand-total');
+
+  if (elLabour) elLabour.textContent = formatCurrency(totalLabour);
+  if (elParts) elParts.textContent = formatCurrency(totalParts);
+  if (elSubtotal) elSubtotal.textContent = formatCurrency(subtotal);
+  if (elTax) elTax.value = taxAmount.toFixed(2);
+  if (elGrand) elGrand.textContent = formatCurrency(grandTotal);
+}
+
+// 11a. Add Estimation Labour Row
+function addEstimationLabourRow(description = '', amount = 0) {
+  const container = document.getElementById('estimation-labour-container');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'service-repeater-row est-labour-row';
+  row.innerHTML = `
+    <div>
+      <input type="text" class="est-labour-desc" placeholder="e.g. OS Re-installation / Screen Cleaning / Virus Removal" value="${description}" style="font-size: 0.85rem;">
+    </div>
+    <div>
+      <input type="number" class="est-labour-amt" placeholder="Estimated Rate ₹" min="0" step="0.01" value="${amount || ''}" style="font-size: 0.85rem;" oninput="recalcEstimationTotals()">
+    </div>
+    <div>
+      <button type="button" class="btn-remove-row" onclick="this.closest('.est-labour-row').remove(); recalcEstimationTotals();" title="Remove">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(row);
+  recalcEstimationTotals();
+}
+
+// 11b. Add Estimation Part Row
+function addEstimationPartRow(itemCode = '', partName = '', qty = 1, rate = 0) {
+  const container = document.getElementById('estimation-parts-container');
+  if (!container) return;
+
+  const stockOptions = state.inventory.map(item => {
+    const avail = calculateAvailableStock(item);
+    const selected = item.itemCode === itemCode ? 'selected' : '';
+    return `<option value="${item.itemCode}" data-name="${item.itemName}" data-rate="${item.sellingRate || item.purchaseRate}" data-avail="${avail}" ${selected}>[Stock: ${avail}] ${item.itemName} - ₹${item.sellingRate || item.purchaseRate}</option>`;
+  }).join('');
+
+  const row = document.createElement('div');
+  row.className = 'service-repeater-row est-part-row';
+  row.innerHTML = `
+    <div>
+      <select class="est-part-select" onchange="handleEstimationPartSelect(this)" style="font-size: 0.85rem; width: 100%;">
+        <option value="">-- Choose Spare Part to Quote (from Stock) --</option>
+        ${stockOptions}
+      </select>
+      <input type="text" class="est-part-custom-name" placeholder="Part name (or type custom)" value="${partName}" style="font-size: 0.82rem; margin-top: 0.25rem;">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Qty</label>
+      <input type="number" class="est-part-qty" min="1" step="1" value="${qty || 1}" style="font-size: 0.85rem;" oninput="handleEstimationPartQtyOrRateChange(this)">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Unit Rate (₹)</label>
+      <input type="number" class="est-part-rate" min="0" step="0.01" value="${rate || ''}" style="font-size: 0.85rem;" oninput="handleEstimationPartQtyOrRateChange(this)">
+    </div>
+    <div>
+      <label style="font-size: 0.72rem; color: var(--text-muted);">Amount (₹)</label>
+      <input type="text" class="est-part-amount" readonly value="${(qty * rate).toFixed(2)}" style="font-size: 0.85rem; background: var(--secondary-light); font-weight: 700;">
+    </div>
+    <div>
+      <button type="button" class="btn-remove-row" onclick="this.closest('.est-part-row').remove(); recalcEstimationTotals();" title="Remove" style="margin-top: 1rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(row);
+  recalcEstimationTotals();
+}
+
+window.handleEstimationPartSelect = function(selectEl) {
+  const row = selectEl.closest('.est-part-row');
+  if (!row) return;
+  const selectedOpt = selectEl.options[selectEl.selectedIndex];
+  if (selectedOpt && selectedOpt.value) {
+    const itemName = selectedOpt.getAttribute('data-name');
+    const rate = parseFloat(selectedOpt.getAttribute('data-rate') || 0);
+    const nameInput = row.querySelector('.est-part-custom-name');
+    const rateInput = row.querySelector('.est-part-rate');
+    const qtyInput = row.querySelector('.est-part-qty');
+    const amtInput = row.querySelector('.est-part-amount');
+    if (nameInput) nameInput.value = itemName;
+    if (rateInput) rateInput.value = rate;
+    const qty = parseFloat(qtyInput?.value || 1);
+    if (amtInput) amtInput.value = (qty * rate).toFixed(2);
+  }
+  recalcEstimationTotals();
+};
+
+window.handleEstimationPartQtyOrRateChange = function(inputEl) {
+  const row = inputEl.closest('.est-part-row');
+  if (!row) return;
+  const qty = parseFloat(row.querySelector('.est-part-qty')?.value || 0);
+  const rate = parseFloat(row.querySelector('.est-part-rate')?.value || 0);
+  const amtInput = row.querySelector('.est-part-amount');
+  if (amtInput) amtInput.value = (qty * rate).toFixed(2);
+  recalcEstimationTotals();
+};
+
+// 11. Recalculate Estimation Totals (uses dynamic rows)
+function recalcEstimationTotals() {
+  // Sum labour rows
+  let totalLabour = 0;
+  document.querySelectorAll('#estimation-labour-container .est-labour-amt').forEach(el => {
+    totalLabour += parseFloat(el.value || 0);
+  });
+
+  // Sum parts rows
+  let totalParts = 0;
+  document.querySelectorAll('#estimation-parts-container .est-part-amount').forEach(el => {
+    totalParts += parseFloat(el.value || 0);
+  });
+
+  const accessories = parseFloat(document.getElementById('estimation-accessories')?.value || 0);
+  const other = parseFloat(document.getElementById('estimation-other-charges')?.value || 0);
+  const discount = parseFloat(document.getElementById('estimation-discount')?.value || 0);
+  const taxRate = parseFloat(document.getElementById('estimation-tax-rate')?.value || 18);
+
+  const subtotal = Math.max(0, (totalLabour + totalParts + accessories + other) - discount);
+  const taxAmount = (subtotal * taxRate) / 100;
+  const grandTotal = subtotal + taxAmount;
+
+  // Update row totals labels
+  const elLabourTotal = document.getElementById('est-calc-labour-total');
+  const elPartsTotal = document.getElementById('est-calc-parts-total');
+  if (elLabourTotal) elLabourTotal.textContent = formatCurrency(totalLabour);
+  if (elPartsTotal) elPartsTotal.textContent = formatCurrency(totalParts);
+
+  // Update summary
+  const elSubtotal = document.getElementById('estimation-calc-subtotal');
+  const elGstAmt = document.getElementById('estimation-calc-gst-amt');
+  const elGrand = document.getElementById('estimation-calc-grand-total');
+
+  if (elSubtotal) elSubtotal.textContent = formatCurrency(subtotal);
+  if (elGstAmt) elGstAmt.textContent = formatCurrency(taxAmount);
+  if (elGrand) elGrand.textContent = formatCurrency(grandTotal);
+}
+
+
+// 12. Recalculate Service Invoice Totals
+function recalcServiceInvoiceTotals() {
+  const labour = parseFloat(document.getElementById('svc-inv-labour-amt')?.value || 0);
+  const parts = parseFloat(document.getElementById('svc-inv-parts-amt')?.value || 0);
+  const discount = parseFloat(document.getElementById('svc-inv-discount')?.value || 0);
+  const gstRate = parseFloat(document.getElementById('svc-inv-gst-rate')?.value || 18);
+  const paid = parseFloat(document.getElementById('svc-inv-paid-amt')?.value || 0);
+
+  const taxable = Math.max(0, (labour + parts) - discount);
+  const gst = (taxable * gstRate) / 100;
+  const grandTotal = taxable + gst;
+  const balance = Math.max(0, grandTotal - paid);
+
+  const elTaxable = document.getElementById('svc-inv-calc-taxable');
+  const elGst = document.getElementById('svc-inv-calc-gst');
+  const elGrand = document.getElementById('svc-inv-calc-grand-total');
+  const elBalance = document.getElementById('svc-inv-balance-amt');
+
+  if (elTaxable) elTaxable.textContent = formatCurrency(taxable);
+  if (elGst) elGst.textContent = formatCurrency(gst);
+  if (elGrand) elGrand.textContent = formatCurrency(grandTotal);
+  if (elBalance) elBalance.value = balance.toFixed(2);
+}
+
+function requireServiceElement(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    throw new Error('Required Service form element not found: #' + id);
+  }
+  return el;
+}
+
+// 13. Open Job Card Modal (New or Edit)
+window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
+  const modal = requireServiceElement('jobcard-modal');
+  const form = requireServiceElement('jobcard-form');
+  requireServiceElement('jobcard-customer-name');
+  requireServiceElement('jobcard-customer-mobile');
+  requireServiceElement('jobcard-customer-address');
+  requireServiceElement('jobcard-number');
+  requireServiceElement('jobcard-date');
+  requireServiceElement('jobcard-status');
+  requireServiceElement('jobcard-labour-container');
+  requireServiceElement('jobcard-parts-container');
+
+  form.reset();
+
+  const labourContainer = document.getElementById('jobcard-labour-container');
+  const partsContainer = document.getElementById('jobcard-parts-container');
+  labourContainer.innerHTML = '';
+  partsContainer.innerHTML = '';
+
+  populateServiceCustomerSuggestions();
+
+  if (jobCardId) {
+    // Edit existing Job Card
+    const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+    if (!jc) return;
+
+    document.getElementById('jobcard-modal-title').textContent = `Edit Service Job Card - ${jc.id}`;
+    document.getElementById('jobcard-edit-id').value = jc.id;
+    document.getElementById('jobcard-from-estimation-id').value = '';
+    document.getElementById('jobcard-number').value = jc.id;
+    document.getElementById('jobcard-date').value = jc.date || getTodayDateString();
+    document.getElementById('jobcard-delivery-date').value = jc.deliveryDate || getTodayDateString();
+    document.getElementById('jobcard-status').value = jc.status || 'Open';
+    document.getElementById('jobcard-customer-name').value = jc.customerName || '';
+    document.getElementById('jobcard-customer-mobile').value = jc.customerMobile || '';
+    document.getElementById('jobcard-customer-address').value = jc.customerAddress || '';
+    document.getElementById('jobcard-device-type').value = jc.deviceType || 'Laptop';
+    document.getElementById('jobcard-device-brand').value = jc.deviceBrand || '';
+    document.getElementById('jobcard-device-model').value = jc.deviceModel || '';
+    document.getElementById('jobcard-device-serial').value = jc.deviceSerial || '';
+    document.getElementById('jobcard-complaint').value = jc.complaint || '';
+    document.getElementById('jobcard-technician').value = jc.technician || '';
+    document.getElementById('jobcard-tech-remarks').value = jc.techRemarks || '';
+    document.getElementById('jobcard-discount').value = jc.discount || 0;
+    document.getElementById('jobcard-tax-rate').value = jc.taxRate !== undefined ? jc.taxRate : 18;
+
+    // Populate Labour items
+    if (jc.labourItems && jc.labourItems.length > 0) {
+      jc.labourItems.forEach(l => addJobCardLabourRow(l.description, l.amount));
+    } else {
+      addJobCardLabourRow();
+    }
+
+    // Populate Parts items
+    if (jc.partsItems && jc.partsItems.length > 0) {
+      jc.partsItems.forEach(p => addJobCardPartRow(p.itemCode, p.partName, p.qty, p.rate));
+    }
+
+  } else if (fromEstimationObj) {
+    // Convert from Estimation
+    document.getElementById('jobcard-modal-title').textContent = `New Job Card (From Estimation ${fromEstimationObj.id})`;
+    document.getElementById('jobcard-edit-id').value = '';
+    document.getElementById('jobcard-from-estimation-id').value = fromEstimationObj.id;
+    document.getElementById('jobcard-number').value = generateJobCardNumber();
+    document.getElementById('jobcard-date').value = getTodayDateString();
+    document.getElementById('jobcard-delivery-date').value = getTodayDateString();
+    document.getElementById('jobcard-status').value = 'Open';
+    document.getElementById('jobcard-customer-name').value = fromEstimationObj.customerName || '';
+    document.getElementById('jobcard-customer-mobile').value = fromEstimationObj.customerMobile || '';
+    document.getElementById('jobcard-customer-address').value = fromEstimationObj.customerAddress || '';
+    document.getElementById('jobcard-device-type').value = fromEstimationObj.deviceType || 'Laptop';
+    document.getElementById('jobcard-device-brand').value = fromEstimationObj.deviceBrand || '';
+    document.getElementById('jobcard-device-model').value = fromEstimationObj.deviceModel || '';
+    document.getElementById('jobcard-device-serial').value = fromEstimationObj.deviceSerial || '';
+    document.getElementById('jobcard-complaint').value = fromEstimationObj.complaint || '';
+    document.getElementById('jobcard-technician').value = 'Senior Hardware Engineer';
+    document.getElementById('jobcard-tech-remarks').value = fromEstimationObj.notes || '';
+    document.getElementById('jobcard-discount').value = fromEstimationObj.discount || 0;
+    document.getElementById('jobcard-tax-rate').value = fromEstimationObj.taxRate !== undefined ? fromEstimationObj.taxRate : 18;
+
+    // Transfer labour items from estimation
+    if (fromEstimationObj.labourItems && fromEstimationObj.labourItems.length > 0) {
+      fromEstimationObj.labourItems.forEach(l => addJobCardLabourRow(l.description, l.amount));
+    } else if (fromEstimationObj.labourAmount > 0) {
+      addJobCardLabourRow('Approved Estimation Labour & Repair Service', fromEstimationObj.labourAmount);
+    } else {
+      addJobCardLabourRow();
+    }
+
+    // Transfer parts items from estimation
+    if (fromEstimationObj.partsItems && fromEstimationObj.partsItems.length > 0) {
+      fromEstimationObj.partsItems.forEach(p => addJobCardPartRow(p.itemCode, p.partName, p.qty, p.rate));
+    } else if (fromEstimationObj.partsAmount > 0) {
+      addJobCardPartRow('', 'Approved Estimation Spare Parts', 1, fromEstimationObj.partsAmount);
+    }
+
+
+  } else {
+    // New Job Card from Scratch
+    document.getElementById('jobcard-modal-title').textContent = 'New Service Job Card';
+    document.getElementById('jobcard-edit-id').value = '';
+    document.getElementById('jobcard-from-estimation-id').value = '';
+    document.getElementById('jobcard-number').value = generateJobCardNumber();
+    document.getElementById('jobcard-date').value = getTodayDateString();
+    document.getElementById('jobcard-delivery-date').value = getTodayDateString();
+    document.getElementById('jobcard-status').value = 'Open';
+    document.getElementById('jobcard-customer-name').value = '';
+    document.getElementById('jobcard-customer-mobile').value = '';
+    document.getElementById('jobcard-customer-address').value = '';
+    document.getElementById('jobcard-discount').value = 0;
+    document.getElementById('jobcard-tax-rate').value = 18;
+
+    addJobCardLabourRow('General Diagnostic & Hardware Servicing', 500);
+  }
+
+  recalcJobCardTotals();
+
+  // Show "Close Job Card" button only when editing an active (non-closed) job card
+  const closeDirectBtn = document.getElementById('close-jobcard-direct-btn');
+  if (closeDirectBtn) {
+    if (jobCardId) {
+      const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+      const activeStatuses = ['Open', 'Under Service', 'Ready', 'Delivered'];
+      closeDirectBtn.style.display = (jc && activeStatuses.includes(jc.status)) ? 'inline-flex' : 'none';
+      closeDirectBtn.setAttribute('data-jcid', jobCardId);
+    } else {
+      closeDirectBtn.style.display = 'none';
+      closeDirectBtn.removeAttribute('data-jcid');
+    }
+  }
+
+  modal.classList.add('active');
+};
+
+// Close Job Card directly from modal footer button
+window.handleDirectCloseFromModal = function() {
+  const closeDirectBtn = document.getElementById('close-jobcard-direct-btn');
+  const jobCardId = closeDirectBtn ? closeDirectBtn.getAttribute('data-jcid') : null;
+  if (!jobCardId) {
+    alert('No Job Card ID found. Please save the Job Card first, then close it.');
+    return;
+  }
+  closeJobCardDirectly(jobCardId);
+};
+
+window.closeJobCardDirectly = function(jobCardId) {
+  const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+  if (!jc) return;
+
+  if (confirm(`Close Job Card ${jc.id} for "${jc.customerName}"?\n\nThis will mark the job as CLOSED. You can still view it in Service History.`)) {
+    jc.status = 'Closed';
+    jc.closedDate = getTodayDateString();
+    saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+    addActivity('service', `Job Card #${jc.id} CLOSED for ${jc.customerName} (${jc.deviceBrand} ${jc.deviceModel})`);
+
+    // Close the modal
+    document.getElementById('jobcard-modal').classList.remove('active');
+    renderServiceModule();
+    renderDashboard();
+    alert(`✅ Job Card ${jc.id} has been successfully Closed.`);
+  }
+};
+
+// 14. Handle Job Card Save & Stock Deduction
+function handleJobCardSubmit(e) {
+  e.preventDefault();
+
+  const editId = document.getElementById('jobcard-edit-id').value;
+  const fromEstId = document.getElementById('jobcard-from-estimation-id').value;
+  const jcNumber = editId || generateJobCardNumber();
+  const date = document.getElementById('jobcard-date').value;
+  const deliveryDate = document.getElementById('jobcard-delivery-date').value;
+  const status = document.getElementById('jobcard-status').value;
+  const customerName = document.getElementById('jobcard-customer-name').value.trim();
+  const customerMobile = document.getElementById('jobcard-customer-mobile').value.trim();
+  const customerAddress = document.getElementById('jobcard-customer-address').value.trim();
+  const deviceType = document.getElementById('jobcard-device-type').value;
+  const deviceBrand = document.getElementById('jobcard-device-brand').value.trim();
+  const deviceModel = document.getElementById('jobcard-device-model').value.trim();
+  const deviceSerial = document.getElementById('jobcard-device-serial').value.trim();
+  const complaint = document.getElementById('jobcard-complaint').value.trim();
+  const technician = document.getElementById('jobcard-technician').value.trim();
+  const techRemarks = document.getElementById('jobcard-tech-remarks').value.trim();
+  const discount = parseFloat(document.getElementById('jobcard-discount').value || 0);
+  const taxRate = parseFloat(document.getElementById('jobcard-tax-rate').value || 18);
+
+  // Collect Labour items
+  const labourItems = [];
+  let totalLabour = 0;
+  document.querySelectorAll('#jobcard-labour-container .service-repeater-row').forEach(row => {
+    const desc = row.querySelector('.jc-labour-desc')?.value.trim();
+    const amt = parseFloat(row.querySelector('.jc-labour-amt')?.value || 0);
+    if (desc && amt >= 0) {
+      labourItems.push({ description: desc, amount: amt });
+      totalLabour += amt;
+    }
+  });
+
+  // Collect Parts items
+  const partsItems = [];
+  let totalParts = 0;
+  const stockValidationFailed = [];
+
+  // Previous parts if editing
+  const existingJC = editId ? (state.serviceJobCards || []).find(j => j.id === editId) : null;
+  const prevPartsMap = {};
+  if (existingJC && existingJC.partsItems) {
+    existingJC.partsItems.forEach(p => {
+      if (p.itemCode) prevPartsMap[p.itemCode] = (prevPartsMap[p.itemCode] || 0) + parseFloat(p.qty || 0);
+    });
+  }
+
+  document.querySelectorAll('#jobcard-parts-container .service-repeater-row').forEach(row => {
+    const select = row.querySelector('.jc-part-select');
+    const customName = row.querySelector('.jc-part-custom-name')?.value.trim();
+    const itemCode = select?.value || '';
+    const partName = customName || (select?.options[select.selectedIndex]?.getAttribute('data-name')) || itemCode;
+    const qty = parseFloat(row.querySelector('.jc-part-qty')?.value || 0);
+    const rate = parseFloat(row.querySelector('.jc-part-rate')?.value || 0);
+    const amount = qty * rate;
+
+    if (partName && qty > 0) {
+      // If linked to inventory item, check stock
+      if (itemCode) {
+        const item = state.inventory.find(i => i.itemCode === itemCode);
+        if (item) {
+          const avail = calculateAvailableStock(item);
+          const previouslyUsed = prevPartsMap[itemCode] || 0;
+          const netRequired = qty - previouslyUsed;
+          if (netRequired > avail) {
+            stockValidationFailed.push(`• ${item.itemName} (Available: ${avail}, Net Required: ${netRequired})`);
+          }
+        }
+      }
+      partsItems.push({ itemCode, partName, qty, rate, amount });
+      totalParts += amount;
+    }
+  });
+
+  if (stockValidationFailed.length > 0) {
+    alert(`❌ Cannot save Job Card due to insufficient stock for the following spare parts:\n\n${stockValidationFailed.join('\n')}\n\nPlease reduce quantity or add stock through the Purchase module.`);
+    return;
+  }
+
+  // Calculate Grand Totals
+  const subtotal = Math.max(0, totalLabour + totalParts - discount);
+  const taxAmount = (subtotal * taxRate) / 100;
+  const grandTotal = subtotal + taxAmount;
+
+  // --- REVERSE PREVIOUS STOCK USAGE (IF EDITING) ---
+  if (existingJC && existingJC.partsItems) {
+    existingJC.partsItems.forEach(p => {
+      if (p.itemCode && p.qty > 0) {
+        recordStockMovement({
+          itemCode: p.itemCode,
+          itemName: p.partName,
+          type: 'SERVICE_REVERSAL',
+          refNo: jcNumber,
+          inQty: p.qty,
+          remarks: `Job Card ${jcNumber} updated/recalculated - previous stock restored`
+        });
+      }
+    });
+  }
+
+  // --- DEDUCT CURRENT SPARE PARTS FROM STOCK ---
+  partsItems.forEach(p => {
+    if (p.itemCode && p.qty > 0) {
+      recordStockMovement({
+        itemCode: p.itemCode,
+        itemName: p.partName,
+        type: 'SERVICE_CONSUME',
+        refNo: jcNumber,
+        outQty: p.qty,
+        unitCost: p.rate,
+        remarks: `Consumed in Laptop/PC Service Job Card: ${jcNumber} (${customerName} - ${deviceBrand} ${deviceModel})`
+      });
+    }
+  });
+
+  // Construct Job Card Object
+  const jobCardObj = {
+    id: jcNumber,
+    date,
+    deliveryDate,
+    status,
+    customerName,
+    customerMobile,
+    customerAddress,
+    deviceType,
+    deviceBrand,
+    deviceModel,
+    deviceSerial,
+    complaint,
+    technician,
+    techRemarks,
+    labourItems,
+    partsItems,
+    totalLabour,
+    totalParts,
+    subtotal,
+    discount,
+    taxRate,
+    taxAmount,
+    grandTotal,
+    invoiceId: existingJC ? existingJC.invoiceId : null
+  };
+
+  if (editId) {
+    const idx = state.serviceJobCards.findIndex(j => j.id === editId);
+    if (idx !== -1) state.serviceJobCards[idx] = jobCardObj;
+    addActivity('service', `Updated Service Job Card #${jcNumber} for ${customerName} (${deviceBrand} ${deviceModel})`);
+  } else {
+    state.serviceJobCards.unshift(jobCardObj);
+    addActivity('service', `Created new Service Job Card #${jcNumber} for ${customerName} (${deviceBrand} ${deviceModel})`);
+
+    // If converted from estimation, mark estimation approved
+    if (fromEstId) {
+      const est = (state.serviceEstimations || []).find(e => e.id === fromEstId);
+      if (est) {
+        est.status = 'Approved';
+        est.convertedJobCardId = jcNumber;
+        saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+      }
+    }
+  }
+
+  saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+
+  // Close modal and re-render
+  document.getElementById('jobcard-modal').classList.remove('active');
+  renderServiceModule();
+  renderInventoryTable();
+  renderDashboard();
+
+  alert(`✅ Service Job Card #${jcNumber} saved successfully!\nInventory spare parts stock automatically updated.`);
+}
+
+// 15. Convert Estimation to Job Card
+window.convertEstimationToJobCard = function(estId) {
+  const est = (state.serviceEstimations || []).find(e => e.id === estId);
+  if (!est) return;
+
+  if (confirm(`Convert Estimation ${est.id} into an Active Service Job Card for "${est.customerName}"?`)) {
+    openJobCardModal(null, est);
+  }
+};
+
+// 16. Quick Update Status for Job Card
+window.updateJobCardStatus = function(jobCardId, newStatus) {
+  const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+  if (!jc) return;
+
+  const oldStatus = jc.status;
+  jc.status = newStatus;
+  saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+
+  addActivity('service', `Job Card #${jc.id} status changed from "${oldStatus}" to "${newStatus}"`);
+  renderServiceModule();
+  renderDashboard();
+};
+
+// 17. Delete Job Card (with stock reversal)
+window.deleteJobCard = function(jobCardId) {
+  const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+  if (!jc) return;
+
+  if (confirm(`Are you sure you want to delete Service Job Card ${jc.id}?\n\n⚠️ Any spare parts consumed from stock will be automatically returned to inventory.`)) {
+    // Reverse spare parts stock
+    if (jc.partsItems && jc.partsItems.length > 0) {
+      jc.partsItems.forEach(p => {
+        if (p.itemCode && p.qty > 0) {
+          recordStockMovement({
+            itemCode: p.itemCode,
+            itemName: p.partName,
+            type: 'SERVICE_REVERSAL',
+            refNo: jc.id,
+            inQty: p.qty,
+            remarks: `Job Card ${jc.id} deleted - stock reversed to inventory`
+          });
+        }
+      });
+    }
+
+    state.serviceJobCards = state.serviceJobCards.filter(j => j.id !== jobCardId);
+    saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+
+    addActivity('service', `Deleted Service Job Card #${jc.id}`);
+    renderServiceModule();
+    renderInventoryTable();
+    renderDashboard();
+  }
+};
+
+// 18. Estimation Modal & Submissions
+window.openEstimationModal = function(estId = null) {
+  const modal = requireServiceElement('estimation-modal');
+  const form = requireServiceElement('estimation-form');
+  requireServiceElement('estimation-customer-name');
+  requireServiceElement('estimation-customer-mobile');
+  requireServiceElement('estimation-customer-address');
+  requireServiceElement('estimation-number');
+  requireServiceElement('estimation-date');
+  requireServiceElement('estimation-status');
+  requireServiceElement('estimation-labour-container');
+  requireServiceElement('estimation-parts-container');
+
+  form.reset();
+
+  // Clear dynamic row containers
+  const labourContainer = document.getElementById('estimation-labour-container');
+  const partsContainer = document.getElementById('estimation-parts-container');
+  labourContainer.innerHTML = '';
+  partsContainer.innerHTML = '';
+
+  populateServiceCustomerSuggestions();
+
+  if (estId) {
+    const est = (state.serviceEstimations || []).find(e => e.id === estId);
+    if (!est) return;
+
+    document.getElementById('estimation-modal-title').textContent = `Edit Estimation - ${est.id}`;
+    document.getElementById('estimation-edit-id').value = est.id;
+    document.getElementById('estimation-number').value = est.id;
+    document.getElementById('estimation-date').value = est.date || getTodayDateString();
+    document.getElementById('estimation-status').value = est.status || 'Draft';
+    document.getElementById('estimation-customer-name').value = est.customerName || '';
+    document.getElementById('estimation-customer-mobile').value = est.customerMobile || '';
+    document.getElementById('estimation-customer-address').value = est.customerAddress || '';
+    document.getElementById('estimation-device-type').value = est.deviceType || 'Laptop';
+    document.getElementById('estimation-device-brand').value = est.deviceBrand || '';
+    document.getElementById('estimation-device-model').value = est.deviceModel || '';
+    document.getElementById('estimation-device-serial').value = est.deviceSerial || '';
+    document.getElementById('estimation-complaint').value = est.complaint || '';
+    document.getElementById('estimation-accessories').value = est.accessoriesAmount || 0;
+    document.getElementById('estimation-other-charges').value = est.otherCharges || 0;
+    document.getElementById('estimation-discount').value = est.discount || 0;
+    document.getElementById('estimation-tax-rate').value = est.taxRate !== undefined ? est.taxRate : 18;
+    document.getElementById('estimation-notes').value = est.notes || '';
+
+    // Populate dynamic labour rows
+    if (est.labourItems && est.labourItems.length > 0) {
+      est.labourItems.forEach(l => addEstimationLabourRow(l.description, l.amount));
+    } else if (est.labourAmount > 0) {
+      // Legacy: single amount
+      addEstimationLabourRow('Repair & Service Labour', est.labourAmount);
+    } else {
+      addEstimationLabourRow();
+    }
+
+    // Populate dynamic parts rows
+    if (est.partsItems && est.partsItems.length > 0) {
+      est.partsItems.forEach(p => addEstimationPartRow(p.itemCode, p.partName, p.qty, p.rate));
+    } else if (est.partsAmount > 0) {
+      // Legacy: single amount
+      addEstimationPartRow('', 'Spare Parts & Components', 1, est.partsAmount);
+    }
+
+  } else {
+    document.getElementById('estimation-modal-title').textContent = 'New Repair & Service Estimation';
+    document.getElementById('estimation-edit-id').value = '';
+    document.getElementById('estimation-number').value = generateEstimationNumber();
+    document.getElementById('estimation-date').value = getTodayDateString();
+    document.getElementById('estimation-status').value = 'Draft';
+    document.getElementById('estimation-customer-name').value = '';
+    document.getElementById('estimation-customer-mobile').value = '';
+    document.getElementById('estimation-customer-address').value = '';
+    document.getElementById('estimation-accessories').value = 0;
+    document.getElementById('estimation-other-charges').value = 0;
+    document.getElementById('estimation-discount').value = 0;
+    document.getElementById('estimation-tax-rate').value = 18;
+
+    // Start with one default labour row
+    addEstimationLabourRow('General Diagnostic & Service Labour', 500);
+  }
+
+  recalcEstimationTotals();
+  modal.classList.add('active');
+};
+
+function handleEstimationSubmit(e) {
+  e.preventDefault();
+
+  const editId = document.getElementById('estimation-edit-id').value;
+  const estNumber = editId || generateEstimationNumber();
+  const date = document.getElementById('estimation-date').value;
+  const status = document.getElementById('estimation-status').value;
+  const customerName = document.getElementById('estimation-customer-name').value.trim();
+  const customerMobile = document.getElementById('estimation-customer-mobile').value.trim();
+  const customerAddress = document.getElementById('estimation-customer-address').value.trim();
+  const deviceType = document.getElementById('estimation-device-type').value;
+  const deviceBrand = document.getElementById('estimation-device-brand').value.trim();
+  const deviceModel = document.getElementById('estimation-device-model').value.trim();
+  const deviceSerial = document.getElementById('estimation-device-serial').value.trim();
+  const complaint = document.getElementById('estimation-complaint').value.trim();
+  const accessoriesAmount = parseFloat(document.getElementById('estimation-accessories').value || 0);
+  const otherCharges = parseFloat(document.getElementById('estimation-other-charges').value || 0);
+  const discount = parseFloat(document.getElementById('estimation-discount').value || 0);
+  const taxRate = parseFloat(document.getElementById('estimation-tax-rate').value || 18);
+  const notes = document.getElementById('estimation-notes').value.trim();
+
+  // Collect labour rows
+  const labourItems = [];
+  let labourAmount = 0;
+  document.querySelectorAll('#estimation-labour-container .est-labour-row').forEach(row => {
+    const desc = row.querySelector('.est-labour-desc')?.value.trim();
+    const amt = parseFloat(row.querySelector('.est-labour-amt')?.value || 0);
+    if (desc) {
+      labourItems.push({ description: desc, amount: amt });
+      labourAmount += amt;
+    }
+  });
+
+  // Collect parts rows
+  const partsItems = [];
+  let partsAmount = 0;
+  document.querySelectorAll('#estimation-parts-container .est-part-row').forEach(row => {
+    const select = row.querySelector('.est-part-select');
+    const customName = row.querySelector('.est-part-custom-name')?.value.trim();
+    const itemCode = select?.value || '';
+    const partName = customName || (select?.options[select.selectedIndex]?.getAttribute('data-name')) || '';
+    const qty = parseFloat(row.querySelector('.est-part-qty')?.value || 0);
+    const rate = parseFloat(row.querySelector('.est-part-rate')?.value || 0);
+    const amount = parseFloat(row.querySelector('.est-part-amount')?.value || qty * rate);
+    if (partName && qty > 0) {
+      partsItems.push({ itemCode, partName, qty, rate, amount });
+      partsAmount += amount;
+    }
+  });
+
+  const subtotal = Math.max(0, (labourAmount + partsAmount + accessoriesAmount + otherCharges) - discount);
+  const taxAmount = (subtotal * taxRate) / 100;
+  const totalAmount = subtotal + taxAmount;
+
+  const estObj = {
+    id: estNumber,
+    date,
+    status,
+    customerName,
+    customerMobile,
+    customerAddress,
+    deviceType,
+    deviceBrand,
+    deviceModel,
+    deviceSerial,
+    complaint,
+    labourItems,
+    labourAmount,
+    partsItems,
+    partsAmount,
+    accessoriesAmount,
+    otherCharges,
+    subtotal,
+    discount,
+    taxRate,
+    taxAmount,
+    totalAmount,
+    notes,
+    convertedJobCardId: null
+  };
+
+  if (editId) {
+    const idx = state.serviceEstimations.findIndex(e => e.id === editId);
+    if (idx !== -1) {
+      estObj.convertedJobCardId = state.serviceEstimations[idx].convertedJobCardId;
+      estObj.status = state.serviceEstimations[idx].status === 'Approved' ? 'Approved' : status;
+      state.serviceEstimations[idx] = estObj;
+    }
+    addActivity('service', `Updated Service Estimation #${estNumber} for ${customerName}`);
+  } else {
+    state.serviceEstimations.unshift(estObj);
+    addActivity('service', `Created new Service Estimation #${estNumber} for ${customerName}`);
+  }
+
+  saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+
+  document.getElementById('estimation-modal').classList.remove('active');
+  renderEstimationsTable();
+  alert(`✅ Service Estimation #${estNumber} saved successfully!`);
+}
+
+
+window.deleteEstimation = function(estId) {
+  if (confirm(`Are you sure you want to delete Estimation ${estId}?`)) {
+    state.serviceEstimations = state.serviceEstimations.filter(e => e.id !== estId);
+    saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+    renderEstimationsTable();
+  }
+};
+
+// 19. Service Invoice Modal & Handlers
+window.openServiceInvoiceModal = function(invId = null, jobCardId = null) {
+  const modal = document.getElementById('svc-invoice-modal');
+  if (!modal) return;
+
+  const form = document.getElementById('svc-invoice-form');
+  if (form) form.reset();
+
+  // Populate Job Cards Select dropdown
+  const jcSelect = document.getElementById('svc-inv-jobcard-select');
+  if (jcSelect) {
+    jcSelect.innerHTML = '<option value="">-- Direct Service Billing / Select Job Card --</option>' +
+      (state.serviceJobCards || []).map(jc => `
+        <option value="${jc.id}" ${jc.id === jobCardId ? 'selected' : ''}>
+          ${jc.id} - ${jc.customerName} (${jc.deviceBrand} ${jc.deviceModel}) - ${formatCurrency(jc.grandTotal)}
+        </option>
+      `).join('');
+  }
+
+  if (invId) {
+    const inv = (state.serviceInvoices || []).find(i => i.id === invId || i.invoiceNo === invId);
+    if (!inv) return;
+
+    document.getElementById('svc-invoice-modal-title').textContent = `Edit Service Invoice - ${inv.invoiceNo}`;
+    document.getElementById('svc-inv-edit-id').value = inv.id || inv.invoiceNo;
+    document.getElementById('svc-inv-jobcard-id').value = inv.jobCardId || '';
+    document.getElementById('svc-inv-number').value = inv.invoiceNo;
+    document.getElementById('svc-inv-date').value = inv.date || getTodayDateString();
+    if (jcSelect) jcSelect.value = inv.jobCardId || '';
+    document.getElementById('svc-inv-cust-name').value = inv.customerName || '';
+    document.getElementById('svc-inv-cust-mobile').value = inv.customerMobile || '';
+    document.getElementById('svc-inv-cust-address').value = inv.customerAddress || '';
+    document.getElementById('svc-inv-device-type').value = inv.deviceType || 'Laptop';
+    document.getElementById('svc-inv-device-brand').value = inv.deviceBrand || '';
+    document.getElementById('svc-inv-device-model').value = inv.deviceModel || '';
+    document.getElementById('svc-inv-device-serial').value = inv.deviceSerial || '';
+    document.getElementById('svc-inv-labour-amt').value = inv.labourAmount || 0;
+    document.getElementById('svc-inv-parts-amt').value = inv.partsAmount || 0;
+    document.getElementById('svc-inv-discount').value = inv.discount || 0;
+    document.getElementById('svc-inv-gst-rate').value = inv.gstRate !== undefined ? inv.gstRate : 18;
+    document.getElementById('svc-inv-payment-status').value = inv.paymentStatus || 'Paid';
+    document.getElementById('svc-inv-payment-method').value = inv.paymentMethod || 'UPI';
+    document.getElementById('svc-inv-paid-amt').value = inv.paidAmount !== undefined ? inv.paidAmount : inv.grandTotal;
+
+  } else if (jobCardId) {
+    const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+    if (!jc) return;
+
+    document.getElementById('svc-invoice-modal-title').textContent = `Generate Service Invoice for Job Card #${jc.id}`;
+    document.getElementById('svc-inv-edit-id').value = '';
+    document.getElementById('svc-inv-jobcard-id').value = jc.id;
+    document.getElementById('svc-inv-number').value = generateServiceInvoiceNumber();
+    document.getElementById('svc-inv-date').value = getTodayDateString();
+    if (jcSelect) jcSelect.value = jc.id;
+    document.getElementById('svc-inv-cust-name').value = jc.customerName || '';
+    document.getElementById('svc-inv-cust-mobile').value = jc.customerMobile || '';
+    document.getElementById('svc-inv-cust-address').value = jc.customerAddress || '';
+    document.getElementById('svc-inv-device-type').value = jc.deviceType || 'Laptop';
+    document.getElementById('svc-inv-device-brand').value = jc.deviceBrand || '';
+    document.getElementById('svc-inv-device-model').value = jc.deviceModel || '';
+    document.getElementById('svc-inv-device-serial').value = jc.deviceSerial || '';
+    document.getElementById('svc-inv-labour-amt').value = jc.totalLabour || 0;
+    document.getElementById('svc-inv-parts-amt').value = jc.totalParts || 0;
+    document.getElementById('svc-inv-discount').value = jc.discount || 0;
+    document.getElementById('svc-inv-gst-rate').value = jc.taxRate !== undefined ? jc.taxRate : 18;
+    document.getElementById('svc-inv-payment-status').value = 'Paid';
+    document.getElementById('svc-inv-payment-method').value = 'UPI';
+    document.getElementById('svc-inv-paid-amt').value = jc.grandTotal || 0;
+
+  } else {
+    document.getElementById('svc-invoice-modal-title').textContent = 'Generate Service Invoice';
+    document.getElementById('svc-inv-edit-id').value = '';
+    document.getElementById('svc-inv-jobcard-id').value = '';
+    document.getElementById('svc-inv-number').value = generateServiceInvoiceNumber();
+    document.getElementById('svc-inv-date').value = getTodayDateString();
+    document.getElementById('svc-inv-labour-amt').value = 500;
+    document.getElementById('svc-inv-parts-amt').value = 0;
+    document.getElementById('svc-inv-discount').value = 0;
+    document.getElementById('svc-inv-gst-rate').value = 18;
+    document.getElementById('svc-inv-payment-status').value = 'Paid';
+    document.getElementById('svc-inv-payment-method').value = 'UPI';
+    document.getElementById('svc-inv-paid-amt').value = 0;
+  }
+
+  recalcServiceInvoiceTotals();
+  modal.classList.add('active');
+};
+
+function handleServiceInvoiceJobCardSelection(e) {
+  const jcId = e.target.value;
+  if (!jcId) return;
+
+  const jc = (state.serviceJobCards || []).find(j => j.id === jcId);
+  if (jc) {
+    document.getElementById('svc-inv-jobcard-id').value = jc.id;
+    document.getElementById('svc-inv-cust-name').value = jc.customerName || '';
+    document.getElementById('svc-inv-cust-mobile').value = jc.customerMobile || '';
+    document.getElementById('svc-inv-cust-address').value = jc.customerAddress || '';
+    document.getElementById('svc-inv-device-type').value = jc.deviceType || 'Laptop';
+    document.getElementById('svc-inv-device-brand').value = jc.deviceBrand || '';
+    document.getElementById('svc-inv-device-model').value = jc.deviceModel || '';
+    document.getElementById('svc-inv-device-serial').value = jc.deviceSerial || '';
+    document.getElementById('svc-inv-labour-amt').value = jc.totalLabour || 0;
+    document.getElementById('svc-inv-parts-amt').value = jc.totalParts || 0;
+    document.getElementById('svc-inv-discount').value = jc.discount || 0;
+    document.getElementById('svc-inv-gst-rate').value = jc.taxRate !== undefined ? jc.taxRate : 18;
+    document.getElementById('svc-inv-paid-amt').value = jc.grandTotal || 0;
+    recalcServiceInvoiceTotals();
+  }
+}
+
+function handleServiceInvoiceSubmit(e) {
+  e.preventDefault();
+
+  const editId = document.getElementById('svc-inv-edit-id').value;
+  const jobCardId = document.getElementById('svc-inv-jobcard-id').value || document.getElementById('svc-inv-jobcard-select').value;
+  const invNumber = editId || generateServiceInvoiceNumber();
+  const date = document.getElementById('svc-inv-date').value;
+  const customerName = document.getElementById('svc-inv-cust-name').value.trim();
+  const customerMobile = document.getElementById('svc-inv-cust-mobile').value.trim();
+  const customerAddress = document.getElementById('svc-inv-cust-address').value.trim();
+  const deviceType = document.getElementById('svc-inv-device-type').value.trim();
+  const deviceBrand = document.getElementById('svc-inv-device-brand').value.trim();
+  const deviceModel = document.getElementById('svc-inv-device-model').value.trim();
+  const deviceSerial = document.getElementById('svc-inv-device-serial').value.trim();
+  const labourAmount = parseFloat(document.getElementById('svc-inv-labour-amt').value || 0);
+  const partsAmount = parseFloat(document.getElementById('svc-inv-parts-amt').value || 0);
+  const discount = parseFloat(document.getElementById('svc-inv-discount').value || 0);
+  const gstRate = parseFloat(document.getElementById('svc-inv-gst-rate').value || 18);
+  const paymentStatus = document.getElementById('svc-inv-payment-status').value;
+  const paymentMethod = document.getElementById('svc-inv-payment-method').value;
+  const paidAmount = parseFloat(document.getElementById('svc-inv-paid-amt').value || 0);
+
+  const taxable = Math.max(0, (labourAmount + partsAmount) - discount);
+  const gstAmount = (taxable * gstRate) / 100;
+  const grandTotal = taxable + gstAmount;
+  const balanceAmount = Math.max(0, grandTotal - paidAmount);
+
+  // Collect itemized list from linked job card or generic
+  let items = [];
+  const linkedJC = jobCardId ? (state.serviceJobCards || []).find(j => j.id === jobCardId) : null;
+  if (linkedJC) {
+    (linkedJC.labourItems || []).forEach(l => {
+      items.push({ name: l.description, type: 'Labour', qty: 1, rate: l.amount, amount: l.amount });
+    });
+    (linkedJC.partsItems || []).forEach(p => {
+      items.push({ name: p.partName, type: 'Spare Part', qty: p.qty, rate: p.rate, amount: p.amount });
+    });
+  } else {
+    items.push({ name: 'Laptop / PC Repair & Diagnostics Labour', type: 'Labour', qty: 1, rate: labourAmount, amount: labourAmount });
+    if (partsAmount > 0) {
+      items.push({ name: 'Replacement Hardware Spare Parts', type: 'Spare Part', qty: 1, rate: partsAmount, amount: partsAmount });
+    }
+  }
+
+  const invoiceObj = {
+    id: invNumber,
+    invoiceNo: invNumber,
+    jobCardId: jobCardId || null,
+    date,
+    customerName,
+    customerMobile,
+    customerAddress,
+    deviceType,
+    deviceBrand,
+    deviceModel,
+    deviceSerial,
+    labourAmount,
+    partsAmount,
+    subtotal: taxable,
+    discount,
+    gstRate,
+    gstAmount,
+    grandTotal,
+    paymentStatus,
+    paymentMethod,
+    paidAmount,
+    balanceAmount,
+    items
+  };
+
+  if (editId) {
+    const idx = state.serviceInvoices.findIndex(i => (i.id === editId || i.invoiceNo === editId));
+    if (idx !== -1) state.serviceInvoices[idx] = invoiceObj;
+    addActivity('service', `Updated Service Invoice #${invNumber} for ${customerName}`);
+  } else {
+    state.serviceInvoices.unshift(invoiceObj);
+    addActivity('service', `Generated Service Tax Invoice #${invNumber} for ${customerName} (₹${grandTotal.toFixed(2)})`);
+
+    // Link invoice with Job Card if present
+    if (linkedJC) {
+      linkedJC.invoiceId = invNumber;
+      if (linkedJC.status === 'Open' || linkedJC.status === 'Under Service') {
+        linkedJC.status = 'Ready';
+      }
+      saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+    }
+  }
+
+  saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
+
+  document.getElementById('svc-invoice-modal').classList.remove('active');
+  renderServiceModule();
+  renderDashboard();
+
+  alert(`✅ Service Invoice #${invNumber} generated successfully!`);
+}
+
+window.deleteServiceInvoice = function(invId) {
+  if (confirm(`Are you sure you want to delete Service Invoice ${invId}?`)) {
+    state.serviceInvoices = state.serviceInvoices.filter(i => (i.id !== invId && i.invoiceNo !== invId));
+    saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
+    renderServiceModule();
+    renderDashboard();
+  }
+};
+
+// 20. Print Modals Logic (Job Card, Estimation, Service Invoice)
+window.openJobCardPrintModal = function(jobCardId) {
+  const jc = (state.serviceJobCards || []).find(j => j.id === jobCardId);
+  if (!jc) return;
+
+  document.getElementById('jc-prev-number').textContent = jc.id;
+  document.getElementById('jc-prev-date').textContent = formatDate(jc.date);
+  document.getElementById('jc-prev-delv').textContent = formatDate(jc.deliveryDate || jc.date);
+  document.getElementById('jc-prev-cust-name').textContent = jc.customerName;
+  document.getElementById('jc-prev-cust-phone').textContent = `Phone: ${jc.customerMobile}`;
+  document.getElementById('jc-prev-cust-address').textContent = jc.customerAddress ? `Address: ${jc.customerAddress}` : 'Address: --';
+  document.getElementById('jc-prev-device-model').textContent = `${jc.deviceBrand} ${jc.deviceModel}`;
+  document.getElementById('jc-prev-device-type').textContent = `Device Type: ${jc.deviceType}`;
+  document.getElementById('jc-prev-device-serial').textContent = `Serial / Tag: ${jc.deviceSerial || '--'}`;
+  document.getElementById('jc-prev-status-badge').textContent = jc.status;
+  document.getElementById('jc-prev-complaint').textContent = jc.complaint;
+  document.getElementById('jc-prev-technician').textContent = jc.technician || 'Hardware Engineer';
+  document.getElementById('jc-prev-remarks').textContent = jc.techRemarks || 'Standard Diagnostics & Service Checklist';
+
+  // Table items
+  const tbody = document.getElementById('jc-prev-items-tbody');
+  if (tbody) {
+    let rowsHtml = '';
+    (jc.labourItems || []).forEach(l => {
+      rowsHtml += `
+        <tr>
+          <td style="font-weight:600;">${l.description}</td>
+          <td><span class="badge badge-category">Labour</span></td>
+          <td style="text-align: center;">1</td>
+          <td style="text-align: right;">${formatCurrency(l.amount)}</td>
+          <td style="text-align: right; font-weight:600;">${formatCurrency(l.amount)}</td>
+        </tr>
+      `;
+    });
+
+    (jc.partsItems || []).forEach(p => {
+      rowsHtml += `
+        <tr>
+          <td style="font-weight:600;">
+            ${p.partName}
+            ${p.itemCode ? `<div style="font-size:0.75rem; color:#64748b; font-family:monospace;">${p.itemCode}</div>` : ''}
+          </td>
+          <td><span class="badge badge-paid">Spare Part</span></td>
+          <td style="text-align: center;">${p.qty || 1}</td>
+          <td style="text-align: right;">${formatCurrency(p.rate)}</td>
+          <td style="text-align: right; font-weight:600;">${formatCurrency(p.amount)}</td>
+        </tr>
+      `;
+    });
+
+    if (!rowsHtml) {
+      rowsHtml = `<tr><td colspan="5" style="text-align:center; color:#64748b;">General Inspection & Diagnostic Service</td></tr>`;
+    }
+
+    tbody.innerHTML = rowsHtml;
+  }
+
+  document.getElementById('jc-prev-total-labour').textContent = formatCurrency(jc.totalLabour);
+  document.getElementById('jc-prev-total-parts').textContent = formatCurrency(jc.totalParts);
+  document.getElementById('jc-prev-discount').textContent = formatCurrency(jc.discount || 0);
+  document.getElementById('jc-prev-tax-rate').textContent = `${jc.taxRate !== undefined ? jc.taxRate : 18}%`;
+  document.getElementById('jc-prev-tax-amt').textContent = formatCurrency(jc.taxAmount);
+  document.getElementById('jc-prev-grand-total').textContent = formatCurrency(jc.grandTotal);
+
+  document.getElementById('jobcard-view-modal').classList.add('active');
+};
+
+window.openEstimationPrintModal = function(estId) {
+  const est = (state.serviceEstimations || []).find(e => e.id === estId);
+  if (!est) return;
+
+  document.getElementById('est-prev-number').textContent = est.id;
+  document.getElementById('est-prev-date').textContent = formatDate(est.date);
+  document.getElementById('est-prev-cust-name').textContent = est.customerName;
+  document.getElementById('est-prev-cust-phone').textContent = `Phone: ${est.customerMobile}`;
+  document.getElementById('est-prev-cust-address').textContent = est.customerAddress ? `Address: ${est.customerAddress}` : 'Address: --';
+  document.getElementById('est-prev-device-model').textContent = `${est.deviceBrand} ${est.deviceModel}`;
+  document.getElementById('est-prev-device-type').textContent = `Device Type: ${est.deviceType}`;
+  document.getElementById('est-prev-device-serial').textContent = `Serial / Tag: ${est.deviceSerial || '--'}`;
+  document.getElementById('est-prev-complaint').textContent = est.complaint;
+
+  document.getElementById('est-prev-labour').textContent = formatCurrency(est.labourAmount);
+  document.getElementById('est-prev-parts').textContent = formatCurrency(est.partsAmount);
+  document.getElementById('est-prev-accessories').textContent = formatCurrency(est.accessoriesAmount);
+  document.getElementById('est-prev-other').textContent = formatCurrency(est.otherCharges);
+  document.getElementById('est-prev-subtotal').textContent = formatCurrency(est.subtotal);
+  document.getElementById('est-prev-discount').textContent = formatCurrency(est.discount);
+  document.getElementById('est-prev-tax-rate').textContent = `${est.taxRate !== undefined ? est.taxRate : 18}%`;
+  document.getElementById('est-prev-tax-amt').textContent = formatCurrency(est.taxAmount);
+  document.getElementById('est-prev-grand-total').textContent = formatCurrency(est.totalAmount);
+
+  document.getElementById('estimation-view-modal').classList.add('active');
+};
+
+window.openServiceInvoicePrintModal = function(invId) {
+  const inv = (state.serviceInvoices || []).find(i => i.id === invId || i.invoiceNo === invId);
+  if (!inv) return;
+
+  document.getElementById('sinv-prev-number').textContent = inv.invoiceNo;
+  document.getElementById('sinv-prev-date').textContent = formatDate(inv.date);
+  document.getElementById('sinv-prev-jc-ref').textContent = inv.jobCardId || 'DIRECT-SERVICE';
+  document.getElementById('sinv-prev-cust-name').textContent = inv.customerName;
+  document.getElementById('sinv-prev-cust-phone').textContent = `Phone: ${inv.customerMobile}`;
+  document.getElementById('sinv-prev-cust-address').textContent = inv.customerAddress ? `Address: ${inv.customerAddress}` : 'Address: --';
+  document.getElementById('sinv-prev-device-info').textContent = `${inv.deviceBrand} ${inv.deviceModel} (${inv.deviceType}) ${inv.deviceSerial ? `[SN: ${inv.deviceSerial}]` : ''}`;
+
+  const tbody = document.getElementById('sinv-prev-items-tbody');
+  if (tbody) {
+    if (inv.items && inv.items.length > 0) {
+      tbody.innerHTML = inv.items.map(it => `
+        <tr>
+          <td style="font-weight:600;">
+            ${it.name}
+            <span class="badge ${it.type === 'Labour' ? 'badge-category' : 'badge-paid'}" style="margin-left: 0.5rem; font-size:0.7rem;">${it.type}</span>
+          </td>
+          <td style="text-align: center;">${it.qty || 1}</td>
+          <td style="text-align: right;">${formatCurrency(it.rate)}</td>
+          <td style="text-align: right; font-weight:600;">${formatCurrency(it.amount)}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td style="font-weight:600;">Laptop / PC Service & Labour Charges</td>
+          <td style="text-align: center;">1</td>
+          <td style="text-align: right;">${formatCurrency(inv.labourAmount)}</td>
+          <td style="text-align: right; font-weight:600;">${formatCurrency(inv.labourAmount)}</td>
+        </tr>
+        ${inv.partsAmount > 0 ? `
+          <tr>
+            <td style="font-weight:600;">Spare Parts & Replacement Components</td>
+            <td style="text-align: center;">1</td>
+            <td style="text-align: right;">${formatCurrency(inv.partsAmount)}</td>
+            <td style="text-align: right; font-weight:600;">${formatCurrency(inv.partsAmount)}</td>
+          </tr>
+        ` : ''}
+      `;
+    }
+  }
+
+  document.getElementById('sinv-prev-labour').textContent = formatCurrency(inv.labourAmount);
+  document.getElementById('sinv-prev-parts').textContent = formatCurrency(inv.partsAmount);
+  document.getElementById('sinv-prev-discount').textContent = formatCurrency(inv.discount || 0);
+  document.getElementById('sinv-prev-gst-rate').textContent = `${inv.gstRate !== undefined ? inv.gstRate : 18}%`;
+  document.getElementById('sinv-prev-gst-amt').textContent = formatCurrency(inv.gstAmount);
+  document.getElementById('sinv-prev-grand-total').textContent = formatCurrency(inv.grandTotal);
+  document.getElementById('sinv-prev-pay-status').textContent = `${inv.paymentStatus} (${inv.paymentMethod || 'UPI'})`;
+  document.getElementById('sinv-prev-paid-amt').textContent = formatCurrency(inv.paidAmount);
+  document.getElementById('sinv-prev-balance-amt').textContent = formatCurrency(inv.balanceAmount);
+
+  document.getElementById('svc-invoice-view-modal').classList.add('active');
+};
+
 window.filterReportsBySupplier = function(supplierName) {
   const repLink = document.querySelector('[data-target="reports"]');
   if (repLink) repLink.click();
@@ -3525,6 +5894,165 @@ function renderReports() {
         `;
       }).join('');
     }
+
+  // 14. SERVICE JOB CARDS REPORT
+  } else if (moduleVal === 'ServiceJobCards') {
+    tableHeadersHtml = `
+      <tr>
+        <th>Job Card #</th>
+        <th>Date</th>
+        <th>Customer Name</th>
+        <th>Mobile</th>
+        <th>Device</th>
+        <th>Serial #</th>
+        <th>Technician</th>
+        <th>Status</th>
+        <th>Total Amount</th>
+      </tr>
+    `;
+    const data = (state.serviceJobCards || []).filter(j => {
+      const matchSearch = j.id.toLowerCase().includes(searchVal) ||
+        j.customerName.toLowerCase().includes(searchVal) ||
+        j.customerMobile.includes(searchVal) ||
+        (j.deviceSerial || '').toLowerCase().includes(searchVal);
+      return matchSearch && isWithinDateRange(j.date);
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (data.length === 0) {
+      tableRowsHtml = `<tr><td colspan="9" class="no-data-msg">No service job cards found.</td></tr>`;
+    } else {
+      tableRowsHtml = data.map(item => `
+        <tr>
+          <td style="font-family: monospace; font-weight:700;">${item.id}</td>
+          <td>${formatDate(item.date)}</td>
+          <td style="font-weight:600;">${item.customerName}</td>
+          <td>${item.customerMobile}</td>
+          <td>${item.deviceBrand} ${item.deviceModel}</td>
+          <td style="font-family: monospace;">${item.deviceSerial || '--'}</td>
+          <td>${item.technician}</td>
+          <td><span class="badge ${item.status === 'Open' ? 'badge-open' : item.status === 'Ready' ? 'badge-ready' : item.status === 'Closed' ? 'badge-closed' : 'badge-under-service'}">${item.status}</span></td>
+          <td style="font-weight:700; color: var(--primary);">${formatCurrency(item.grandTotal)}</td>
+        </tr>
+      `).join('');
+    }
+
+  // 15. SERVICE INVOICES REPORT
+  } else if (moduleVal === 'ServiceInvoices') {
+    tableHeadersHtml = `
+      <tr>
+        <th>Invoice #</th>
+        <th>Date</th>
+        <th>Job Card #</th>
+        <th>Customer Name</th>
+        <th>Device</th>
+        <th>Labour (₹)</th>
+        <th>Parts (₹)</th>
+        <th>GST (₹)</th>
+        <th>Grand Total (₹)</th>
+        <th>Payment Status</th>
+      </tr>
+    `;
+    const data = (state.serviceInvoices || []).filter(i => {
+      const matchSearch = i.invoiceNo.toLowerCase().includes(searchVal) ||
+        (i.jobCardId || '').toLowerCase().includes(searchVal) ||
+        i.customerName.toLowerCase().includes(searchVal);
+      return matchSearch && isWithinDateRange(i.date);
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (data.length === 0) {
+      tableRowsHtml = `<tr><td colspan="10" class="no-data-msg">No service invoices found.</td></tr>`;
+    } else {
+      tableRowsHtml = data.map(item => `
+        <tr>
+          <td style="font-family: monospace; font-weight:700;">${item.invoiceNo}</td>
+          <td>${formatDate(item.date)}</td>
+          <td style="font-family: monospace;">${item.jobCardId || '--'}</td>
+          <td style="font-weight:600;">${item.customerName}</td>
+          <td>${item.deviceBrand} ${item.deviceModel}</td>
+          <td>${formatCurrency(item.labourAmount)}</td>
+          <td>${formatCurrency(item.partsAmount)}</td>
+          <td>${formatCurrency(item.gstAmount)}</td>
+          <td style="font-weight:700; color: var(--primary);">${formatCurrency(item.grandTotal)}</td>
+          <td><span class="badge ${item.paymentStatus === 'Paid' ? 'badge-paid' : item.paymentStatus === 'Partially Paid' ? 'badge-partial' : 'badge-pending'}">${item.paymentStatus}</span></td>
+        </tr>
+      `).join('');
+    }
+
+  // 16. SERVICE PARTS REPORT
+  } else if (moduleVal === 'ServiceParts') {
+    tableHeadersHtml = `
+      <tr>
+        <th>Job Card #</th>
+        <th>Date</th>
+        <th>Part Code</th>
+        <th>Part Description</th>
+        <th style="text-align: center;">Qty Consumed</th>
+        <th>Unit Rate</th>
+        <th>Total Amount</th>
+      </tr>
+    `;
+    const rows = [];
+    (state.serviceJobCards || []).filter(j => isWithinDateRange(j.date)).forEach(j => {
+      (j.partsItems || []).forEach(p => {
+        if (!searchVal || (p.partName || '').toLowerCase().includes(searchVal) || (p.itemCode || '').toLowerCase().includes(searchVal) || j.id.toLowerCase().includes(searchVal)) {
+          rows.push({ jcId: j.id, date: j.date, itemCode: p.itemCode, partName: p.partName, qty: p.qty, rate: p.rate, amount: p.amount });
+        }
+      });
+    });
+
+    if (rows.length === 0) {
+      tableRowsHtml = `<tr><td colspan="7" class="no-data-msg">No spare parts consumption recorded in this period.</td></tr>`;
+    } else {
+      tableRowsHtml = rows.map(r => `
+        <tr>
+          <td style="font-family: monospace; font-weight:700;">${r.jcId}</td>
+          <td>${formatDate(r.date)}</td>
+          <td style="font-family: monospace;">${r.itemCode || '--'}</td>
+          <td style="font-weight:600;">${r.partName}</td>
+          <td style="text-align: center; font-weight:700; color: var(--danger-dark);">${r.qty}</td>
+          <td>${formatCurrency(r.rate)}</td>
+          <td style="font-weight:700; color: var(--primary);">${formatCurrency(r.amount)}</td>
+        </tr>
+      `).join('');
+    }
+
+  // 17. SERVICE ESTIMATIONS REPORT
+  } else if (moduleVal === 'ServiceEstimations') {
+    tableHeadersHtml = `
+      <tr>
+        <th>Estimate #</th>
+        <th>Date</th>
+        <th>Customer Name</th>
+        <th>Device</th>
+        <th>Labour (₹)</th>
+        <th>Parts (₹)</th>
+        <th>Total Estimate (₹)</th>
+        <th>Status</th>
+      </tr>
+    `;
+    const data = (state.serviceEstimations || []).filter(e => {
+      const matchSearch = e.id.toLowerCase().includes(searchVal) ||
+        e.customerName.toLowerCase().includes(searchVal) ||
+        (e.deviceBrand || '').toLowerCase().includes(searchVal);
+      return matchSearch && isWithinDateRange(e.date);
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (data.length === 0) {
+      tableRowsHtml = `<tr><td colspan="8" class="no-data-msg">No estimations found.</td></tr>`;
+    } else {
+      tableRowsHtml = data.map(item => `
+        <tr>
+          <td style="font-family: monospace; font-weight:700;">${item.id}</td>
+          <td>${formatDate(item.date)}</td>
+          <td style="font-weight:600;">${item.customerName}</td>
+          <td>${item.deviceBrand} ${item.deviceModel}</td>
+          <td>${formatCurrency(item.labourAmount)}</td>
+          <td>${formatCurrency(parseFloat(item.partsAmount || 0) + parseFloat(item.accessoriesAmount || 0))}</td>
+          <td style="font-weight:700; color: var(--primary);">${formatCurrency(item.totalAmount)}</td>
+          <td><span class="badge ${item.status === 'Approved' ? 'badge-approved' : item.status === 'Rejected' ? 'badge-rejected' : 'badge-draft'}">${item.status}</span></td>
+        </tr>
+      `).join('');
+    }
   }
 
   tableHead.innerHTML = tableHeadersHtml;
@@ -3715,6 +6243,47 @@ function handleReportExport() {
       const profit = sell - cost;
       const margin = sell > 0 ? ((profit / sell) * 100).toFixed(2) : 0;
       csvContent += `${escapeCSV(item.invoiceNo)},${escapeCSV(item.date)},${escapeCSV(item.customerName)},${escapeCSV(item.productName)},${escapeCSV(qty)},${escapeCSV(cost)},${escapeCSV(sell)},${escapeCSV(profit)},${escapeCSV(margin)}\n`;
+    });
+
+  // 14. Service Job Cards
+  } else if (moduleVal === 'ServiceJobCards') {
+    const list = (state.serviceJobCards || []).filter(j => isWithinDateRange(j.date));
+    if (list.length === 0) return alert("No service job cards to export!");
+    csvContent += "Job Card No,Date,Expected Delivery,Customer Name,Customer Mobile,Customer Address,Device Type,Brand,Model,Serial No,Customer Complaint,Assigned Technician,Technician Remarks,Labour Amount (INR),Parts Amount (INR),Subtotal (INR),Discount (INR),Tax Rate (%),Tax Amount (INR),Grand Total (INR),Status,Linked Invoice No\n";
+    list.forEach(j => {
+      csvContent += `${escapeCSV(j.id)},${escapeCSV(j.date)},${escapeCSV(j.deliveryDate || j.date)},${escapeCSV(j.customerName)},${escapeCSV(j.customerMobile)},${escapeCSV(j.customerAddress || "")},${escapeCSV(j.deviceType)},${escapeCSV(j.deviceBrand)},${escapeCSV(j.deviceModel)},${escapeCSV(j.deviceSerial || "")},${escapeCSV(j.complaint)},${escapeCSV(j.technician)},${escapeCSV(j.techRemarks || "")},${escapeCSV(j.totalLabour)},${escapeCSV(j.totalParts)},${escapeCSV(j.subtotal)},${escapeCSV(j.discount)},${escapeCSV(j.taxRate)},${escapeCSV(j.taxAmount)},${escapeCSV(j.grandTotal)},${escapeCSV(j.status)},${escapeCSV(j.invoiceId || "")}\n`;
+    });
+
+  // 15. Service Invoices
+  } else if (moduleVal === 'ServiceInvoices') {
+    const list = (state.serviceInvoices || []).filter(i => isWithinDateRange(i.date));
+    if (list.length === 0) return alert("No service invoices to export!");
+    csvContent += "Invoice No,Date,Job Card Ref,Customer Name,Customer Mobile,Customer Address,Device Details,Labour Charges (INR),Parts Charges (INR),Taxable Subtotal (INR),Discount (INR),GST Rate (%),GST Amount (INR),Grand Total (INR),Payment Status,Payment Method,Paid Amount (INR),Balance Due (INR)\n";
+    list.forEach(i => {
+      csvContent += `${escapeCSV(i.invoiceNo)},${escapeCSV(i.date)},${escapeCSV(i.jobCardId || "")},${escapeCSV(i.customerName)},${escapeCSV(i.customerMobile)},${escapeCSV(i.customerAddress || "")},${escapeCSV(i.deviceBrand + " " + i.deviceModel)},${escapeCSV(i.labourAmount)},${escapeCSV(i.partsAmount)},${escapeCSV(i.subtotal)},${escapeCSV(i.discount)},${escapeCSV(i.gstRate)},${escapeCSV(i.gstAmount)},${escapeCSV(i.grandTotal)},${escapeCSV(i.paymentStatus)},${escapeCSV(i.paymentMethod || "")},${escapeCSV(i.paidAmount)},${escapeCSV(i.balanceAmount)}\n`;
+    });
+
+  // 16. Service Parts Consumption
+  } else if (moduleVal === 'ServiceParts') {
+    const rows = [];
+    (state.serviceJobCards || []).filter(j => isWithinDateRange(j.date)).forEach(j => {
+      (j.partsItems || []).forEach(p => {
+        rows.push({ jcId: j.id, date: j.date, cust: j.customerName, device: `${j.deviceBrand} ${j.deviceModel}`, itemCode: p.itemCode, partName: p.partName, qty: p.qty, rate: p.rate, amount: p.amount });
+      });
+    });
+    if (rows.length === 0) return alert("No service parts consumed to export!");
+    csvContent += "Job Card No,Date,Customer Name,Device,Part Code,Part Description,Quantity Used,Unit Rate (INR),Total Amount (INR)\n";
+    rows.forEach(r => {
+      csvContent += `${escapeCSV(r.jcId)},${escapeCSV(r.date)},${escapeCSV(r.cust)},${escapeCSV(r.device)},${escapeCSV(r.itemCode || "")},${escapeCSV(r.partName)},${escapeCSV(r.qty)},${escapeCSV(r.rate)},${escapeCSV(r.amount)}\n`;
+    });
+
+  // 17. Service Estimations
+  } else if (moduleVal === 'ServiceEstimations') {
+    const list = (state.serviceEstimations || []).filter(e => isWithinDateRange(e.date));
+    if (list.length === 0) return alert("No service estimations to export!");
+    csvContent += "Estimate No,Date,Customer Name,Customer Mobile,Device Type,Brand,Model,Serial No,Customer Complaint,Labour Amount (INR),Parts Amount (INR),Accessories (INR),Other Charges (INR),Subtotal (INR),Discount (INR),Tax (INR),Grand Total (INR),Status,Notes\n";
+    list.forEach(e => {
+      csvContent += `${escapeCSV(e.id)},${escapeCSV(e.date)},${escapeCSV(e.customerName)},${escapeCSV(e.customerMobile)},${escapeCSV(e.deviceType)},${escapeCSV(e.deviceBrand)},${escapeCSV(e.deviceModel)},${escapeCSV(e.deviceSerial || "")},${escapeCSV(e.complaint)},${escapeCSV(e.labourAmount)},${escapeCSV(e.partsAmount)},${escapeCSV(e.accessoriesAmount || 0)},${escapeCSV(e.otherCharges || 0)},${escapeCSV(e.subtotal)},${escapeCSV(e.discount)},${escapeCSV(e.taxAmount)},${escapeCSV(e.totalAmount)},${escapeCSV(e.status)},${escapeCSV(e.notes || "")}\n`;
     });
   }
 
