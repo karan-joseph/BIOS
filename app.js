@@ -3,6 +3,48 @@
 // Building Intelligent Outcomes with Solutions
 // ==========================================================================
 
+// ==========================================================================
+// CENTRALIZED COMPANY BRANDING & OFFICIAL LOGO SYSTEM
+// Single Source of Truth across UI, Modals, Print Documents & Reports
+// ==========================================================================
+const COMPANY_BRANDING = {
+  name: 'BIOS',
+  fullName: 'BIOS PC Solutions & Systems',
+  tagline: 'BUILDING INTELLIGENT OUTCOMES WITH SOLUTION',
+  subtitle: 'PC, Laptop & Inventory Management Suite',
+  division: 'Enterprise PC, Laptop & Billing Solutions',
+  address: '123 Startup Hub, Tech District',
+  phone: '+91 98765 43210',
+  email: 'billing@bios.solutions',
+  website: 'www.bios.solutions',
+  gstin: '29AABCB1234F1Z5',
+  logoOriginal: 'assets/bios-logo.jpg',
+  logoTransparent: 'assets/bios-logo-transparent.png',
+
+  // Returns standardized logo image tag
+  getLogoImg: function(className = 'print-brand-logo', useTransparent = true) {
+    const src = useTransparent ? this.logoTransparent : this.logoOriginal;
+    return `<img src="${src}" alt="BIOS Official Logo" class="${className} brand-logo-img" loading="eager" />`;
+  },
+
+  // Returns standardized print document header HTML
+  getPrintHeaderHtml: function(subText = 'Computer Systems, Laptops, Components & Accessories', useTransparent = true) {
+    const src = useTransparent ? this.logoTransparent : this.logoOriginal;
+    return `
+      <div class="print-brand-header">
+        <img src="${src}" alt="BIOS Official Logo" class="print-brand-logo brand-logo-img" />
+        <div class="print-brand-info">
+          <h2>${this.name}</h2>
+          <div class="print-brand-tagline">${this.tagline}</div>
+          <div class="print-brand-desc">${subText}</div>
+        </div>
+      </div>
+    `;
+  }
+};
+window.COMPANY_BRANDING = COMPANY_BRANDING;
+
+
 // Global Application State
 let state = {
   enquiries: [],
