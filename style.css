@@ -95,10 +95,27 @@ h1, h2, h3, h4, h5, h6 {
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.5rem 2rem 0.5rem;
+  gap: 0.85rem;
+  padding: 0.5rem 0.5rem 1.75rem 0.5rem;
   border-bottom: 1px solid #1e293b;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
+}
+
+.brand-logo-img {
+  display: block;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.sidebar-brand-logo {
+  height: 48px;
+  width: auto;
+  max-width: 75px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  transition: transform var(--transition);
+  flex-shrink: 0;
 }
 
 .logo-icon {
@@ -113,19 +130,183 @@ h1, h2, h3, h4, h5, h6 {
 
 .logo-title {
   color: #ffffff;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   font-family: var(--font-heading);
-  letter-spacing: 0.05em;
-  line-height: 1.2;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
 }
 
 .logo-subtitle {
   color: var(--primary);
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* Header Brand Chip */
+.header-title-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-brand-logo {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-brand-tagline {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+/* Dashboard Brand Hero Banner */
+.dashboard-brand-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-brand-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.dashboard-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 1;
+}
+
+.dashboard-brand-logo {
+  height: 80px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+}
+
+.dashboard-brand-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-brand-subtitle {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-brand-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dashboard-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-brand-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.dashboard-brand-right strong {
+  color: #f1f5f9;
+}
+
+/* Print Documents Logo & Brand Header */
+.print-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.print-brand-logo {
+  height: 64px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  display: block;
+}
+
+.print-brand-info h2 {
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.05em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.print-brand-tagline {
+  font-size: 0.68rem;
+  color: #2563eb;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0.2rem 0;
+}
+
+.print-brand-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin: 0;
 }
 
 .nav-links {
@@ -1383,6 +1564,25 @@ body.printing-modal {
     margin: 0 !important;
     break-after: avoid;
     page-break-after: avoid;
+  }
+
+  /* Standardized BIOS Brand Logo in Print */
+  .brand-logo-img,
+  .print-brand-logo {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    max-height: 65px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-brand-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    break-inside: avoid !important;
   }
 
   /* ---- REPORT PRINT mode ---- */
