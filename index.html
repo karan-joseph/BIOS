@@ -120,6 +120,15 @@
           </a>
         </li>
         <li>
+          <a class="nav-link" data-target="finance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Finance & P/L
+          </a>
+        </li>
+        <li>
           <a class="nav-link" data-target="reports">
             <svg viewBox="0 0 24 24">
               <line x1="18" y1="20" x2="18" y2="10"/>
@@ -1336,6 +1345,176 @@
           </div>
         </section>
 
+        <!-- ==================== FINANCE VIEW ==================== -->
+        <section id="finance-section" class="page-section">
+          <div class="section-header">
+            <div class="section-header-left">
+              <h3>Finance & Business Overview</h3>
+              <p>Revenue, COGS, operating expenses, profit/loss and cash flow from your live sales, purchases and expense records.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="finance-print-btn">Print</button>
+              <button type="button" class="btn btn-success btn-sm" id="finance-export-csv-btn">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="filter-bar finance-period-bar">
+            <div class="form-group-inline">
+              <label for="finance-period-preset">Period</label>
+              <select id="finance-period-preset">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="year">This Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
+            <div class="form-group-inline finance-custom-dates" style="display: none;">
+              <label for="finance-from-date">From</label>
+              <input type="date" id="finance-from-date">
+            </div>
+            <div class="form-group-inline finance-custom-dates" style="display: none;">
+              <label for="finance-to-date">To</label>
+              <input type="date" id="finance-to-date">
+            </div>
+            <div class="form-group-inline">
+              <label for="finance-month-select">Monthly Report</label>
+              <input type="month" id="finance-month-select">
+            </div>
+            <button type="button" class="btn btn-secondary" id="finance-refresh-btn" style="height: 42px;">Refresh</button>
+          </div>
+
+          <div id="finance-cogs-notice" class="finance-notice-banner" style="display: none;"></div>
+
+          <div class="sub-nav-tabs finance-sub-tabs">
+            <button type="button" class="sub-tab-btn active" data-finance-tab="overview">Dashboard</button>
+            <button type="button" class="sub-tab-btn" data-finance-tab="expenses">Expenses</button>
+            <button type="button" class="sub-tab-btn" data-finance-tab="other-income">Other Income</button>
+            <button type="button" class="sub-tab-btn" data-finance-tab="pl">Profit & Loss</button>
+            <button type="button" class="sub-tab-btn" data-finance-tab="cashflow">Cash Flow</button>
+            <button type="button" class="sub-tab-btn" data-finance-tab="reports">Financial Reports</button>
+          </div>
+
+          <div id="finance-tab-overview" class="sub-tab-pane active">
+            <div class="finance-kpi-grid" id="finance-kpi-grid"></div>
+            <div class="finance-charts-grid" id="finance-charts-grid"></div>
+            <div class="dashboard-card" style="margin-top: 1rem;">
+              <h4 class="card-title-area" style="margin-bottom: 0.75rem;">Monthly Business Summary</h4>
+              <div id="finance-monthly-summary-table"></div>
+              <p id="finance-period-comparison" class="finance-comparison-text" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);"></p>
+            </div>
+          </div>
+
+          <div id="finance-tab-expenses" class="sub-tab-pane">
+            <div class="section-header" style="margin-bottom: 1rem;">
+              <div class="section-header-left">
+                <h4 style="font-size: 1.15rem;">Operating Expenses</h4>
+                <p style="font-size: 0.85rem;">Rent, salary, utilities and other costs — separate from product purchases.</p>
+              </div>
+              <button type="button" class="btn btn-primary" id="open-expense-modal-btn">+ Add Expense</button>
+            </div>
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 1;">
+                <label for="expense-search">Search</label>
+                <input type="text" id="expense-search" placeholder="Description, reference, category...">
+              </div>
+              <div class="form-group-inline">
+                <label for="expense-filter-category">Category</label>
+                <select id="expense-filter-category"><option value="All">All Categories</option></select>
+              </div>
+              <div class="form-group-inline">
+                <label for="expense-filter-from">From</label>
+                <input type="date" id="expense-filter-from">
+              </div>
+              <div class="form-group-inline">
+                <label for="expense-filter-to">To</label>
+                <input type="date" id="expense-filter-to">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Expense ID</th>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Reference</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="expense-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="finance-tab-other-income" class="sub-tab-pane">
+            <div class="section-header" style="margin-bottom: 1rem;">
+              <div class="section-header-left">
+                <h4 style="font-size: 1.15rem;">Other Income</h4>
+                <p style="font-size: 0.85rem;">Commission, service fees (non-invoice) and other business income.</p>
+              </div>
+              <button type="button" class="btn btn-primary" id="open-other-income-modal-btn">+ Add Other Income</button>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Income ID</th>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="other-income-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="finance-tab-pl" class="sub-tab-pane">
+            <div class="invoice-preview-card finance-pl-card" id="finance-pl-statement"></div>
+          </div>
+
+          <div id="finance-tab-cashflow" class="sub-tab-pane">
+            <div class="finance-cashflow-grid" id="finance-cashflow-panel"></div>
+          </div>
+
+          <div id="finance-tab-reports" class="sub-tab-pane">
+            <div class="filter-bar">
+              <div class="form-group-inline" style="flex-grow: 1.5;">
+                <label for="finance-report-type">Financial Report</label>
+                <select id="finance-report-type">
+                  <option value="Revenue">Revenue Report</option>
+                  <option value="Sales">Sales Report</option>
+                  <option value="Purchase">Purchase Report</option>
+                  <option value="Expense">Expense Report</option>
+                  <option value="GrossProfit">Gross Profit Report</option>
+                  <option value="NetProfit">Net Profit / Loss Report</option>
+                  <option value="ProductProfit">Product Profit Report</option>
+                  <option value="CategoryProfit">Category Profit Report</option>
+                  <option value="CustomerOutstanding">Customer Outstanding</option>
+                  <option value="SupplierOutstanding">Supplier Outstanding</option>
+                  <option value="CashFlow">Cash Flow Summary</option>
+                  <option value="PaymentMethods">Payment Method Summary</option>
+                  <option value="MonthlySummary">Monthly Business Summary</option>
+                  <option value="YearlySummary">Yearly Business Summary</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive" id="finance-report-print-area">
+              <table>
+                <thead id="finance-report-head"></thead>
+                <tbody id="finance-report-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- ==================== REPORTS VIEW ==================== -->
         <section id="reports-section" class="page-section">
           <div class="section-header">
@@ -1386,6 +1565,9 @@
                   <option value="ServiceInvoices">Service Invoices & Payments Report</option>
                   <option value="ServiceParts">Service Parts Consumption Report</option>
                   <option value="ServiceEstimations">Service Estimations Report</option>
+                </optgroup>
+                <optgroup label="Finance Reports (see Finance module)">
+                  <option value="ProfitMargin">Profit / Margin Report (Product Sales)</option>
                 </optgroup>
               </select>
             </div>
@@ -1853,7 +2035,7 @@
               </div>
               <div class="form-group">
                 <label for="purchase-min-stock">Minimum Stock Alert</label>
-                <input type="number" id="purchase-min-stock" min="1" step="1" value="2">
+                <input type="number" id="purchase-min-stock" min="0" step="1" value="2" required>
               </div>
             </div>
 
@@ -2197,6 +2379,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" id="close-purchase-view-btn2">Close</button>
+        <button type="button" class="btn btn-secondary" id="edit-purchase-from-view-btn">Edit Purchase Bill</button>
         <button type="button" class="btn btn-primary" id="print-purchase-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Purchase Voucher
@@ -2321,6 +2504,11 @@
       <form id="jobcard-form">
         <input type="hidden" id="jobcard-edit-id">
         <input type="hidden" id="jobcard-from-estimation-id">
+        <div id="jobcard-source-estimation-banner" style="display: none; margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; font-size: 0.85rem;">
+          Linked Estimation:
+          <span id="jobcard-source-estimation-label" style="font-family: monospace; font-weight: 700; color: var(--primary);"></span>
+          <button type="button" class="btn btn-link btn-sm" id="jobcard-open-source-estimation-btn" style="margin-left: 0.35rem; padding: 0;">View original estimation</button>
+        </div>
         <div class="modal-body">
           
           <!-- Job Info & Dates -->
@@ -2833,6 +3021,7 @@
               <div class="invoice-meta-val" id="jc-prev-date">--</div>
               <div class="invoice-meta-label">Exp. Delivery:</div>
               <div class="invoice-meta-val" id="jc-prev-delv" style="font-weight: 700; color: #4f46e5;">--</div>
+              <div id="jc-prev-source-estimation-row" style="display: none; margin-top: 0.35rem; font-size: 0.78rem;"></div>
             </div>
           </div>
 
@@ -3180,6 +3369,129 @@
           Print Service Invoice
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- EXPENSE MODAL -->
+  <div class="modal-overlay" id="expense-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4 id="expense-modal-title">Add Expense</h4>
+        <button type="button" class="modal-close-btn" id="close-expense-modal-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="expense-form">
+        <div class="modal-body">
+          <input type="hidden" id="expense-edit-id">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="expense-number">Expense ID</label>
+              <input type="text" id="expense-number" readonly style="background: var(--secondary-light); font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label for="expense-date">Date *</label>
+              <input type="date" id="expense-date" required>
+            </div>
+            <div class="form-group">
+              <label for="expense-category">Category *</label>
+              <select id="expense-category" required></select>
+            </div>
+            <div class="form-group">
+              <label for="expense-amount">Amount (₹) *</label>
+              <input type="number" id="expense-amount" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="expense-payment-method">Payment Method</label>
+              <select id="expense-payment-method">
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="Card">Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="expense-reference">Reference #</label>
+              <input type="text" id="expense-reference" placeholder="Receipt / voucher no.">
+            </div>
+            <div class="form-group form-full-width">
+              <label for="expense-description">Description *</label>
+              <input type="text" id="expense-description" required placeholder="What was this expense for?">
+            </div>
+            <div class="form-group form-full-width">
+              <label for="expense-notes">Notes</label>
+              <textarea id="expense-notes" rows="2" placeholder="Optional notes"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-expense-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- OTHER INCOME MODAL -->
+  <div class="modal-overlay" id="other-income-modal">
+    <div class="modal-content modal-md">
+      <div class="modal-header">
+        <h4 id="other-income-modal-title">Add Other Income</h4>
+        <button type="button" class="modal-close-btn" id="close-other-income-modal-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="other-income-form">
+        <div class="modal-body">
+          <input type="hidden" id="other-income-edit-id">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="other-income-number">Income ID</label>
+              <input type="text" id="other-income-number" readonly style="background: var(--secondary-light); font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label for="other-income-date">Date *</label>
+              <input type="date" id="other-income-date" required>
+            </div>
+            <div class="form-group">
+              <label for="other-income-category">Category</label>
+              <select id="other-income-category">
+                <option value="Service Income">Service Income</option>
+                <option value="Commission">Commission</option>
+                <option value="Other Business Income">Other Business Income</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="other-income-amount">Amount (₹) *</label>
+              <input type="number" id="other-income-amount" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="other-income-payment-method">Payment Method</label>
+              <select id="other-income-payment-method">
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="Card">Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group form-full-width">
+              <label for="other-income-description">Description *</label>
+              <input type="text" id="other-income-description" required>
+            </div>
+            <div class="form-group form-full-width">
+              <label for="other-income-notes">Notes</label>
+              <textarea id="other-income-notes" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancel-other-income-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Income</button>
+        </div>
+      </form>
     </div>
   </div>
 
