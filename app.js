@@ -59,7 +59,9 @@ let state = {
   stockLedger: [],        // Complete stock movement history
   serviceJobCards: [],    // Service & Repair Job Cards
   serviceEstimations: [], // Service Quotations & Estimations
-  serviceInvoices: []     // Service Bills & Invoices
+  serviceInvoices: [],    // Service Bills & Invoices
+  expenses: [],           // Operating expenses (rent, salary, etc.)
+  otherIncome: []         // Non-product sales income
 };
 
 // LocalStorage Keys
@@ -76,7 +78,9 @@ const STORAGE_KEYS = {
   STOCK_LEDGER: 'bios_stock_ledger',
   SERVICE_JOB_CARDS: 'bios_service_job_cards',
   SERVICE_ESTIMATIONS: 'bios_service_estimations',
-  SERVICE_INVOICES: 'bios_service_invoices'
+  SERVICE_INVOICES: 'bios_service_invoices',
+  EXPENSES: 'bios_expenses',
+  OTHER_INCOME: 'bios_other_income'
 };
 
 // ==========================================================================
@@ -104,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderReturnsTables();
   renderServiceModule();
   renderReports();
+  initFinanceModule();
 });
 
 // Load data from LocalStorage
@@ -122,6 +127,8 @@ function loadFromStorage() {
     state.serviceJobCards = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_JOB_CARDS)) || [];
     state.serviceEstimations = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_ESTIMATIONS)) || [];
     state.serviceInvoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_INVOICES)) || [];
+    state.expenses = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || [];
+    state.otherIncome = JSON.parse(localStorage.getItem(STORAGE_KEYS.OTHER_INCOME)) || [];
   } catch (e) {
     console.error('Error loading data from LocalStorage:', e);
   }
@@ -339,6 +346,18 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-IN', options);
 }
 
+/** Parse minimum stock: empty = invalid; 0 = valid; positive = valid */
+function parseMinStockField(rawValue) {
+  if (rawValue === '' || rawValue === null || rawValue === undefined) {
+    return { ok: false, message: '❌ Minimum stock is required. Enter 0 if you do not want low-stock alerts.' };
+  }
+  const minStock = parseFloat(String(rawValue).trim());
+  if (!Number.isFinite(minStock) || minStock < 0) {
+    return { ok: false, message: '❌ Minimum stock must be 0 or a positive number.' };
+  }
+  return { ok: true, value: minStock };
+}
+
 // Format Date & Time for ledger
 function formatDateTime(isoStr) {
   if (!isoStr) return '';
@@ -408,6 +427,8 @@ function setupNavigation() {
         renderPCBuildHistoryTable();
       } else if (targetSectionId === 'returns') {
         renderReturnsTables();
+      } else if (targetSectionId === 'finance') {
+        renderFinanceModule();
       } else if (targetSectionId === 'reports') {
         renderReports();
       }
@@ -477,6 +498,22 @@ function setupSubTabs() {
       else if (target === 'invoices') renderServiceInvoicesTable();
       else if (target === 'history') renderServiceHistorySearch();
       else if (target === 'customers') renderServiceCustomersTable();
+    });
+  });
+
+  const financeTabs = document.querySelectorAll('[data-finance-tab]');
+  financeTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      financeTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-finance-tab');
+      document.querySelectorAll('#finance-section .sub-tab-pane').forEach(p => p.classList.remove('active'));
+      const pane = document.getElementById(`finance-tab-${target}`);
+      if (pane) pane.classList.add('active');
+      if (target === 'reports') renderFinanceReportTable();
+      else if (target === 'expenses') renderExpensesTable();
+      else if (target === 'other-income') renderOtherIncomeTable();
+      else renderFinanceModule();
     });
   });
 }
@@ -688,7 +725,7 @@ function setupEventListeners() {
         document.getElementById('purchase-model').value = existing.model || '';
         document.getElementById('purchase-rate').value = existing.purchaseRate || '';
         document.getElementById('purchase-selling-rate').value = existing.sellingRate || '';
-        document.getElementById('purchase-min-stock').value = existing.minStock || 2;
+        document.getElementById('purchase-min-stock').value = existing.minStock != null ? existing.minStock : 2;
         calculatePurchaseTotals();
       }
     });
@@ -714,6 +751,16 @@ function setupEventListeners() {
       if (purchaseFilterFrom) purchaseFilterFrom.value = '';
       if (purchaseFilterTo) purchaseFilterTo.value = '';
       renderPurchasesTable();
+    });
+  }
+
+  const editPurchaseFromViewBtn = document.getElementById('edit-purchase-from-view-btn');
+  if (editPurchaseFromViewBtn) {
+    editPurchaseFromViewBtn.addEventListener('click', () => {
+      const viewModal = document.getElementById('purchase-view-modal');
+      const purchaseId = viewModal?.dataset?.purchaseId;
+      if (purchaseId) editPurchase(purchaseId);
+      else alert('❌ Unable to edit purchase bill. Please close and try again from the list.');
     });
   }
 
@@ -864,6 +911,8 @@ function setupEventListeners() {
 
   if (reportExportBtn) reportExportBtn.addEventListener('click', handleReportExport);
   if (reportPrintBtn) reportPrintBtn.addEventListener('click', handleReportPrint);
+
+  setupFinanceEventListeners();
 
   // --- Service Module Listeners ---
   setupCustomerAutoFill('jobcard-customer-name', 'jobcard-customer-mobile', 'jobcard-customer-address');
@@ -1829,7 +1878,12 @@ function handlePurchaseSubmit(e) {
   const category = document.getElementById('purchase-category').value;
   const brand = document.getElementById('purchase-brand').value.trim();
   const model = document.getElementById('purchase-model').value.trim();
-  const minStock = parseFloat(document.getElementById('purchase-min-stock').value || 2);
+  const minStockParsed = parseMinStockField(document.getElementById('purchase-min-stock').value);
+  if (!minStockParsed.ok) {
+    alert(minStockParsed.message);
+    return;
+  }
+  const minStock = minStockParsed.value;
   const serialRaw = document.getElementById('purchase-serial-numbers').value.trim();
   const serials = serialRaw ? serialRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   const qty = parseFloat(document.getElementById('purchase-qty').value || 1);
@@ -1874,14 +1928,52 @@ function handlePurchaseSubmit(e) {
   else { sup.totalPurchases = parseFloat(sup.totalPurchases || 0) + totalAmount; sup.balanceDue = parseFloat(sup.balanceDue || 0) + balanceAmount; if (supplierPhone) sup.phone = supplierPhone; }
   saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
 
-  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials };
+  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials, minStock };
   if (editId) { const idx = state.purchases.findIndex(p => p.id === editId); if (idx !== -1) state.purchases[idx] = newPurchase; }
   else state.purchases.push(newPurchase);
   saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
-  addActivity('purchase', `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
+  addActivity('purchase', editId
+    ? `Updated Purchase Bill <strong>${invoiceNo}</strong> from ${supplier} (Stock recalculated)`
+    : `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
   document.getElementById('purchase-modal').classList.remove('active');
   renderPurchasesTable(); renderInventoryTable(); renderDashboard(); renderReports();
+  alert(editId ? '✅ Purchase bill updated successfully.\nStock has been recalculated.' : '✅ Purchase bill saved successfully.\nStock has been updated.');
 }
+
+window.editPurchase = function(id) {
+  const item = state.purchases.find(p => p.id === id);
+  if (!item) {
+    alert('❌ Purchase bill not found.');
+    return;
+  }
+
+  document.getElementById('purchase-modal-title').textContent = `Edit Purchase Bill — ${item.invoiceNo}`;
+  document.getElementById('purchase-edit-id').value = item.id;
+  document.getElementById('purchase-supplier').value = item.supplier || '';
+  document.getElementById('purchase-supplier-phone').value = item.supplierPhone || '';
+  document.getElementById('purchase-invoice-no').value = item.invoiceNo || '';
+  document.getElementById('purchase-date').value = item.date || getTodayDateString();
+  document.getElementById('purchase-item-code').value = item.itemCode || '';
+  document.getElementById('purchase-item-name').value = item.itemName || '';
+  document.getElementById('purchase-category').value = item.category || 'General';
+  document.getElementById('purchase-brand').value = item.brand || '';
+  document.getElementById('purchase-model').value = item.model || '';
+  const invForMin = state.inventory.find(i => i.itemCode === item.itemCode);
+  const minStockDisplay = item.minStock != null ? item.minStock : (invForMin && invForMin.minStock != null ? invForMin.minStock : 2);
+  document.getElementById('purchase-min-stock').value = minStockDisplay;
+  document.getElementById('purchase-serial-numbers').value = (item.serials || []).join(', ');
+  document.getElementById('purchase-qty').value = item.qty || 1;
+  document.getElementById('purchase-rate').value = item.rate || 0;
+  document.getElementById('purchase-discount').value = item.discount || 0;
+  document.getElementById('purchase-gst-rate').value = item.gstRate !== undefined ? item.gstRate : 18;
+  document.getElementById('purchase-selling-rate').value = item.sellingRate || '';
+  document.getElementById('purchase-paid-amount').value = item.paidAmount || 0;
+
+  populatePurchaseDataLists();
+  calculatePurchaseTotals();
+  document.getElementById('purchase-view-modal')?.classList.remove('active');
+  document.getElementById('purchase-modal').classList.add('active');
+};
 
 function renderPurchasesTable() {
   const tableBody = document.getElementById('purchases-table-body');
@@ -1974,6 +2066,7 @@ function renderPurchasesTable() {
         <td><span class="badge ${statusClass}">${item.status}</span></td>
         <td class="actions-cell">
           <button class="btn btn-primary btn-sm" onclick="previewPurchaseInvoice('${item.id}')">⎙ View</button>
+          <button class="btn btn-secondary btn-sm" onclick="editPurchase('${item.id}')" title="Edit Purchase Bill">Edit</button>
           <button class="btn btn-outline btn-sm btn-danger" onclick="deletePurchase('${item.id}')">Delete</button>
         </td>
       </tr>
@@ -2007,7 +2100,9 @@ window.previewPurchaseInvoice = function(id) {
   document.getElementById('purch-prev-paid').textContent = formatCurrency(item.paidAmount);
   document.getElementById('purch-prev-balance').textContent = formatCurrency(item.balanceAmount);
 
-  document.getElementById('purchase-view-modal').classList.add('active');
+  const viewModal = document.getElementById('purchase-view-modal');
+  if (viewModal) viewModal.dataset.purchaseId = id;
+  viewModal.classList.add('active');
 };
 
 window.deletePurchase = function(id) {
@@ -2142,7 +2237,7 @@ function renderInventoryTable() {
         <td>${formatCurrency(item.purchaseRate)}</td>
         <td style="font-weight: 600; color: var(--primary);">${formatCurrency(item.sellingRate)}</td>
         <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(stockValue)}</td>
-        <td style="text-align: center; color: var(--text-muted);">${item.minStock || 2}</td>
+        <td style="text-align: center; color: var(--text-muted);">${item.minStock ?? 2}</td>
         <td><span class="badge ${statusClass}">${status}</span></td>
         <td class="actions-cell">
           <button class="btn btn-outline btn-sm" onclick="quickStockAdjust('${item.itemCode}')" title="Adjust Stock (±)">± Adjust</button>
@@ -2907,26 +3002,62 @@ function renderServiceDashboard() {
   if (elTodayAmt) elTodayAmt.textContent = formatCurrency(todayRevenue);
 }
 
-// 2. ID Generators
+// 2. ID Generators (sequential by max existing number — safe after deletes)
+function nextSequentialDocumentId(prefix, year, existingIds) {
+  let maxNum = 0;
+  const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`, 'i');
+  (existingIds || []).forEach(id => {
+    const match = String(id || '').match(pattern);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+  });
+  return `${prefix}-${year}-${String(maxNum + 1).padStart(4, '0')}`;
+}
+
 function generateJobCardNumber() {
   const currentYear = new Date().getFullYear();
-  const list = state.serviceJobCards || [];
-  const nextNum = list.length + 1;
-  return `JC-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+  const ids = (state.serviceJobCards || []).map(j => j.id);
+  return nextSequentialDocumentId('JC', currentYear, ids);
 }
 
 function generateEstimationNumber() {
   const currentYear = new Date().getFullYear();
-  const list = state.serviceEstimations || [];
-  const nextNum = list.length + 1;
-  return `EST-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+  const ids = (state.serviceEstimations || []).map(e => e.id);
+  return nextSequentialDocumentId('EST', currentYear, ids);
 }
 
 function generateServiceInvoiceNumber() {
   const currentYear = new Date().getFullYear();
-  const list = state.serviceInvoices || [];
-  const nextNum = list.length + 1;
-  return `SINV-${currentYear}-${String(nextNum).padStart(4, '0')}`;
+  const ids = (state.serviceInvoices || []).map(i => i.invoiceNo || i.id);
+  return nextSequentialDocumentId('SINV', currentYear, ids);
+}
+
+function getEstimationConversionMissingFields(est) {
+  const missing = [];
+  if (!est.customerName || !String(est.customerName).trim()) missing.push('Customer Name');
+  if (!est.customerMobile || !String(est.customerMobile).trim()) missing.push('Mobile Number');
+  if (!est.deviceBrand || !String(est.deviceBrand).trim()) missing.push('Device Brand');
+  if (!est.deviceModel || !String(est.deviceModel).trim()) missing.push('Device Model');
+  if (!est.complaint || !String(est.complaint).trim()) missing.push('Problem / Complaint');
+  return missing;
+}
+
+function updateJobCardSourceEstimationBanner(sourceEstimationId) {
+  const banner = document.getElementById('jobcard-source-estimation-banner');
+  const label = document.getElementById('jobcard-source-estimation-label');
+  const btn = document.getElementById('jobcard-open-source-estimation-btn');
+  if (!banner || !label || !btn) return;
+  if (sourceEstimationId) {
+    banner.style.display = 'block';
+    label.textContent = sourceEstimationId;
+    btn.onclick = () => {
+      document.getElementById('jobcard-modal')?.classList.remove('active');
+      openEstimationPrintModal(sourceEstimationId);
+    };
+  } else {
+    banner.style.display = 'none';
+    label.textContent = '';
+    btn.onclick = null;
+  }
 }
 
 // 3. Render Job Cards Table
@@ -2972,6 +3103,7 @@ function renderJobCardsTable() {
           <a href="#" onclick="openJobCardPrintModal('${jc.id}'); return false;" style="font-family: monospace; font-weight: 700; color: var(--primary); text-decoration: underline;">
             ${jc.id}
           </a>
+          ${jc.sourceEstimationId ? `<div style="font-size: 0.72rem; margin-top: 0.15rem;"><a href="#" onclick="openEstimationPrintModal('${jc.sourceEstimationId}'); return false;" title="View source estimation">Est: ${jc.sourceEstimationId}</a></div>` : ''}
         </td>
         <td>
           <div style="font-weight: 600;">${formatDate(jc.date)}</div>
@@ -3082,12 +3214,14 @@ function renderEstimationsTable() {
             <button class="btn btn-secondary btn-sm" onclick="openEstimationPrintModal('${est.id}')" title="Print Quotation / Estimate">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             </button>
-            ${est.status !== 'Approved' ? `
+            ${!est.convertedJobCardId ? `
               <button class="btn btn-success btn-sm" onclick="convertEstimationToJobCard('${est.id}')" title="Convert to Job Card (Customer Approved)">
                 ⚡ Convert to Job Card
               </button>
             ` : `
-              <span class="badge badge-ready" title="Job Card Created: ${est.convertedJobCardId || ''}">Job Card Active</span>
+              <button class="btn btn-outline btn-sm badge-ready" onclick="openJobCardModal('${est.convertedJobCardId}')" title="Open Job Card ${est.convertedJobCardId}">
+                Job Card: ${est.convertedJobCardId}
+              </button>
             `}
             <button class="btn btn-secondary btn-sm" onclick="openEstimationModal('${est.id}')" title="Edit Estimate">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -3777,6 +3911,8 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
       jc.partsItems.forEach(p => addJobCardPartRow(p.itemCode, p.partName, p.qty, p.rate));
     }
 
+    updateJobCardSourceEstimationBanner(jc.sourceEstimationId || null);
+
   } else if (fromEstimationObj) {
     // Convert from Estimation
     document.getElementById('jobcard-modal-title').textContent = `New Job Card (From Estimation ${fromEstimationObj.id})`;
@@ -3815,6 +3951,12 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
       addJobCardPartRow('', 'Approved Estimation Spare Parts', 1, fromEstimationObj.partsAmount);
     }
 
+    const accAmt = parseFloat(fromEstimationObj.accessoriesAmount || 0);
+    const otherAmt = parseFloat(fromEstimationObj.otherCharges || 0);
+    if (accAmt > 0) addJobCardLabourRow('Accessories (from estimation)', accAmt);
+    if (otherAmt > 0) addJobCardLabourRow('Other charges (from estimation)', otherAmt);
+
+    updateJobCardSourceEstimationBanner(fromEstimationObj.id);
 
   } else {
     // New Job Card from Scratch
@@ -3832,6 +3974,7 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
     document.getElementById('jobcard-tax-rate').value = 18;
 
     addJobCardLabourRow('General Diagnostic & Hardware Servicing', 500);
+    updateJobCardSourceEstimationBanner(null);
   }
 
   recalcJobCardTotals();
@@ -3888,7 +4031,8 @@ function handleJobCardSubmit(e) {
 
   const editId = document.getElementById('jobcard-edit-id').value;
   const fromEstId = document.getElementById('jobcard-from-estimation-id').value;
-  const jcNumber = editId || generateJobCardNumber();
+  const displayedJcNumber = document.getElementById('jobcard-number')?.value?.trim();
+  const jcNumber = editId || displayedJcNumber || generateJobCardNumber();
   const date = document.getElementById('jobcard-date').value;
   const deliveryDate = document.getElementById('jobcard-delivery-date').value;
   const status = document.getElementById('jobcard-status').value;
@@ -3904,6 +4048,27 @@ function handleJobCardSubmit(e) {
   const techRemarks = document.getElementById('jobcard-tech-remarks').value.trim();
   const discount = parseFloat(document.getElementById('jobcard-discount').value || 0);
   const taxRate = parseFloat(document.getElementById('jobcard-tax-rate').value || 18);
+
+  if (!customerName || !customerMobile || !deviceBrand || !deviceModel || !complaint || !technician) {
+    alert('❌ Please complete the required fields: Customer Name, Mobile, Device Brand, Model, Complaint, and Technician.');
+    return;
+  }
+  if (!date || !deliveryDate) {
+    alert('❌ Please complete the required fields: Received Date and Expected Delivery Date.');
+    return;
+  }
+
+  if (fromEstId && !editId) {
+    const estCheck = (state.serviceEstimations || []).find(e => e.id === fromEstId);
+    if (estCheck?.convertedJobCardId) {
+      alert('❌ This estimation has already been converted to Job Card ' + estCheck.convertedJobCardId + '.');
+      return;
+    }
+  }
+  if (!editId && (state.serviceJobCards || []).some(j => j.id === jcNumber)) {
+    alert('❌ Unable to convert estimation to job card: Job Card number already exists. Please try again.');
+    return;
+  }
 
   // Collect Labour items
   const labourItems = [];
@@ -4024,7 +4189,8 @@ function handleJobCardSubmit(e) {
     taxRate,
     taxAmount,
     grandTotal,
-    invoiceId: existingJC ? existingJC.invoiceId : null
+    invoiceId: existingJC ? existingJC.invoiceId : null,
+    sourceEstimationId: existingJC?.sourceEstimationId || fromEstId || null
   };
 
   if (editId) {
@@ -4060,9 +4226,23 @@ function handleJobCardSubmit(e) {
 // 15. Convert Estimation to Job Card
 window.convertEstimationToJobCard = function(estId) {
   const est = (state.serviceEstimations || []).find(e => e.id === estId);
-  if (!est) return;
+  if (!est) {
+    alert('❌ Unable to convert estimation to job card: estimation not found.');
+    return;
+  }
 
-  if (confirm(`Convert Estimation ${est.id} into an Active Service Job Card for "${est.customerName}"?`)) {
+  if (est.convertedJobCardId) {
+    alert('❌ This estimation has already been converted to Job Card ' + est.convertedJobCardId + '.');
+    return;
+  }
+
+  const missing = getEstimationConversionMissingFields(est);
+  if (missing.length > 0) {
+    alert('❌ Please complete the required fields on the estimation before converting:\n\n• ' + missing.join('\n• '));
+    return;
+  }
+
+  if (confirm(`Convert Estimation ${est.id} into an Active Service Job Card for "${est.customerName}"?\n\nThe estimation will remain saved; a new Job Card will be created when you click Save.`)) {
     openJobCardModal(null, est);
   }
 };
@@ -4101,6 +4281,15 @@ window.deleteJobCard = function(jobCardId) {
           });
         }
       });
+    }
+
+    if (jc.sourceEstimationId) {
+      const linkedEst = (state.serviceEstimations || []).find(e => e.id === jc.sourceEstimationId);
+      if (linkedEst && linkedEst.convertedJobCardId === jc.id) {
+        linkedEst.convertedJobCardId = null;
+        if (linkedEst.status === 'Approved') linkedEst.status = 'Draft';
+        saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+      }
     }
 
     state.serviceJobCards = state.serviceJobCards.filter(j => j.id !== jobCardId);
@@ -4203,7 +4392,8 @@ function handleEstimationSubmit(e) {
   e.preventDefault();
 
   const editId = document.getElementById('estimation-edit-id').value;
-  const estNumber = editId || generateEstimationNumber();
+  const displayedEstNumber = document.getElementById('estimation-number')?.value?.trim();
+  const estNumber = editId || displayedEstNumber || generateEstimationNumber();
   const date = document.getElementById('estimation-date').value;
   const status = document.getElementById('estimation-status').value;
   const customerName = document.getElementById('estimation-customer-name').value.trim();
@@ -4219,6 +4409,11 @@ function handleEstimationSubmit(e) {
   const discount = parseFloat(document.getElementById('estimation-discount').value || 0);
   const taxRate = parseFloat(document.getElementById('estimation-tax-rate').value || 18);
   const notes = document.getElementById('estimation-notes').value.trim();
+
+  if (!customerName || !customerMobile || !deviceBrand || !deviceModel || !complaint) {
+    alert('❌ Please complete the required fields: Customer Name, Mobile, Device Brand, Model, and Complaint.');
+    return;
+  }
 
   // Collect labour rows
   const labourItems = [];
@@ -4425,7 +4620,8 @@ function handleServiceInvoiceSubmit(e) {
 
   const editId = document.getElementById('svc-inv-edit-id').value;
   const jobCardId = document.getElementById('svc-inv-jobcard-id').value || document.getElementById('svc-inv-jobcard-select').value;
-  const invNumber = editId || generateServiceInvoiceNumber();
+  const displayedInvNumber = document.getElementById('svc-inv-number')?.value?.trim();
+  const invNumber = editId || displayedInvNumber || generateServiceInvoiceNumber();
   const date = document.getElementById('svc-inv-date').value;
   const customerName = document.getElementById('svc-inv-cust-name').value.trim();
   const customerMobile = document.getElementById('svc-inv-cust-mobile').value.trim();
@@ -4589,6 +4785,17 @@ window.openJobCardPrintModal = function(jobCardId) {
   document.getElementById('jc-prev-tax-rate').textContent = `${jc.taxRate !== undefined ? jc.taxRate : 18}%`;
   document.getElementById('jc-prev-tax-amt').textContent = formatCurrency(jc.taxAmount);
   document.getElementById('jc-prev-grand-total').textContent = formatCurrency(jc.grandTotal);
+
+  const estLinkRow = document.getElementById('jc-prev-source-estimation-row');
+  if (estLinkRow) {
+    if (jc.sourceEstimationId) {
+      estLinkRow.style.display = 'block';
+      estLinkRow.innerHTML = `Source Estimation: <button type="button" class="btn btn-link btn-sm" style="padding:0; font-weight:700;" onclick="openEstimationPrintModal('${jc.sourceEstimationId}')">${jc.sourceEstimationId}</button>`;
+    } else {
+      estLinkRow.style.display = 'none';
+      estLinkRow.innerHTML = '';
+    }
+  }
 
   document.getElementById('jobcard-view-modal').classList.add('active');
 };
@@ -5632,4 +5839,658 @@ function handleReportExport() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+// ==========================================================================
+// FINANCE — REVENUE, COGS, EXPENSES, P/L & CASH FLOW
+// ==========================================================================
+const FINANCE_EXPENSE_CATEGORIES = [
+  'Rent', 'Electricity', 'Internet', 'Salary', 'Staff Expenses', 'Transport', 'Delivery',
+  'Maintenance', 'Shop Expenses', 'Office Expenses', 'Marketing', 'Advertising',
+  'Software Subscriptions', 'Equipment', 'Repairs', 'Bank Charges', 'Other Expenses'
+];
+
+function financeParseDate(str) {
+  if (!str) return null;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function financeIsInRange(dateStr, from, to) {
+  const d = financeParseDate(dateStr);
+  if (!d) return false;
+  if (from && d < from) return false;
+  if (to && d > to) return false;
+  return true;
+}
+
+function getFinancePeriodRange(preset, customFrom, customTo) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let from = new Date(today);
+  let to = new Date(today);
+  if (preset === 'week') {
+    const dow = from.getDay();
+    const monOffset = dow === 0 ? 6 : dow - 1;
+    from.setDate(from.getDate() - monOffset);
+  } else if (preset === 'month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+    to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  } else if (preset === 'year') {
+    from = new Date(today.getFullYear(), 0, 1);
+    to = new Date(today.getFullYear(), 11, 31);
+  } else if (preset === 'custom') {
+    from = financeParseDate(customFrom) || today;
+    to = financeParseDate(customTo) || today;
+    if (from > to) { const t = from; from = to; to = t; }
+  }
+  return { from, to };
+}
+
+function generateExpenseId() {
+  const y = new Date().getFullYear();
+  return nextSequentialDocumentId('EXP', y, (state.expenses || []).map(e => e.id));
+}
+
+function generateOtherIncomeId() {
+  const y = new Date().getFullYear();
+  return nextSequentialDocumentId('OIN', y, (state.otherIncome || []).map(o => o.id));
+}
+
+function getPartUnitCost(itemCode, fallbackRate) {
+  if (itemCode) {
+    const item = state.inventory.find(i => i.itemCode === itemCode);
+    if (item && parseFloat(item.purchaseRate || 0) > 0) return parseFloat(item.purchaseRate);
+  }
+  return parseFloat(fallbackRate || 0);
+}
+
+function computeFinanceMetrics(from, to) {
+  const billings = state.billings.filter(b => financeIsInRange(b.date, from, to));
+  const svcInvoices = (state.serviceInvoices || []).filter(i => financeIsInRange(i.date, from, to));
+  const purchases = state.purchases.filter(p => financeIsInRange(p.date, from, to));
+  const expenses = (state.expenses || []).filter(e => financeIsInRange(e.date, from, to));
+  const otherIncomeRows = (state.otherIncome || []).filter(o => financeIsInRange(o.date, from, to));
+  const salesReturns = state.returns.filter(r => r.type === 'SALES_RETURN' && financeIsInRange(r.date, from, to));
+  const purchaseReturns = state.returns.filter(r => r.type === 'PURCHASE_RETURN' && financeIsInRange(r.date, from, to));
+  const bookingsInPeriod = state.bookings.filter(b => financeIsInRange(b.date, from, to));
+
+  const productSales = billings.reduce((s, b) => s + parseFloat(b.totalAmount || 0), 0);
+  const serviceSales = svcInvoices.reduce((s, i) => s + parseFloat(i.grandTotal || 0), 0);
+  const otherIncomeTotal = otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
+  const salesReturnTotal = salesReturns.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+
+  const totalSales = productSales + serviceSales;
+  const netRevenue = Math.max(0, totalSales + otherIncomeTotal - salesReturnTotal);
+
+  let productCogs = billings.reduce((s, b) => s + parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1), 0);
+  const billingsMissingCost = billings.filter(b => !(parseFloat(b.costPrice || 0) > 0)).length;
+  salesReturns.forEach(r => {
+    const inv = state.billings.find(b => b.invoiceNo === r.invNo);
+    if (inv) productCogs -= parseFloat(inv.costPrice || 0) * parseFloat(r.qty || 0);
+  });
+  productCogs = Math.max(0, productCogs);
+
+  let servicePartsCogs = 0;
+  svcInvoices.forEach(inv => {
+    const jc = inv.jobCardId ? (state.serviceJobCards || []).find(j => j.id === inv.jobCardId) : null;
+    (jc?.partsItems || []).forEach(p => {
+      servicePartsCogs += getPartUnitCost(p.itemCode, p.rate) * parseFloat(p.qty || 0);
+    });
+  });
+  const totalCogs = productCogs + servicePartsCogs;
+  const grossProfit = netRevenue - totalCogs;
+
+  const totalOperatingExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+  const netProfit = grossProfit - totalOperatingExpenses;
+
+  const totalPurchase = purchases.reduce((s, p) => s + parseFloat(p.totalAmount || 0), 0);
+  const purchaseReturnTotal = purchaseReturns.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+  const netPurchaseCost = Math.max(0, totalPurchase - purchaseReturnTotal);
+
+  const customerOutstanding =
+    state.billings.reduce((s, b) => s + parseFloat(b.balanceAmount ?? 0), 0) +
+    (state.serviceInvoices || []).reduce((s, i) => s + parseFloat(i.balanceAmount ?? 0), 0);
+  const supplierOutstanding = state.purchases.reduce((s, p) => s + parseFloat(p.balanceAmount ?? 0), 0);
+
+  const cashFromBillings = billings.reduce((s, b) => s + parseFloat(b.paidAmount || 0), 0);
+  const cashFromService = svcInvoices.reduce((s, i) => s + parseFloat(i.paidAmount || 0), 0);
+  const cashFromBookings = bookingsInPeriod.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
+  const cashFromOtherIncome = otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
+  const cashReceived = cashFromBillings + cashFromService + cashFromBookings + cashFromOtherIncome;
+
+  const cashPaidPurchases = purchases.reduce((s, p) => s + parseFloat(p.paidAmount || 0), 0);
+  const cashPaidExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+  const cashPaid = cashPaidPurchases + cashPaidExpenses;
+  const netCashFlow = cashReceived - cashPaid;
+
+  const paymentBreakdown = {};
+  const addPay = (method, amt) => {
+    const m = method || 'Unspecified';
+    paymentBreakdown[m] = (paymentBreakdown[m] || 0) + parseFloat(amt || 0);
+  };
+  svcInvoices.forEach(i => addPay(i.paymentMethod, i.paidAmount || i.grandTotal));
+  bookingsInPeriod.forEach(b => addPay(b.payment, b.amount));
+  expenses.forEach(e => addPay(e.paymentMethod, e.amount));
+  otherIncomeRows.forEach(o => addPay(o.paymentMethod, o.amount));
+  billings.forEach(b => addPay(b.paymentMethod || 'Credit / Unspecified', b.paidAmount || 0));
+
+  const grossMarginPct = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : null;
+  const netMarginPct = netRevenue > 0 ? (netProfit / netRevenue) * 100 : null;
+  const expensePct = netRevenue > 0 ? (totalOperatingExpenses / netRevenue) * 100 : null;
+
+  return {
+    from, to, billings, svcInvoices, purchases, expenses, otherIncomeRows, salesReturns, purchaseReturns,
+    productSales, serviceSales, otherIncomeTotal, salesReturnTotal, totalSales, netRevenue,
+    productCogs, servicePartsCogs, totalCogs, grossProfit, totalOperatingExpenses, netProfit,
+    totalPurchase, purchaseReturnTotal, netPurchaseCost,
+    customerOutstanding, supplierOutstanding, cashReceived, cashPaid, netCashFlow, paymentBreakdown,
+    grossMarginPct, netMarginPct, expensePct, billingsMissingCost
+  };
+}
+
+function getActiveFinanceMetrics() {
+  const preset = document.getElementById('finance-period-preset')?.value || 'month';
+  const customFrom = document.getElementById('finance-from-date')?.value;
+  const customTo = document.getElementById('finance-to-date')?.value;
+  const { from, to } = getFinancePeriodRange(preset, customFrom, customTo);
+  return computeFinanceMetrics(from, to);
+}
+
+function financePctLabel(pct) {
+  return pct === null || !Number.isFinite(pct) ? '—' : pct.toFixed(1) + '%';
+}
+
+function renderFinanceKpis(m) {
+  const el = document.getElementById('finance-kpi-grid');
+  if (!el) return;
+  const netLabel = m.netProfit >= 0 ? 'Net Profit' : 'Net Loss';
+  const netVal = Math.abs(m.netProfit);
+  const netClass = m.netProfit >= 0 ? 'finance-kpi-profit' : 'finance-kpi-loss';
+  const cards = [
+    { label: 'Total Revenue (Net)', value: m.netRevenue, sub: 'Sales + other income − returns' },
+    { label: 'Total Sales', value: m.totalSales, sub: `Product ${formatCurrency(m.productSales)} · Service ${formatCurrency(m.serviceSales)}` },
+    { label: 'Inventory Purchases (Period)', value: m.netPurchaseCost, sub: 'Not COGS — stock inward cost' },
+    { label: 'Cost of Goods Sold', value: m.totalCogs, sub: 'Sold items at purchase cost' },
+    { label: 'Gross Profit', value: m.grossProfit, sub: `Margin ${financePctLabel(m.grossMarginPct)}` },
+    { label: 'Operating Expenses', value: m.totalOperatingExpenses, sub: 'Rent, salary, utilities, etc.' },
+    { label: netLabel, value: netVal, sub: `Margin ${financePctLabel(m.netMarginPct)}`, cls: netClass },
+    { label: 'Customer Outstanding', value: m.customerOutstanding, sub: 'All open invoice balances' },
+    { label: 'Supplier Outstanding', value: m.supplierOutstanding, sub: 'Unpaid purchase balances' },
+    { label: 'Cash Received', value: m.cashReceived, sub: 'Receipts in selected period' },
+    { label: 'Cash Paid', value: m.cashPaid, sub: 'Supplier + expense payouts' },
+    { label: 'Net Cash Flow', value: m.netCashFlow, sub: 'Money in − money out (not P/L)' }
+  ];
+  el.innerHTML = cards.map(c => `
+    <div class="finance-kpi-card ${c.cls || ''}">
+      <span class="finance-kpi-label">${c.label}</span>
+      <span class="finance-kpi-value">${formatCurrency(c.value)}</span>
+      <span class="finance-kpi-sub">${c.sub}</span>
+    </div>
+  `).join('');
+}
+
+function renderFinanceCharts(m) {
+  const el = document.getElementById('finance-charts-grid');
+  if (!el) return;
+  const maxBar = Math.max(m.netRevenue, m.totalOperatingExpenses, m.netPurchaseCost, m.grossProfit, 1);
+  const bar = (label, val, color) => {
+    const w = Math.max(4, (Math.abs(val) / maxBar) * 100);
+    return `<div class="finance-bar-row"><span>${label}</span><div class="finance-bar-track"><div class="finance-bar-fill" style="width:${w}%;background:${color}"></div></div><span>${formatCurrency(val)}</span></div>`;
+  };
+  const expenseByCat = {};
+  m.expenses.forEach(e => { expenseByCat[e.category] = (expenseByCat[e.category] || 0) + parseFloat(e.amount || 0); });
+  const topExp = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  el.innerHTML = `
+    <div class="dashboard-card finance-chart-card">
+      <h4>Revenue vs Expenses vs Purchases</h4>
+      ${bar('Net Revenue', m.netRevenue, '#4f46e5')}
+      ${bar('COGS', m.totalCogs, '#64748b')}
+      ${bar('Gross Profit', m.grossProfit, '#10b981')}
+      ${bar('Operating Expenses', m.totalOperatingExpenses, '#f59e0b')}
+      ${bar('Purchases (stock)', m.netPurchaseCost, '#94a3b8')}
+    </div>
+    <div class="dashboard-card finance-chart-card">
+      <h4>Expense Categories (Top)</h4>
+      ${topExp.length ? topExp.map(([cat, amt]) => bar(cat, amt, '#ef4444')).join('') : '<p class="finance-kpi-sub">No expenses in this period.</p>'}
+    </div>
+  `;
+}
+
+function renderFinanceMonthlySummary() {
+  const monthInput = document.getElementById('finance-month-select');
+  let y, mo;
+  if (monthInput?.value) {
+    [y, mo] = monthInput.value.split('-').map(Number);
+  } else {
+    const t = new Date();
+    y = t.getFullYear(); mo = t.getMonth() + 1;
+    if (monthInput) monthInput.value = `${y}-${String(mo).padStart(2, '0')}`;
+  }
+  const from = new Date(y, mo - 1, 1);
+  const to = new Date(y, mo, 0);
+  const cur = computeFinanceMetrics(from, to);
+  const prevFrom = new Date(y, mo - 2, 1);
+  const prevTo = new Date(y, mo - 1, 0);
+  const prev = computeFinanceMetrics(prevFrom, prevTo);
+  const tbl = document.getElementById('finance-monthly-summary-table');
+  if (tbl) {
+    tbl.innerHTML = `<table class="finance-summary-table"><tbody>
+      <tr><td>Revenue</td><td>${formatCurrency(cur.netRevenue)}</td></tr>
+      <tr><td>COGS</td><td>${formatCurrency(cur.totalCogs)}</td></tr>
+      <tr><td>Gross Profit</td><td>${formatCurrency(cur.grossProfit)}</td></tr>
+      <tr><td>Operating Expenses</td><td>${formatCurrency(cur.totalOperatingExpenses)}</td></tr>
+      <tr><td>${cur.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</td><td>${formatCurrency(Math.abs(cur.netProfit))}</td></tr>
+      <tr><td>Profit Margin</td><td>${financePctLabel(cur.netMarginPct)}</td></tr>
+    </tbody></table>`;
+  }
+  const cmp = document.getElementById('finance-period-comparison');
+  if (cmp) {
+    const revDelta = cur.netRevenue - prev.netRevenue;
+    const profitDelta = cur.netProfit - prev.netProfit;
+    cmp.textContent = `Vs previous month: Revenue ${revDelta >= 0 ? '+' : ''}${formatCurrency(revDelta)} · Net P/L ${profitDelta >= 0 ? '+' : ''}${formatCurrency(profitDelta)}`;
+  }
+}
+
+function renderFinancePL(m) {
+  const el = document.getElementById('finance-pl-statement');
+  if (!el) return;
+  const netLine = m.netProfit >= 0 ? 'Net Profit' : 'Net Loss';
+  el.innerHTML = `
+    <h3 style="margin-bottom:1rem;color:var(--primary);">Profit & Loss Statement</h3>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">${formatDate(m.from.toISOString().slice(0, 10))} — ${formatDate(m.to.toISOString().slice(0, 10))} · Generated ${new Date().toLocaleString()}</p>
+    <table class="finance-pl-table">
+      <tr><td><strong>Revenue — Net Sales & Service</strong></td><td>${formatCurrency(m.netRevenue)}</td></tr>
+      <tr><td class="finance-pl-indent">Product sales (net of returns)</td><td>${formatCurrency(m.productSales - m.salesReturnTotal)}</td></tr>
+      <tr><td class="finance-pl-indent">Service invoices</td><td>${formatCurrency(m.serviceSales)}</td></tr>
+      <tr><td class="finance-pl-indent">Other income</td><td>${formatCurrency(m.otherIncomeTotal)}</td></tr>
+      <tr><td><strong>Less: Cost of Goods Sold</strong></td><td>${formatCurrency(m.totalCogs)}</td></tr>
+      <tr class="finance-pl-highlight"><td><strong>= Gross Profit</strong></td><td>${formatCurrency(m.grossProfit)} (${financePctLabel(m.grossMarginPct)})</td></tr>
+      <tr><td><strong>Less: Operating Expenses</strong></td><td>${formatCurrency(m.totalOperatingExpenses)} (${financePctLabel(m.expensePct)})</td></tr>
+      <tr class="finance-pl-total"><td><strong>= ${netLine}</strong></td><td>${formatCurrency(Math.abs(m.netProfit))} (${financePctLabel(m.netMarginPct)})</td></tr>
+    </table>
+    <p style="margin-top:1rem;font-size:0.78rem;color:var(--text-muted);">COGS uses invoice cost (product sales) and inventory purchase cost (service spare parts). Inventory purchases in the period are <strong>not</strong> treated as COGS.</p>
+  `;
+}
+
+function renderFinanceCashFlow(m) {
+  const el = document.getElementById('finance-cashflow-panel');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="dashboard-card"><h4>Money In</h4>
+      <ul class="finance-cash-list">
+        <li>Customer / sales receipts <span>${formatCurrency(m.cashReceived)}</span></li>
+      </ul>
+      <p class="finance-kpi-sub">Includes paid amounts on sales & service invoices, booking deposits, and other income recorded in the period.</p>
+    </div>
+    <div class="dashboard-card"><h4>Money Out</h4>
+      <ul class="finance-cash-list">
+        <li>Supplier & expense payments <span>${formatCurrency(m.cashPaid)}</span></li>
+      </ul></div>
+    <div class="dashboard-card finance-kpi-card"><h4>Net Cash Flow</h4>
+      <span class="finance-kpi-value">${formatCurrency(m.netCashFlow)}</span>
+      <p class="finance-kpi-sub">Cash movement only — differs from accounting profit.</p>
+    </div>
+  `;
+}
+
+function renderFinanceModule() {
+  const m = getActiveFinanceMetrics();
+  const notice = document.getElementById('finance-cogs-notice');
+  if (notice) {
+    if (m.billingsMissingCost > 0) {
+      notice.style.display = 'block';
+      notice.textContent = `Note: ${m.billingsMissingCost} product invoice(s) in this period have no cost price stored — COGS may be understated. Link sales to inventory items when billing.`;
+    } else notice.style.display = 'none';
+  }
+  renderFinanceKpis(m);
+  renderFinanceCharts(m);
+  renderFinanceMonthlySummary();
+  renderFinancePL(m);
+  renderFinanceCashFlow(m);
+}
+
+function populateExpenseCategorySelects() {
+  ['expense-category', 'expense-filter-category'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const isFilter = id.includes('filter');
+    sel.innerHTML = (isFilter ? '<option value="All">All Categories</option>' : '') +
+      FINANCE_EXPENSE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+  });
+}
+
+function openExpenseModal(editId = null) {
+  const modal = document.getElementById('expense-modal');
+  if (!modal) return;
+  document.getElementById('expense-edit-id').value = editId || '';
+  populateExpenseCategorySelects();
+  if (editId) {
+    const ex = (state.expenses || []).find(e => e.id === editId);
+    if (!ex) return;
+    document.getElementById('expense-modal-title').textContent = 'Edit Expense';
+    document.getElementById('expense-number').value = ex.id;
+    document.getElementById('expense-date').value = ex.date;
+    document.getElementById('expense-category').value = ex.category;
+    document.getElementById('expense-amount').value = ex.amount;
+    document.getElementById('expense-payment-method').value = ex.paymentMethod || 'Cash';
+    document.getElementById('expense-reference').value = ex.reference || '';
+    document.getElementById('expense-description').value = ex.description || '';
+    document.getElementById('expense-notes').value = ex.notes || '';
+  } else {
+    document.getElementById('expense-modal-title').textContent = 'Add Expense';
+    document.getElementById('expense-form').reset();
+    document.getElementById('expense-number').value = generateExpenseId();
+    document.getElementById('expense-date').value = getTodayDateString();
+  }
+  modal.classList.add('active');
+}
+
+function handleExpenseSubmit(e) {
+  e.preventDefault();
+  const editId = document.getElementById('expense-edit-id').value;
+  const id = editId || document.getElementById('expense-number').value.trim() || generateExpenseId();
+  const now = new Date().toISOString();
+  const payload = {
+    id,
+    date: document.getElementById('expense-date').value,
+    category: document.getElementById('expense-category').value,
+    amount: parseFloat(document.getElementById('expense-amount').value || 0),
+    paymentMethod: document.getElementById('expense-payment-method').value,
+    reference: document.getElementById('expense-reference').value.trim(),
+    description: document.getElementById('expense-description').value.trim(),
+    notes: document.getElementById('expense-notes').value.trim(),
+    updatedAt: now
+  };
+  if (!payload.date || !payload.category || !payload.description || !(payload.amount >= 0)) {
+    alert('❌ Please complete date, category, description and amount.'); return;
+  }
+  if (editId) {
+    const idx = state.expenses.findIndex(x => x.id === editId);
+    if (idx !== -1) {
+      payload.createdAt = state.expenses[idx].createdAt || now;
+      state.expenses[idx] = payload;
+      addActivity('billing', `Updated expense <strong>${id}</strong> (${payload.category}: ${formatCurrency(payload.amount)})`);
+    }
+  } else {
+    payload.createdAt = now;
+    state.expenses.unshift(payload);
+    addActivity('billing', `Recorded expense <strong>${id}</strong> — ${payload.category} (${formatCurrency(payload.amount)})`);
+  }
+  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
+  document.getElementById('expense-modal').classList.remove('active');
+  renderExpensesTable();
+  renderFinanceModule();
+  alert('✅ Expense saved successfully.');
+}
+
+window.editExpense = function(id) { openExpenseModal(id); };
+window.deleteExpense = function(id) {
+  if (!confirm('Delete this expense record?')) return;
+  state.expenses = (state.expenses || []).filter(e => e.id !== id);
+  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
+  addActivity('billing', `Deleted expense ${id}`);
+  renderExpensesTable();
+  renderFinanceModule();
+};
+
+function renderExpensesTable() {
+  const body = document.getElementById('expense-table-body');
+  if (!body) return;
+  const search = (document.getElementById('expense-search')?.value || '').toLowerCase();
+  const cat = document.getElementById('expense-filter-category')?.value || 'All';
+  const from = financeParseDate(document.getElementById('expense-filter-from')?.value);
+  const to = financeParseDate(document.getElementById('expense-filter-to')?.value);
+  const rows = (state.expenses || []).filter(e => {
+    if (cat !== 'All' && e.category !== cat) return false;
+    if (!financeIsInRange(e.date, from, to)) return false;
+    const hay = `${e.id} ${e.description} ${e.reference || ''} ${e.category}`.toLowerCase();
+    return hay.includes(search);
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="8" class="no-data-msg">No expenses found.</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(e => `
+    <tr>
+      <td style="font-family:monospace;font-weight:700;">${e.id}</td>
+      <td>${formatDate(e.date)}</td>
+      <td>${e.category}</td>
+      <td>${e.description}</td>
+      <td style="font-weight:700;">${formatCurrency(e.amount)}</td>
+      <td>${e.paymentMethod || '—'}</td>
+      <td>${e.reference || '—'}</td>
+      <td class="actions-cell">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="editExpense('${e.id}')">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteExpense('${e.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openOtherIncomeModal(editId = null) {
+  const modal = document.getElementById('other-income-modal');
+  if (!modal) return;
+  document.getElementById('other-income-edit-id').value = editId || '';
+  if (editId) {
+    const row = (state.otherIncome || []).find(o => o.id === editId);
+    if (!row) return;
+    document.getElementById('other-income-modal-title').textContent = 'Edit Other Income';
+    document.getElementById('other-income-number').value = row.id;
+    document.getElementById('other-income-date').value = row.date;
+    document.getElementById('other-income-category').value = row.category;
+    document.getElementById('other-income-amount').value = row.amount;
+    document.getElementById('other-income-payment-method').value = row.paymentMethod || 'Cash';
+    document.getElementById('other-income-description').value = row.description;
+    document.getElementById('other-income-notes').value = row.notes || '';
+  } else {
+    document.getElementById('other-income-modal-title').textContent = 'Add Other Income';
+    document.getElementById('other-income-form').reset();
+    document.getElementById('other-income-number').value = generateOtherIncomeId();
+    document.getElementById('other-income-date').value = getTodayDateString();
+  }
+  modal.classList.add('active');
+}
+
+function handleOtherIncomeSubmit(e) {
+  e.preventDefault();
+  const editId = document.getElementById('other-income-edit-id').value;
+  const id = editId || document.getElementById('other-income-number').value.trim() || generateOtherIncomeId();
+  const now = new Date().toISOString();
+  const payload = {
+    id, date: document.getElementById('other-income-date').value,
+    category: document.getElementById('other-income-category').value,
+    amount: parseFloat(document.getElementById('other-income-amount').value || 0),
+    paymentMethod: document.getElementById('other-income-payment-method').value,
+    description: document.getElementById('other-income-description').value.trim(),
+    notes: document.getElementById('other-income-notes').value.trim(),
+    updatedAt: now
+  };
+  if (!payload.date || !payload.description || !(payload.amount >= 0)) { alert('❌ Complete date, description and amount.'); return; }
+  if (editId) {
+    const idx = state.otherIncome.findIndex(o => o.id === editId);
+    if (idx !== -1) { payload.createdAt = state.otherIncome[idx].createdAt || now; state.otherIncome[idx] = payload; }
+    addActivity('billing', `Updated other income ${id}`);
+  } else {
+    payload.createdAt = now;
+    state.otherIncome.unshift(payload);
+    addActivity('billing', `Recorded other income ${id} (${formatCurrency(payload.amount)})`);
+  }
+  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
+  document.getElementById('other-income-modal').classList.remove('active');
+  renderOtherIncomeTable();
+  renderFinanceModule();
+}
+
+window.editOtherIncome = function(id) { openOtherIncomeModal(id); };
+window.deleteOtherIncome = function(id) {
+  if (!confirm('Delete this income record?')) return;
+  state.otherIncome = (state.otherIncome || []).filter(o => o.id !== id);
+  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
+  renderOtherIncomeTable();
+  renderFinanceModule();
+};
+
+function renderOtherIncomeTable() {
+  const body = document.getElementById('other-income-table-body');
+  if (!body) return;
+  const rows = (state.otherIncome || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="no-data-msg">No other income recorded.</td></tr>'; return; }
+  body.innerHTML = rows.map(o => `
+    <tr>
+      <td style="font-family:monospace;">${o.id}</td>
+      <td>${formatDate(o.date)}</td>
+      <td>${o.category}</td>
+      <td>${o.description}</td>
+      <td style="font-weight:700;">${formatCurrency(o.amount)}</td>
+      <td>${o.paymentMethod || '—'}</td>
+      <td class="actions-cell">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="editOtherIncome('${o.id}')">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteOtherIncome('${o.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderFinanceReportTable() {
+  const type = document.getElementById('finance-report-type')?.value || 'Revenue';
+  const m = getActiveFinanceMetrics();
+  const head = document.getElementById('finance-report-head');
+  const body = document.getElementById('finance-report-body');
+  if (!head || !body) return;
+  let headers = '';
+  let rows = '';
+
+  if (type === 'Revenue' || type === 'Sales') {
+    headers = '<tr><th>Source</th><th>Date</th><th>Reference</th><th>Customer</th><th>Amount</th></tr>';
+    m.billings.forEach(b => { rows += `<tr><td>Product Sale</td><td>${formatDate(b.date)}</td><td>${b.invoiceNo}</td><td>${b.customerName}</td><td>${formatCurrency(b.totalAmount)}</td></tr>`; });
+    m.svcInvoices.forEach(i => { rows += `<tr><td>Service Invoice</td><td>${formatDate(i.date)}</td><td>${i.invoiceNo || i.id}</td><td>${i.customerName}</td><td>${formatCurrency(i.grandTotal)}</td></tr>`; });
+    m.otherIncomeRows.forEach(o => { rows += `<tr><td>Other Income</td><td>${formatDate(o.date)}</td><td>${o.id}</td><td>${o.description}</td><td>${formatCurrency(o.amount)}</td></tr>`; });
+    m.salesReturns.forEach(r => { rows += `<tr><td>Sales Return</td><td>${formatDate(r.date)}</td><td>${r.invNo}</td><td>${r.customerName}</td><td>-${formatCurrency(r.amount)}</td></tr>`; });
+  } else if (type === 'Purchase') {
+    headers = '<tr><th>Date</th><th>Invoice</th><th>Supplier</th><th>Item</th><th>Category</th><th>Total</th></tr>';
+    m.purchases.forEach(p => { rows += `<tr><td>${formatDate(p.date)}</td><td>${p.invoiceNo}</td><td>${p.supplier}</td><td>${p.itemName}</td><td>${p.category || '—'}</td><td>${formatCurrency(p.totalAmount)}</td></tr>`; });
+  } else if (type === 'Expense') {
+    headers = '<tr><th>ID</th><th>Date</th><th>Category</th><th>Description</th><th>Payment</th><th>Amount</th></tr>';
+    m.expenses.forEach(e => { rows += `<tr><td>${e.id}</td><td>${formatDate(e.date)}</td><td>${e.category}</td><td>${e.description}</td><td>${e.paymentMethod}</td><td>${formatCurrency(e.amount)}</td></tr>`; });
+  } else if (type === 'GrossProfit' || type === 'NetProfit') {
+    headers = '<tr><th>Line</th><th>Amount</th></tr>';
+    rows = `<tr><td>Net Revenue</td><td>${formatCurrency(m.netRevenue)}</td></tr>
+      <tr><td>COGS</td><td>${formatCurrency(m.totalCogs)}</td></tr>
+      <tr><td>Gross Profit</td><td>${formatCurrency(m.grossProfit)}</td></tr>
+      <tr><td>Operating Expenses</td><td>${formatCurrency(m.totalOperatingExpenses)}</td></tr>
+      <tr><td>${m.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</td><td>${formatCurrency(Math.abs(m.netProfit))}</td></tr>`;
+  } else if (type === 'ProductProfit') {
+    headers = '<tr><th>Invoice</th><th>Product</th><th>Qty</th><th>Revenue</th><th>COGS</th><th>Profit</th></tr>';
+    m.billings.forEach(b => {
+      const cogs = parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1);
+      const rev = parseFloat(b.totalAmount || 0);
+      rows += `<tr><td>${b.invoiceNo}</td><td>${b.productName}</td><td>${b.qty}</td><td>${formatCurrency(rev)}</td><td>${formatCurrency(cogs)}</td><td>${formatCurrency(rev - cogs)}</td></tr>`;
+    });
+  } else if (type === 'CategoryProfit') {
+    headers = '<tr><th>Category</th><th>Revenue</th><th>COGS</th><th>Profit</th></tr>';
+    const map = {};
+    m.billings.forEach(b => {
+      const item = state.inventory.find(i => i.itemCode === b.itemCode);
+      const cat = item?.category || 'General';
+      if (!map[cat]) map[cat] = { rev: 0, cogs: 0 };
+      map[cat].rev += parseFloat(b.totalAmount || 0);
+      map[cat].cogs += parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1);
+    });
+    Object.entries(map).forEach(([cat, v]) => { rows += `<tr><td>${cat}</td><td>${formatCurrency(v.rev)}</td><td>${formatCurrency(v.cogs)}</td><td>${formatCurrency(v.rev - v.cogs)}</td></tr>`; });
+  } else if (type === 'CustomerOutstanding') {
+    headers = '<tr><th>Customer</th><th>Document</th><th>Balance Due</th></tr>';
+    state.billings.filter(b => parseFloat(b.balanceAmount || 0) > 0).forEach(b => { rows += `<tr><td>${b.customerName}</td><td>${b.invoiceNo}</td><td>${formatCurrency(b.balanceAmount)}</td></tr>`; });
+    (state.serviceInvoices || []).filter(i => parseFloat(i.balanceAmount || 0) > 0).forEach(i => { rows += `<tr><td>${i.customerName}</td><td>${i.invoiceNo}</td><td>${formatCurrency(i.balanceAmount)}</td></tr>`; });
+  } else if (type === 'SupplierOutstanding') {
+    headers = '<tr><th>Supplier</th><th>Purchase Inv</th><th>Balance</th></tr>';
+    state.purchases.filter(p => parseFloat(p.balanceAmount || 0) > 0).forEach(p => { rows += `<tr><td>${p.supplier}</td><td>${p.invoiceNo}</td><td>${formatCurrency(p.balanceAmount)}</td></tr>`; });
+  } else if (type === 'CashFlow') {
+    headers = '<tr><th>Flow</th><th>Amount</th></tr>';
+    rows = `<tr><td>Cash Received</td><td>${formatCurrency(m.cashReceived)}</td></tr><tr><td>Cash Paid</td><td>${formatCurrency(m.cashPaid)}</td></tr><tr><td>Net Cash Flow</td><td>${formatCurrency(m.netCashFlow)}</td></tr>`;
+  } else if (type === 'PaymentMethods') {
+    headers = '<tr><th>Payment Method</th><th>Amount</th></tr>';
+    Object.entries(m.paymentBreakdown).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => { rows += `<tr><td>${k}</td><td>${formatCurrency(v)}</td></tr>`; });
+  } else if (type === 'MonthlySummary' || type === 'YearlySummary') {
+    headers = '<tr><th>Period</th><th>Revenue</th><th>COGS</th><th>Gross Profit</th><th>Expenses</th><th>Net P/L</th></tr>';
+    const year = m.from.getFullYear();
+    if (type === 'YearlySummary') {
+      const fm = computeFinanceMetrics(new Date(year, 0, 1), new Date(year, 11, 31));
+      rows = `<tr><td>${year}</td><td>${formatCurrency(fm.netRevenue)}</td><td>${formatCurrency(fm.totalCogs)}</td><td>${formatCurrency(fm.grossProfit)}</td><td>${formatCurrency(fm.totalOperatingExpenses)}</td><td>${formatCurrency(fm.netProfit)}</td></tr>`;
+    } else {
+      for (let mo = 0; mo < 12; mo++) {
+        const fm = computeFinanceMetrics(new Date(year, mo, 1), new Date(year, mo + 1, 0));
+        rows += `<tr><td>${new Date(year, mo, 1).toLocaleString('en-IN', { month: 'short', year: 'numeric' })}</td><td>${formatCurrency(fm.netRevenue)}</td><td>${formatCurrency(fm.totalCogs)}</td><td>${formatCurrency(fm.grossProfit)}</td><td>${formatCurrency(fm.totalOperatingExpenses)}</td><td>${formatCurrency(fm.netProfit)}</td></tr>`;
+      }
+    }
+  }
+
+  head.innerHTML = headers;
+  body.innerHTML = rows || '<tr><td colspan="6" class="no-data-msg">No data for selected period.</td></tr>';
+}
+
+function handleFinanceExportCsv() {
+  renderFinanceReportTable();
+  const type = document.getElementById('finance-report-type')?.value || 'Revenue';
+  const table = document.querySelector('#finance-report-print-area table');
+  if (!table) return;
+  let csv = 'BIOS Finance Report,' + type + '\n';
+  table.querySelectorAll('tr').forEach(tr => {
+    csv += Array.from(tr.querySelectorAll('th,td')).map(td => `"${(td.textContent || '').replace(/"/g, '""')}"`).join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `BIOS-Finance-${type}-${Date.now()}.csv`;
+  link.click();
+}
+
+function handleFinancePrint() {
+  document.body.classList.add('printing-finance');
+  window.print();
+  window.addEventListener('afterprint', () => document.body.classList.remove('printing-finance'), { once: true });
+}
+
+function setupFinanceEventListeners() {
+  setupModalToggle('open-expense-modal-btn', 'close-expense-modal-btn', 'cancel-expense-btn', 'expense-modal');
+  setupModalToggle('open-other-income-modal-btn', 'close-other-income-modal-btn', 'cancel-other-income-btn', 'other-income-modal');
+  const expForm = document.getElementById('expense-form');
+  if (expForm) expForm.addEventListener('submit', handleExpenseSubmit);
+  const oiForm = document.getElementById('other-income-form');
+  if (oiForm) oiForm.addEventListener('submit', handleOtherIncomeSubmit);
+
+  const preset = document.getElementById('finance-period-preset');
+  const toggleCustom = () => {
+    const show = preset?.value === 'custom';
+    document.querySelectorAll('.finance-custom-dates').forEach(el => { el.style.display = show ? '' : 'none'; });
+  };
+  if (preset) {
+    preset.addEventListener('change', () => { toggleCustom(); renderFinanceModule(); });
+    toggleCustom();
+  }
+  ['finance-from-date', 'finance-to-date', 'finance-month-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => renderFinanceModule());
+  });
+  document.getElementById('finance-refresh-btn')?.addEventListener('click', renderFinanceModule);
+  document.getElementById('finance-report-type')?.addEventListener('change', renderFinanceReportTable);
+  document.getElementById('finance-export-csv-btn')?.addEventListener('click', handleFinanceExportCsv);
+  document.getElementById('finance-print-btn')?.addEventListener('click', handleFinancePrint);
+
+  ['expense-search', 'expense-filter-category', 'expense-filter-from', 'expense-filter-to'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderExpensesTable);
+    document.getElementById(id)?.addEventListener('change', renderExpensesTable);
+  });
+}
+
+function initFinanceModule() {
+  populateExpenseCategorySelects();
+  const monthSel = document.getElementById('finance-month-select');
+  if (monthSel && !monthSel.value) {
+    const t = new Date();
+    monthSel.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+  }
+  if (document.getElementById('finance-section')?.classList.contains('active')) renderFinanceModule();
 }
