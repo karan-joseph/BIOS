@@ -83,13 +83,16 @@ const STORAGE_KEYS = {
   OTHER_INCOME: 'bios_other_income'
 };
 
+/** Schema version for LocalStorage migrations (increment when structure changes). */
+const CURRENT_DATA_VERSION = 2;
+const DATA_VERSION_KEY = 'bios_data_version';
+
 // ==========================================================================
 // INITIALIZATION & DATA SEEDING
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
   loadFromStorage();
-  clearPurchaseInventoryTestDataOnce();
-  // Initial Purchase & Inventory test-data seeding has been disabled.
+  migrateBusinessDataIfNeeded();
   setupNavigation();
   setupMobileMenu();
   setupSubTabs();
@@ -134,44 +137,172 @@ function loadFromStorage() {
   }
 }
 
-// One-time cleanup of old Purchase & Inventory TEST DATA.
-// This deliberately preserves Customers/Enquiries, Bookings, Billing/Sales, PC Builds,
-// Service Job Cards, Service Estimations and Service Invoices.
-function clearPurchaseInventoryTestDataOnce() {
-  const RESET_KEY = 'bios_purchase_inventory_test_reset_v1';
-  try {
-    if (localStorage.getItem(RESET_KEY) === 'done') return;
+function sumPaymentTransactions(payments) {
+  return (payments || []).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+}
 
-    // Clear Purchase & Inventory master/test records.
-    state.inventory = [];
-    state.purchases = [];
-    state.suppliers = [];
-    state.stockLedger = [];
+function syncBillingPaymentFields(invoice) {
+  if (!invoice) return;
+  if (!invoice.payments) invoice.payments = [];
+  invoice.paidAmount = sumPaymentTransactions(invoice.payments);
+  const total = parseFloat(invoice.totalAmount || 0);
+  invoice.balanceAmount = Math.max(0, total - invoice.paidAmount);
+  if (invoice.balanceAmount <= 0) invoice.status = 'Paid';
+  else if (invoice.paidAmount > 0) invoice.status = 'Partial';
+  else invoice.status = 'Unpaid';
+}
 
-    localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify([]));
-    localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify([]));
-    localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify([]));
-    localStorage.setItem(STORAGE_KEYS.STOCK_LEDGER, JSON.stringify([]));
+function syncPurchasePaymentFields(purchase) {
+  if (!purchase) return;
+  if (!purchase.payments) purchase.payments = [];
+  purchase.paidAmount = sumPaymentTransactions(purchase.payments);
+  const total = parseFloat(purchase.totalAmount || 0);
+  purchase.balanceAmount = Math.max(0, total - purchase.paidAmount);
+  if (purchase.balanceAmount <= 0) purchase.status = 'Paid';
+  else if (purchase.paidAmount > 0) purchase.status = 'Partial';
+  else purchase.status = 'Unpaid';
+}
 
-    // Keep Sales Returns, remove only Purchase Returns from the mixed returns store.
-    state.returns = (state.returns || []).filter(r => r && r.type !== 'PURCHASE_RETURN');
-    localStorage.setItem(STORAGE_KEYS.RETURNS, JSON.stringify(state.returns));
-
-    // Remove Purchase/Inventory activity entries, while preserving unrelated activity.
-    state.activities = (state.activities || []).filter(a => {
-      if (!a) return false;
-      if (a.type === 'purchase' || a.type === 'inventory') return false;
-      if (a.type === 'return' && /purchase return|purchase-return|stock deducted/i.test(a.description || '')) return false;
-      return true;
+function sumPaymentsInDateRange(records, from, to) {
+  let total = 0;
+  (records || []).forEach(rec => {
+    (rec.payments || []).forEach(p => {
+      if (financeIsInRange(p.date, from, to)) total += parseFloat(p.amount || 0);
     });
-    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(state.activities));
+  });
+  return total;
+}
 
-    // Prevent the old seeded test data from returning on refresh/browser restart.
-    localStorage.setItem(RESET_KEY, 'done');
-    console.info('Purchase & Inventory test data cleared successfully.');
-  } catch (e) {
-    console.error('Error clearing Purchase & Inventory test data:', e);
+function migrateBusinessDataIfNeeded() {
+  let version = parseInt(localStorage.getItem(DATA_VERSION_KEY) || '1', 10);
+  if (!Number.isFinite(version) || version < 1) version = 1;
+
+  if (version < 2) {
+    state.billings.forEach(b => {
+      if (!b.payments) {
+        b.payments = parseFloat(b.paidAmount || 0) > 0
+          ? [{ id: 'CPAY-MIG-' + b.id, date: b.date || getTodayDateString(), amount: parseFloat(b.paidAmount), method: b.paymentMethod || 'Unspecified', notes: 'Migrated from invoice paid balance' }]
+          : [];
+      }
+      syncBillingPaymentFields(b);
+    });
+    state.purchases.forEach(p => {
+      if (!p.payments) {
+        p.payments = parseFloat(p.paidAmount || 0) > 0
+          ? [{ id: 'SPAY-MIG-' + p.id, date: p.date || getTodayDateString(), amount: parseFloat(p.paidAmount), method: 'Unspecified', notes: 'Migrated from purchase paid balance' }]
+          : [];
+      }
+      syncPurchasePaymentFields(p);
+    });
+    version = 2;
+    localStorage.setItem(DATA_VERSION_KEY, String(CURRENT_DATA_VERSION));
+    saveAllBusinessDataToStorage();
   }
+}
+
+function saveAllBusinessDataToStorage() {
+  Object.entries(STORAGE_KEYS).forEach(([, key]) => {
+    const prop = key.replace('bios_', '').toLowerCase();
+    // Map storage keys to state properties
+  });
+  saveToStorage(STORAGE_KEYS.ENQUIRIES, state.enquiries);
+  saveToStorage(STORAGE_KEYS.BOOKINGS, state.bookings);
+  saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
+  saveToStorage(STORAGE_KEYS.ACTIVITIES, state.activities);
+  saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
+  saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
+  saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+  saveToStorage(STORAGE_KEYS.PC_BUILDS, state.pcBuilds);
+  saveToStorage(STORAGE_KEYS.RETURNS, state.returns);
+  saveToStorage(STORAGE_KEYS.STOCK_LEDGER, state.stockLedger);
+  saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
+  saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
+  saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
+  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
+  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
+}
+
+function exportFullBackupJson() {
+  const payload = {
+    meta: {
+      app: 'BIOS Billing Suite',
+      dataVersion: CURRENT_DATA_VERSION,
+      exportedAt: new Date().toISOString()
+    },
+    data: {
+      enquiries: state.enquiries,
+      bookings: state.bookings,
+      billings: state.billings,
+      activities: state.activities,
+      inventory: state.inventory,
+      purchases: state.purchases,
+      suppliers: state.suppliers,
+      pcBuilds: state.pcBuilds,
+      returns: state.returns,
+      stockLedger: state.stockLedger,
+      serviceJobCards: state.serviceJobCards,
+      serviceEstimations: state.serviceEstimations,
+      serviceInvoices: state.serviceInvoices,
+      expenses: state.expenses,
+      otherIncome: state.otherIncome
+    }
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `BIOS-Full-Backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  addActivity('inventory', 'Exported full business data backup (JSON)');
+}
+
+function importFullBackupJsonFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed || !parsed.data || typeof parsed.data !== 'object') {
+        alert('❌ Invalid backup file structure.');
+        return;
+      }
+      const required = ['billings', 'purchases', 'inventory'];
+      for (const k of required) {
+        if (!Array.isArray(parsed.data[k])) {
+          alert('❌ Backup is missing required data: ' + k);
+          return;
+        }
+      }
+      if (!confirm('⚠️ Restore backup?\n\nThis will REPLACE all current business data in this browser.\n\nExport a backup first if you need to keep today\'s data.')) return;
+      if (!confirm('Final confirmation: overwrite all LocalStorage business records with this backup?')) return;
+
+      const d = parsed.data;
+      state.enquiries = d.enquiries || [];
+      state.bookings = d.bookings || [];
+      state.billings = d.billings || [];
+      state.activities = d.activities || [];
+      state.inventory = d.inventory || [];
+      state.purchases = d.purchases || [];
+      state.suppliers = d.suppliers || [];
+      state.pcBuilds = d.pcBuilds || [];
+      state.returns = d.returns || [];
+      state.stockLedger = d.stockLedger || [];
+      state.serviceJobCards = d.serviceJobCards || [];
+      state.serviceEstimations = d.serviceEstimations || [];
+      state.serviceInvoices = d.serviceInvoices || [];
+      state.expenses = d.expenses || [];
+      state.otherIncome = d.otherIncome || [];
+      migrateBusinessDataIfNeeded();
+      saveAllBusinessDataToStorage();
+      localStorage.setItem(DATA_VERSION_KEY, String(parsed.meta?.dataVersion || CURRENT_DATA_VERSION));
+      addActivity('inventory', 'Restored business data from JSON backup');
+      alert('✅ Backup restored successfully. Reloading views.');
+      location.reload();
+    } catch (e) {
+      console.error(e);
+      alert('❌ Failed to read backup file.');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // Save data to LocalStorage
@@ -565,6 +696,10 @@ function setupEventListeners() {
   setupModalToggle(null, 'close-jobcard-view-btn', 'close-jobcard-view-btn2', 'jobcard-view-modal');
   setupModalToggle(null, 'close-estimation-view-btn', 'close-estimation-view-btn2', 'estimation-view-modal');
   setupModalToggle(null, 'close-svc-inv-view-btn', 'close-svc-inv-view-btn2', 'svc-invoice-view-modal');
+  setupModalToggle(null, 'close-pay-modal-btn', 'cancel-pay-modal-btn', 'payment-collection-modal');
+
+  const payCollectionForm = document.getElementById('payment-collection-form');
+  if (payCollectionForm) payCollectionForm.addEventListener('submit', handlePaymentCollectionSubmit);
 
   // Service Print Buttons
   const printJobCardBtn = document.getElementById('print-jobcard-btn');
@@ -1524,19 +1659,8 @@ window.deleteBooking = function(id) {
 // ==========================================================================
 function generateInvoiceNumber() {
   const currentYear = new Date().getFullYear();
-  const prefix = `BIOS-${currentYear}-`;
-  let maxSeq = 0;
-  state.billings.forEach(inv => {
-    if (inv.invoiceNo && inv.invoiceNo.startsWith(prefix)) {
-      const parts = inv.invoiceNo.split('-');
-      if (parts.length === 3) {
-        const seq = parseInt(parts[2], 10);
-        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-      }
-    }
-  });
-  const nextSeq = String(maxSeq + 1).padStart(4, '0');
-  return `${prefix}${nextSeq}`;
+  const ids = (state.billings || []).map(b => b.invoiceNo || b.id);
+  return nextSequentialDocumentId('BIOS', currentYear, ids);
 }
 
 function populateBillingBookingDropdown() {
@@ -1698,11 +1822,13 @@ function handleBillingSubmit(e) {
     gstAmount,
     totalAmount,
     costPrice,
+    payments: [],
     paidAmount: 0,
     balanceAmount: totalAmount,
     status: 'Unpaid',
     bookingId: bookingId || null
   };
+  syncBillingPaymentFields(newInvoice);
 
   state.billings.push(newInvoice);
   saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
@@ -1723,7 +1849,7 @@ function renderBillingsTable() {
   if (sorted.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="no-data-msg">
+        <td colspan="9" class="no-data-msg">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
           <p>No sales invoices generated yet.</p>
         </td>
@@ -1748,7 +1874,12 @@ function renderBillingsTable() {
       <td>${formatCurrency(item.baseAmount)}</td>
       <td>${formatCurrency(item.gstAmount)} <small style="color: var(--text-muted);">(${item.gstRate || 18}%)</small></td>
       <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(item.totalAmount)}</td>
+      <td>
+        <span class="badge ${item.status === 'Paid' ? 'badge-paid' : item.status === 'Partial' ? 'badge-partial' : 'badge-unpaid'}">${item.status || 'Unpaid'}</span>
+        ${parseFloat(item.balanceAmount || 0) > 0 ? `<br><small style="color:var(--danger-dark);">Bal: ${formatCurrency(item.balanceAmount)}</small>` : ''}
+      </td>
       <td class="actions-cell">
+        <button class="btn btn-success btn-sm" onclick="openCollectPaymentModal('billing','${item.id}')" title="Record payment">₹ Pay</button>
         <button class="btn btn-primary btn-sm" onclick="previewInvoice('${item.id}')">⎙ Print</button>
         <button class="btn btn-outline btn-sm btn-danger" onclick="deleteInvoice('${item.id}')">Delete</button>
       </td>
@@ -1760,6 +1891,212 @@ window.previewInvoice = function(id) {
   const item = state.billings.find(i => i.id === id);
   if (!item) return;
   openInvoicePreviewModal(item);
+};
+window.openCollectPaymentModal = function(targetType, targetId) {
+  const modal = document.getElementById('payment-collection-modal');
+  if (!modal) return;
+
+  document.getElementById('pay-target-type').value = targetType;
+  document.getElementById('pay-target-id').value = targetId;
+  const form = document.getElementById('payment-collection-form');
+  if (form) form.reset();
+  document.getElementById('pay-date').value = getTodayDateString();
+
+  let partyName = '';
+  let docNo = '';
+  let totalAmt = 0;
+  let prevPaid = 0;
+  let balanceDue = 0;
+  let payments = [];
+
+  if (targetType === 'billing') {
+    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
+    if (!inv) { alert('❌ Invoice not found.'); return; }
+    syncBillingPaymentFields(inv);
+    partyName = inv.customerName || 'Customer';
+    docNo = inv.invoiceNo;
+    totalAmt = parseFloat(inv.totalAmount || 0);
+    prevPaid = parseFloat(inv.paidAmount || 0);
+    balanceDue = parseFloat(inv.balanceAmount || 0);
+    payments = inv.payments || [];
+    document.getElementById('pay-modal-title').textContent = `Record Payment Collection — ${docNo}`;
+    document.getElementById('pay-party-label').textContent = 'Customer Name:';
+    document.getElementById('pay-doc-label').textContent = 'Invoice #:';
+  } else if (targetType === 'purchase') {
+    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
+    if (!pur) { alert('❌ Purchase bill not found.'); return; }
+    syncPurchasePaymentFields(pur);
+    partyName = pur.supplier || 'Supplier';
+    docNo = pur.invoiceNo;
+    totalAmt = parseFloat(pur.totalAmount || 0);
+    prevPaid = parseFloat(pur.paidAmount || 0);
+    balanceDue = parseFloat(pur.balanceAmount || 0);
+    payments = pur.payments || [];
+    document.getElementById('pay-modal-title').textContent = `Record Supplier Payment — ${docNo}`;
+    document.getElementById('pay-party-label').textContent = 'Supplier Name:';
+    document.getElementById('pay-doc-label').textContent = 'Purchase Bill #:';
+  } else {
+    return;
+  }
+
+  document.getElementById('pay-party-name').textContent = partyName;
+  document.getElementById('pay-doc-no').textContent = docNo;
+  document.getElementById('pay-total-amt').textContent = formatCurrency(totalAmt);
+  document.getElementById('pay-prev-paid').textContent = formatCurrency(prevPaid);
+  document.getElementById('pay-balance-due').textContent = formatCurrency(balanceDue);
+  document.getElementById('pay-amount').value = balanceDue > 0 ? balanceDue.toFixed(2) : '';
+
+  renderPaymentHistoryList(targetType, targetId, payments);
+  modal.classList.add('active');
+};
+
+function renderPaymentHistoryList(targetType, targetId, payments) {
+  const container = document.getElementById('pay-history-container');
+  if (!container) return;
+
+  if (!payments || payments.length === 0) {
+    container.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 0.5rem 0;">No previous payment transactions recorded.</p>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+          <th style="padding: 0.35rem;">Date</th>
+          <th style="padding: 0.35rem;">Amount</th>
+          <th style="padding: 0.35rem;">Method</th>
+          <th style="padding: 0.35rem;">Ref / Notes</th>
+          <th style="padding: 0.35rem; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${payments.map(p => `
+          <tr style="border-bottom: 1px dashed var(--border);">
+            <td style="padding: 0.35rem;">${formatDate(p.date)}</td>
+            <td style="padding: 0.35rem; font-weight: 700; color: var(--success-dark);">${formatCurrency(p.amount)}</td>
+            <td style="padding: 0.35rem;"><span class="badge badge-category" style="font-size: 0.7rem;">${p.method || 'Cash'}</span></td>
+            <td style="padding: 0.35rem; color: var(--text-muted); font-size: 0.78rem;">${p.reference ? `Ref: ${p.reference} ` : ''}${p.notes || ''}</td>
+            <td style="padding: 0.35rem; text-align: right;">
+              <button type="button" class="btn-remove-row" onclick="deletePaymentTransaction('${targetType}', '${targetId}', '${p.id}')" title="Delete payment entry">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function handlePaymentCollectionSubmit(e) {
+  e.preventDefault();
+  const targetType = document.getElementById('pay-target-type').value;
+  const targetId = document.getElementById('pay-target-id').value;
+  const payDate = document.getElementById('pay-date').value;
+  const payAmount = parseFloat(document.getElementById('pay-amount').value || 0);
+  const payMethod = document.getElementById('pay-method').value;
+  const payRef = document.getElementById('pay-reference').value.trim();
+  const payNotes = document.getElementById('pay-notes').value.trim();
+
+  if (!payDate || !Number.isFinite(payAmount) || payAmount <= 0) {
+    alert('❌ Please enter a valid payment date and an amount greater than zero.');
+    return;
+  }
+
+  if (targetType === 'billing') {
+    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
+    if (!inv) { alert('❌ Invoice not found.'); return; }
+    syncBillingPaymentFields(inv);
+    if (payAmount > inv.balanceAmount + 0.01) {
+      alert(`❌ Payment amount (${formatCurrency(payAmount)}) exceeds remaining balance due (${formatCurrency(inv.balanceAmount)}).`);
+      return;
+    }
+    const payEntry = {
+      id: 'CPAY-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      date: payDate,
+      amount: payAmount,
+      method: payMethod,
+      reference: payRef,
+      notes: payNotes || 'Payment collection'
+    };
+    if (!inv.payments) inv.payments = [];
+    inv.payments.push(payEntry);
+    syncBillingPaymentFields(inv);
+    saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
+    addActivity('billing', `Recorded ${formatCurrency(payAmount)} payment (${payMethod}) for Sales Invoice <strong>${inv.invoiceNo}</strong> (${inv.customerName})`);
+    alert(`✅ Payment of ${formatCurrency(payAmount)} recorded successfully for Invoice ${inv.invoiceNo}.\nRemaining Balance: ${formatCurrency(inv.balanceAmount)}`);
+    renderBillingsTable();
+  } else if (targetType === 'purchase') {
+    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
+    if (!pur) { alert('❌ Purchase bill not found.'); return; }
+    syncPurchasePaymentFields(pur);
+    if (payAmount > pur.balanceAmount + 0.01) {
+      alert(`❌ Payment amount (${formatCurrency(payAmount)}) exceeds remaining balance due (${formatCurrency(pur.balanceAmount)}).`);
+      return;
+    }
+    const payEntry = {
+      id: 'SPAY-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      date: payDate,
+      amount: payAmount,
+      method: payMethod,
+      reference: payRef,
+      notes: payNotes || 'Supplier payment'
+    };
+    if (!pur.payments) pur.payments = [];
+    pur.payments.push(payEntry);
+    syncPurchasePaymentFields(pur);
+
+    const sup = state.suppliers.find(x => x.name.toLowerCase() === pur.supplier.toLowerCase());
+    if (sup) {
+      const supplierPurchases = state.purchases.filter(p => p.supplier.toLowerCase() === pur.supplier.toLowerCase());
+      sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
+      saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+    }
+
+    saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
+    addActivity('purchase', `Recorded ${formatCurrency(payAmount)} supplier payment (${payMethod}) for Purchase Bill <strong>${pur.invoiceNo}</strong> (${pur.supplier})`);
+    alert(`✅ Supplier payment of ${formatCurrency(payAmount)} recorded successfully for Purchase ${pur.invoiceNo}.\nRemaining Balance: ${formatCurrency(pur.balanceAmount)}`);
+    renderPurchasesTable();
+  }
+
+  document.getElementById('payment-collection-modal').classList.remove('active');
+  renderDashboard();
+  renderReports();
+  if (typeof renderFinanceModule === 'function') renderFinanceModule();
+}
+
+window.deletePaymentTransaction = function(targetType, targetId, paymentId) {
+  if (!confirm('Are you sure you want to delete this payment entry?')) return;
+
+  if (targetType === 'billing') {
+    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
+    if (inv && inv.payments) {
+      inv.payments = inv.payments.filter(p => p.id !== paymentId);
+      syncBillingPaymentFields(inv);
+      saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
+      renderBillingsTable();
+      openCollectPaymentModal('billing', targetId);
+    }
+  } else if (targetType === 'purchase') {
+    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
+    if (pur && pur.payments) {
+      pur.payments = pur.payments.filter(p => p.id !== paymentId);
+      syncPurchasePaymentFields(pur);
+      const sup = state.suppliers.find(x => x.name.toLowerCase() === pur.supplier.toLowerCase());
+      if (sup) {
+        const supplierPurchases = state.purchases.filter(p => p.supplier.toLowerCase() === pur.supplier.toLowerCase());
+        sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
+        saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
+      }
+      saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
+      renderPurchasesTable();
+      openCollectPaymentModal('purchase', targetId);
+    }
+  }
+  renderDashboard();
+  renderReports();
+  if (typeof renderFinanceModule === 'function') renderFinanceModule();
 };
 
 function openInvoicePreviewModal(invoice) {
@@ -1905,10 +2242,20 @@ function handlePurchaseSubmit(e) {
 
   const oldPurchase = editId ? state.purchases.find(p => p.id === editId) : null;
   if (oldPurchase) {
+    recordStockMovement({
+      itemCode: oldPurchase.itemCode,
+      itemName: oldPurchase.itemName,
+      category: oldPurchase.category || 'General',
+      type: 'PURCHASE_REVERSAL',
+      refNo: `EDIT-REVERSAL-${oldPurchase.invoiceNo}`,
+      outQty: oldPurchase.qty || 0,
+      unitCost: oldPurchase.rate || 0,
+      remarks: `Reversed old purchase ${oldPurchase.invoiceNo} before editing`
+    });
     const oldItem = state.inventory.find(i => i.itemCode === oldPurchase.itemCode);
-    if (oldItem) {
-      recordStockMovement({ itemCode: oldPurchase.itemCode, itemName: oldPurchase.itemName, category: oldPurchase.category, type: 'PURCHASE_REVERSAL', refNo: `EDIT-REVERSAL-${oldPurchase.invoiceNo}`, outQty: oldPurchase.qty || 0, unitCost: oldPurchase.rate || 0, remarks: `Reversed old purchase ${oldPurchase.invoiceNo} before editing` });
+    if (oldItem && oldPurchase.serials?.length) {
       oldItem.serials = (oldItem.serials || []).filter(sn => !(oldPurchase.serials || []).includes(sn));
+      saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
     }
     const oldSup = state.suppliers.find(x => x.name.toLowerCase() === oldPurchase.supplier.toLowerCase());
     if (oldSup) {
@@ -1928,7 +2275,22 @@ function handlePurchaseSubmit(e) {
   else { sup.totalPurchases = parseFloat(sup.totalPurchases || 0) + totalAmount; sup.balanceDue = parseFloat(sup.balanceDue || 0) + balanceAmount; if (supplierPhone) sup.phone = supplierPhone; }
   saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
 
-  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials, minStock };
+  let purchasePayments = [];
+  if (editId && oldPurchase?.payments) purchasePayments = [...oldPurchase.payments];
+  else if (!editId && paidAmount > 0) {
+    purchasePayments.push({
+      id: 'SPAY-' + Date.now(),
+      date: date || getTodayDateString(),
+      amount: paidAmount,
+      method: 'Cash',
+      notes: 'Initial payment on purchase bill'
+    });
+  }
+  const newPurchase = {
+    id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount,
+    payments: purchasePayments, serials, minStock
+  };
+  syncPurchasePaymentFields(newPurchase);
   if (editId) { const idx = state.purchases.findIndex(p => p.id === editId); if (idx !== -1) state.purchases[idx] = newPurchase; }
   else state.purchases.push(newPurchase);
   saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
@@ -1937,6 +2299,7 @@ function handlePurchaseSubmit(e) {
     : `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
   document.getElementById('purchase-modal').classList.remove('active');
   renderPurchasesTable(); renderInventoryTable(); renderDashboard(); renderReports();
+  if (typeof renderFinanceModule === 'function') renderFinanceModule();
   alert(editId ? '✅ Purchase bill updated successfully.\nStock has been recalculated.' : '✅ Purchase bill saved successfully.\nStock has been updated.');
 }
 
@@ -2066,6 +2429,7 @@ function renderPurchasesTable() {
         <td><span class="badge ${statusClass}">${item.status}</span></td>
         <td class="actions-cell">
           <button class="btn btn-primary btn-sm" onclick="previewPurchaseInvoice('${item.id}')">⎙ View</button>
+          <button class="btn btn-success btn-sm" onclick="openCollectPaymentModal('purchase','${item.id}')" title="Record supplier payment">₹ Pay</button>
           <button class="btn btn-secondary btn-sm" onclick="editPurchase('${item.id}')" title="Edit Purchase Bill">Edit</button>
           <button class="btn btn-outline btn-sm btn-danger" onclick="deletePurchase('${item.id}')">Delete</button>
         </td>
@@ -2113,7 +2477,7 @@ window.deletePurchase = function(id) {
     recordStockMovement({
       itemCode: item.itemCode,
       itemName: item.itemName,
-      type: 'PURCHASE_RETURN',
+      type: 'PURCHASE_REVERSAL',
       refNo: `REVERSAL-${item.invoiceNo}`,
       inQty: 0,
       outQty: item.qty,
@@ -2124,7 +2488,8 @@ window.deletePurchase = function(id) {
     const sup = state.suppliers.find(x => x.name.toLowerCase() === item.supplier.toLowerCase());
     if (sup) {
       sup.totalPurchases = Math.max(0, parseFloat(sup.totalPurchases || 0) - parseFloat(item.totalAmount || 0));
-      sup.balanceDue = Math.max(0, parseFloat(sup.balanceDue || 0) - parseFloat(item.balanceAmount || 0));
+      const supplierPurchases = state.purchases.filter(p => p.id !== id && p.supplier.toLowerCase() === item.supplier.toLowerCase());
+      sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
       saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
     }
     state.purchases = state.purchases.filter(p => p.id !== id);
@@ -2133,6 +2498,8 @@ window.deletePurchase = function(id) {
     renderPurchasesTable();
     renderInventoryTable();
     renderDashboard();
+    renderReports();
+    if (typeof renderFinanceModule === 'function') renderFinanceModule();
   }
 };
 
@@ -4299,6 +4666,8 @@ window.deleteJobCard = function(jobCardId) {
     renderServiceModule();
     renderInventoryTable();
     renderDashboard();
+    renderReports();
+    if (typeof renderFinanceModule === 'function') renderFinanceModule();
   }
 };
 
