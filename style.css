@@ -272,8 +272,15 @@ h1, h2, h3, h4, h5, h6 {
 .print-brand-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1.25rem;
   margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+.print-brand-info {
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .print-brand-logo {
@@ -380,6 +387,11 @@ header {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.header-right-mobile {
+  display: none;
+  flex-shrink: 0;
 }
 
 .mobile-menu-btn {
@@ -847,6 +859,8 @@ tr:hover td {
   z-index: 200;
   padding: 1.5rem;
   animation: fadeIn 0.25s ease-out;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-overlay.active {
@@ -859,7 +873,9 @@ tr:hover td {
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
   animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -944,36 +960,54 @@ tr:hover td {
 
 /* --- INVOICE PRINT PREVIEW MODAL --- */
 .invoice-modal {
-  max-width: 800px;
+  width: 100%;
+  max-width: min(800px, calc(100vw - 3rem));
+  min-width: 0;
+}
+
+.invoice-modal .modal-body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .invoice-preview-card {
   background: #ffffff;
-  padding: 2.5rem;
+  padding: clamp(1rem, 2.5vw, 2.5rem);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: #334155;
-  font-size: 0.9rem;
+  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .invoice-header-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
   margin-bottom: 2.5rem;
 }
 
 .invoice-title {
   font-family: var(--font-heading);
-  font-size: 2.25rem;
+  font-size: clamp(1.35rem, 4vw, 2.25rem);
   font-weight: 800;
   color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.25rem;
+  line-height: 1.15;
 }
 
 .invoice-meta {
   text-align: right;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .invoice-meta-label {
@@ -1022,7 +1056,9 @@ tr:hover td {
 
 .invoice-table {
   width: 100%;
+  max-width: 100%;
   margin-bottom: 2rem;
+  table-layout: fixed;
 }
 
 .invoice-table th {
@@ -1034,6 +1070,8 @@ tr:hover td {
 .invoice-table td {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .invoice-summary-area {
@@ -1042,7 +1080,8 @@ tr:hover td {
 }
 
 .invoice-summary-box {
-  width: 300px;
+  width: 100%;
+  max-width: 300px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1128,9 +1167,31 @@ tr:hover td {
   gap: 1rem;
 }
 
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
   .form-grid-3, .form-grid-4 {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .invoice-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .invoice-meta {
+    text-align: left;
+  }
+
+  .invoice-details-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .invoice-summary-area {
+    justify-content: stretch;
+  }
+
+  .invoice-summary-box {
+    max-width: 100%;
   }
 }
 
@@ -1446,8 +1507,13 @@ tr:hover td {
   color: var(--text-muted);
 }
 
-/* RESPONSIVE DESIGN */
-@media (max-width: 768px) {
+/* RESPONSIVE DESIGN — sidebar / mobile menu (screen only) */
+@media screen and (max-width: 768px) {
+  .header-right-mobile {
+    display: flex;
+    align-items: center;
+  }
+
   .sidebar {
     position: fixed;
     left: -280px;
@@ -1564,6 +1630,42 @@ body.printing-modal {
     margin: 0 !important;
     break-after: avoid;
     page-break-after: avoid;
+    font-size: 0.9rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body.printing-modal .invoice-header-row {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+  }
+
+  body.printing-modal .invoice-meta {
+    text-align: right !important;
+  }
+
+  body.printing-modal .invoice-title {
+    font-size: 2rem !important;
+  }
+
+  body.printing-modal .invoice-details-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  body.printing-modal .invoice-summary-box {
+    width: 300px !important;
+    max-width: 300px !important;
+  }
+
+  body.printing-modal .invoice-table {
+    table-layout: auto !important;
+  }
+
+  body.printing-modal .invoice-table th,
+  body.printing-modal .invoice-table td {
+    font-size: inherit !important;
+    padding: 0.65rem 0.85rem !important;
   }
 
   /* Standardized BIOS Brand Logo in Print */
@@ -1612,15 +1714,15 @@ body.printing-modal {
   }
 }
 /* =========================================================
-   MOBILE INVOICE PREVIEW FIX
+   MOBILE INVOICE PREVIEW FIX (screen only — does not affect @media print)
    ========================================================= */
-@media (max-width: 600px) {
+@media screen and (max-width: 600px) {
 
-  /* Invoice popup should fit phone screen */
+  /* Invoice popup should fit phone screen (avoid 100vw horizontal scroll) */
   .invoice-modal {
-    width: calc(100vw - 16px) !important;
-    max-width: none !important;
-    margin: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
 
   .invoice-modal .modal-body {
@@ -1984,10 +2086,11 @@ img  { max-width: 100%; height: auto; }
   .metric-cards-row       { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
   .modal-content.modal-xl,
   .modal-content.modal-full { max-width: 95vw; }
+  .invoice-modal { max-width: min(800px, calc(100vw - 2rem)); }
 }
 
 /* ── TABLET (769px – 1023px) ── */
-@media (max-width: 1023px) {
+@media screen and (max-width: 1023px) {
   .content-area { padding: 1.25rem; }
 
   .dashboard-brand-banner {
@@ -2018,7 +2121,10 @@ img  { max-width: 100%; height: auto; }
   .modal-content.modal-lg,
   .modal-content.modal-xl,
   .modal-content.modal-full { max-width: 95vw; }
-  .invoice-modal            { max-width: 95vw; }
+  .invoice-modal {
+    max-width: min(800px, calc(100vw - 2rem));
+    width: 100%;
+  }
 
   .filter-bar { gap: 0.75rem; }
   .form-group-inline { min-width: 140px; }
@@ -2029,7 +2135,7 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── MOBILE (≤ 768px) — FULL AUDIT ── */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* LAYOUT */
   .app-container  { flex-direction: column; }
   .main-wrapper   { width: 100%; min-width: 0; }
@@ -2133,6 +2239,12 @@ img  { max-width: 100%; height: auto; }
     max-height: 95vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
+
+  .invoice-modal {
+    max-width: 100%;
+    width: 100%;
+  }
+
   .modal-header   { padding: 1rem; }
   .modal-header h4 { font-size: 1rem; }
   .modal-body     { padding: 1rem; }
@@ -2238,16 +2350,15 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── INVOICE PREVIEW — 601px to 768px gap ── */
-@media (max-width: 768px) and (min-width: 601px) {
-  .invoice-modal            { max-width: 96vw; }
-  .invoice-preview-card     { padding: 1.5rem; font-size: 0.84rem; }
-  .invoice-title            { font-size: 1.75rem; }
+@media screen and (max-width: 768px) and (min-width: 601px) {
+  .invoice-modal            { max-width: 100%; width: 100%; }
+  .invoice-preview-card     { padding: 1.5rem; }
   .invoice-details-grid     { grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .invoice-summary-box      { width: 260px; }
+  .invoice-summary-box      { max-width: 260px; }
 }
 
 /* ── SMALL-SCREEN INVOICE FIXES ── */
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
   .invoice-summary-box         { width: 100% !important; }
   .invoice-table                { font-size: 0.75rem; }
   .invoice-table th,
@@ -2263,6 +2374,99 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── MODAL BODY INLINE PRICE ROWS — SMALL SCREENS ── */
+/* ── FINANCE MODULE ── */
+.finance-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+.finance-kpi-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.finance-kpi-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em; }
+.finance-kpi-value { font-size: 1.25rem; font-weight: 800; color: var(--text-main); font-family: var(--font-heading); }
+.finance-kpi-sub { font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }
+.finance-kpi-profit .finance-kpi-value { color: var(--success-dark); }
+.finance-kpi-loss .finance-kpi-value { color: var(--danger-dark); }
+.finance-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.finance-chart-card h4 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+.finance-bar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 28%) 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.78rem;
+  margin-bottom: 0.45rem;
+}
+.finance-bar-track {
+  height: 8px;
+  background: var(--secondary-light);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 0;
+}
+.finance-bar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.finance-notice-banner {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  margin-bottom: 1rem;
+}
+.finance-summary-table { width: 100%; max-width: 420px; border-collapse: collapse; }
+.finance-summary-table td { padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.finance-summary-table td:last-child { text-align: right; font-weight: 700; }
+.finance-pl-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.finance-pl-table td { padding: 0.5rem 0.65rem; border-bottom: 1px solid var(--border); }
+.finance-pl-table td:last-child { text-align: right; font-weight: 600; }
+.finance-pl-indent { padding-left: 1.25rem !important; color: var(--text-muted); font-size: 0.85rem; }
+.finance-pl-highlight td { background: #eef2ff; }
+.finance-pl-total td { font-size: 1.05rem; border-top: 2px solid var(--border); }
+.finance-cashflow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.finance-cash-list { list-style: none; font-size: 0.88rem; }
+.finance-cash-list li { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px dashed var(--border); }
+.finance-pl-card { max-width: 100%; min-width: 0; }
+.finance-sub-tabs { margin-bottom: 1rem; flex-wrap: wrap; }
+
+@media screen and (max-width: 768px) {
+  .finance-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .finance-bar-row { grid-template-columns: 1fr; gap: 0.25rem; }
+}
+@media screen and (max-width: 480px) {
+  .finance-kpi-grid { grid-template-columns: 1fr; }
+}
+
+@media print {
+  body.printing-finance > * { display: none !important; }
+  body.printing-finance #finance-section,
+  body.printing-finance #finance-section * { visibility: visible !important; }
+  body.printing-finance #finance-section {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+  body.printing-finance .finance-sub-tabs,
+  body.printing-finance .filter-bar,
+  body.printing-finance .section-header button { display: none !important; }
+}
+
 @media (max-width: 600px) {
   .modal-body div[style*="justify-content: flex-end"],
   .modal-body div[style*="justify-content:flex-end"] {
@@ -2275,4 +2479,3 @@ img  { max-width: 100%; height: auto; }
     max-width: 100% !important;
   }
 }
-
