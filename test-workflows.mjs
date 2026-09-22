@@ -106,15 +106,39 @@ function syncPurchasePaymentFields(purchase) {
   else purchase.status = 'Unpaid';
 }
 
-function computeFinanceMetricsSim({ billings = [], svcInvoices = [], purchases = [], expenses = [], otherIncomeRows = [], salesReturns = [], purchaseReturns = [] }) {
-  const productSales = billings.reduce((s, b) => s + parseFloat(b.totalAmount || 0), 0);
-  const serviceSales = svcInvoices.reduce((s, i) => s + parseFloat(i.grandTotal || 0), 0);
+function computeFinanceMetricsSim({
+  billings = [],
+  svcInvoices = [],
+  purchases = [],
+  expenses = [],
+  otherIncomeRows = [],
+  salesReturns = [],
+  purchaseReturns = [],
+  outsourceRepairs = [],
+  openingBalance = { cash: 0, bank: 0, upi: 0, other: 0 }
+}) {
+  // Taxable Revenue - Output GST is strictly excluded
+  const productSales = billings.reduce((s, b) => {
+    const taxable = b.baseAmount !== undefined ? parseFloat(b.baseAmount || 0) : (parseFloat(b.totalAmount || 0) - parseFloat(b.gstAmount || 0));
+    return s + taxable;
+  }, 0);
+
+  const serviceSales = svcInvoices.reduce((s, i) => {
+    const taxable = i.subtotal !== undefined ? parseFloat(i.subtotal || 0) : (parseFloat(i.grandTotal || 0) - parseFloat(i.gstAmount || 0));
+    return s + taxable;
+  }, 0);
+
   const otherIncomeTotal = otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
-  const salesReturnTotal = salesReturns.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+  const salesReturnTaxable = salesReturns.reduce((s, r) => s + parseFloat(r.taxableAmount !== undefined ? r.taxableAmount : (r.amount || 0)), 0);
 
   const totalSales = productSales + serviceSales;
-  const netRevenue = Math.max(0, totalSales + otherIncomeTotal - salesReturnTotal);
+  const netRevenue = Math.max(0, totalSales + otherIncomeTotal - salesReturnTaxable);
 
+  // Output GST collected
+  const outputGst = billings.reduce((s, b) => s + parseFloat(b.gstAmount || 0), 0) +
+                    svcInvoices.reduce((s, i) => s + parseFloat(i.gstAmount || 0), 0);
+
+  // Product COGS
   let productCogs = billings.reduce((s, b) => s + parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1), 0);
   salesReturns.forEach(r => {
     const inv = billings.find(b => b.invoiceNo === r.invNo);
@@ -122,21 +146,65 @@ function computeFinanceMetricsSim({ billings = [], svcInvoices = [], purchases =
   });
   productCogs = Math.max(0, productCogs);
 
-  const totalCogs = productCogs;
+  // Service Parts COGS
+  let servicePartsCogs = 0;
+  svcInvoices.forEach(inv => {
+    (inv.partsItems || []).forEach(p => {
+      servicePartsCogs += parseFloat(p.costRate || 0) * parseFloat(p.quantity || p.qty || 0);
+    });
+  });
+
+  // Outsource Repair Costs (Direct service cost / COGS)
+  const outsourceCogs = outsourceRepairs.reduce((s, o) => s + parseFloat(o.outsourceCost || 0), 0);
+
+  const totalCogs = productCogs + servicePartsCogs + outsourceCogs;
   const grossProfit = netRevenue - totalCogs;
   const totalOperatingExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
   const netProfit = grossProfit - totalOperatingExpenses;
 
-  const cashReceived = billings.reduce((s, b) => s + parseFloat(b.paidAmount || 0), 0) +
-                       otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
-  const cashPaid = purchases.reduce((s, p) => s + parseFloat(p.paidAmount || 0), 0) +
-                   expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-  const netCashFlow = cashReceived - cashPaid;
+  // Actual Money Movements for Available Funds (NOT revenue - expenses)
+  const cashFromBillings = billings.reduce((s, b) => s + parseFloat(b.paidAmount || 0), 0);
+  const cashFromService = svcInvoices.reduce((s, i) => s + parseFloat(i.paidAmount || 0), 0);
+  const cashFromOtherIncome = otherIncomeTotal;
+  const totalReceipts = cashFromBillings + cashFromService + cashFromOtherIncome;
+
+  const cashPaidPurchases = purchases.reduce((s, p) => s + parseFloat(p.paidAmount || 0), 0);
+  const cashPaidExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+  const cashPaidOutsource = outsourceRepairs.reduce((s, o) => s + parseFloat(o.paidAmount || 0), 0);
+  const totalPayments = cashPaidPurchases + cashPaidExpenses + cashPaidOutsource;
+
+  const openingTotal = parseFloat(openingBalance.cash || 0) +
+                       parseFloat(openingBalance.bank || 0) +
+                       parseFloat(openingBalance.upi || 0) +
+                       parseFloat(openingBalance.other || 0);
+
+  const availableFunds = openingTotal + totalReceipts - totalPayments;
+  const netCashFlow = totalReceipts - totalPayments;
 
   const grossMarginPct = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
   const netMarginPct = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
 
-  return { productSales, serviceSales, totalSales, salesReturnTotal, netRevenue, totalCogs, grossProfit, totalOperatingExpenses, netProfit, cashReceived, cashPaid, netCashFlow, grossMarginPct, netMarginPct };
+  return {
+    productSales,
+    serviceSales,
+    totalSales,
+    salesReturnTotal: salesReturnTaxable,
+    netRevenue,
+    outputGst,
+    productCogs,
+    servicePartsCogs,
+    outsourceCogs,
+    totalCogs,
+    grossProfit,
+    totalOperatingExpenses,
+    netProfit,
+    cashReceived: totalReceipts,
+    cashPaid: totalPayments,
+    netCashFlow,
+    availableFunds,
+    grossMarginPct,
+    netMarginPct
+  };
 }
 
 // --- 2. TEST RUNNER ---
@@ -358,7 +426,205 @@ console.log('\n12. Data Backup Payload Structure');
   assert(isValid, 'Backup payload structure validation passes');
 }
 
+console.log('\n13. Service Stock Deduction (Direct Service Invoice / Workflow B)');
+{
+  const inventory = [{ itemCode: 'SSD-512', openingStock: 10, serviceConsumedQty: 0 }];
+  inventory[0].availableStock = calculateAvailableStock(inventory[0]);
+  assert(inventory[0].availableStock === 10, 'Initial SSD stock is 10');
+
+  // Direct Service Invoice (no jobCardId) uses 2 SSDs
+  const directInvoice = {
+    invoiceNo: 'SINV-2026-0001',
+    jobCardId: null,
+    partsItems: [{ itemCode: 'SSD-512', itemName: 'SSD 512GB', quantity: 2, sellingRate: 3500, costRate: 2200, amount: 7000 }]
+  };
+
+  // Rule: Direct Service Invoice deducts stock
+  if (!directInvoice.jobCardId) {
+    directInvoice.partsItems.forEach(p => {
+      recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_CONSUME', outQty: p.quantity });
+    });
+  }
+
+  const updatedItem = inventory.find(i => i.itemCode === 'SSD-512');
+  assert(updatedItem.availableStock === 8, 'Direct Service Invoice: SSD qty 2 -> stock reduced 10 -> 8');
+}
+
+console.log('\n14. Job Card + Service Invoice (Double Deduction Prevention)');
+{
+  const inventory = [{ itemCode: 'SSD-512', openingStock: 10, serviceConsumedQty: 0 }];
+  inventory[0].availableStock = calculateAvailableStock(inventory[0]);
+
+  // Step 1: Job Card uses 2 SSDs
+  const jobCard = {
+    id: 'JC-2026-0001',
+    partsItems: [{ itemCode: 'SSD-512', partName: 'SSD 512GB', qty: 2, rate: 3500, amount: 7000 }]
+  };
+  jobCard.partsItems.forEach(p => {
+    recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_CONSUME', outQty: p.qty });
+  });
+
+  let item = inventory.find(i => i.itemCode === 'SSD-512');
+  assert(item.availableStock === 8, 'Job Card save: 2 SSD consumed -> stock is 8');
+
+  // Step 2: Generate Service Invoice from same Job Card
+  const jcLinkedInvoice = {
+    invoiceNo: 'SINV-2026-0002',
+    jobCardId: 'JC-2026-0001',
+    partsItems: [{ itemCode: 'SSD-512', itemName: 'SSD 512GB', quantity: 2, sellingRate: 3500, costRate: 2200, amount: 7000 }]
+  };
+
+  // Rule: If linked to Job Card, stock was already consumed -> NO second deduction
+  if (!jcLinkedInvoice.jobCardId) {
+    jcLinkedInvoice.partsItems.forEach(p => {
+      recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_CONSUME', outQty: p.quantity });
+    });
+  }
+
+  item = inventory.find(i => i.itemCode === 'SSD-512');
+  assert(item.availableStock === 8, 'Job Card linked invoice does NOT double-deduct: stock is still 8, NOT 6');
+}
+
+console.log('\n15. GST Profit Test (Exclude Customer GST from Revenue and Profit)');
+{
+  // Taxable Revenue = ₹10,000, GST = ₹1,800, Grand Total = ₹11,800, COGS = ₹6,000, Expense = ₹1,000
+  const data = {
+    billings: [{
+      invoiceNo: 'INV-GST-1',
+      baseAmount: 10000,
+      gstAmount: 1800,
+      totalAmount: 11800,
+      costPrice: 6000,
+      qty: 1,
+      paidAmount: 11800
+    }],
+    purchases: [],
+    expenses: [{ amount: 1000, paymentMethod: 'Cash' }],
+    otherIncomeRows: [],
+    salesReturns: [],
+    purchaseReturns: []
+  };
+
+  const f = computeFinanceMetricsSim(data);
+  assert(f.netRevenue === 10000, 'Revenue = 10,000 (taxable, strictly excluding 1,800 GST)');
+  assert(f.outputGst === 1800, 'Output GST = 1,800 tracked separately');
+  assert(f.grossProfit === 4000, 'Gross Profit = 10,000 - 6,000 = 4,000 (NOT 5,800)');
+  assert(f.netProfit === 3000, 'Net Profit = 4,000 - 1,000 = 3,000 (NOT 4,800)');
+}
+
+console.log('\n16. Outsource Repair Cost & Profit Test');
+{
+  // Customer taxable charge = ₹5,000, GST = ₹900, Customer total = ₹5,900, Outside repair cost = ₹2,000
+  const data = {
+    billings: [],
+    svcInvoices: [{
+      invoiceNo: 'SINV-OUT-1',
+      subtotal: 5000,
+      gstAmount: 900,
+      grandTotal: 5900,
+      paidAmount: 5900,
+      partsItems: []
+    }],
+    outsourceRepairs: [{
+      id: 'OUT-2026-0001',
+      jobCardId: 'JC-2026-0099',
+      outsourceCost: 2000,
+      customerCharge: 5000,
+      paidAmount: 2000
+    }],
+    purchases: [],
+    expenses: [],
+    otherIncomeRows: [],
+    salesReturns: []
+  };
+
+  const f = computeFinanceMetricsSim(data);
+  assert(f.netRevenue === 5000, 'Service Revenue = 5,000 (excl GST)');
+  assert(f.outsourceCogs === 2000, 'Outsource Cost = 2,000 (treated as COGS)');
+  assert(f.grossProfit === 3000, 'Service Gross Profit = 5,000 - 2,000 = 3,000 (GST 900 excluded)');
+}
+
+console.log('\n17. Outsource Payment Tracking & Balance Sync');
+{
+  function syncOutsourcePaymentFields(outsource) {
+    outsource.balanceAmount = Math.max(0, outsource.outsourceCost - outsource.paidAmount);
+    if (outsource.balanceAmount <= 0) outsource.paymentStatus = 'Paid';
+    else if (outsource.paidAmount > 0) outsource.paymentStatus = 'Partial';
+    else outsource.paymentStatus = 'Unpaid';
+  }
+
+  const outsource = { outsourceCost: 2000, paidAmount: 0 };
+  syncOutsourcePaymentFields(outsource);
+  assert(outsource.paymentStatus === 'Unpaid' && outsource.balanceAmount === 2000, 'Initial outsource status: Unpaid (Balance: 2,000)');
+
+  // Partial vendor payment 1,000
+  outsource.paidAmount = 1000;
+  syncOutsourcePaymentFields(outsource);
+  assert(outsource.paymentStatus === 'Partial' && outsource.balanceAmount === 1000, 'After 1,000 vendor payment: Partial (Balance: 1,000)');
+
+  // Final vendor payment +1,000 (total 2,000)
+  outsource.paidAmount = 2000;
+  syncOutsourcePaymentFields(outsource);
+  assert(outsource.paymentStatus === 'Paid' && outsource.balanceAmount === 0, 'After 2,000 vendor payment: Paid (Balance: 0)');
+}
+
+console.log('\n18. Company Available Funds Test (Separate from Profit)');
+{
+  // Opening Balance = 20,000, Customer payment = 10,000, Supplier payment = 5,000, Expense payment = 2,000
+  const data = {
+    openingBalance: { cash: 20000, bank: 0, upi: 0, other: 0 },
+    billings: [{ invoiceNo: 'INV-1', totalAmount: 50000, paidAmount: 10000 }], // Customer owes 50k, paid 10k
+    purchases: [{ invoiceNo: 'PUR-1', totalAmount: 12000, paidAmount: 5000 }], // Supplier owed 12k, paid 5k
+    expenses: [{ amount: 2000, paymentMethod: 'Cash' }],
+    otherIncomeRows: [],
+    salesReturns: [],
+    outsourceRepairs: []
+  };
+
+  const f = computeFinanceMetricsSim(data);
+  // Expected Available Funds: 20,000 + 10,000 - 5,000 - 2,000 = 23,000
+  assert(f.availableFunds === 23000, 'Company Available Funds = 20,000 + 10,000 - 5,000 - 2,000 = 23,000');
+  assert(f.availableFunds !== f.netProfit, 'Available Funds (23,000) is distinct from accounting profit');
+}
+
+console.log('\n19. Direct Service Invoice Edit & Delete Reversals');
+{
+  const inventory = [{ itemCode: 'SSD-1TB', openingStock: 10, serviceConsumedQty: 0 }];
+  inventory[0].availableStock = calculateAvailableStock(inventory[0]);
+
+  // Step 1: Create Direct Service Invoice with 2 SSDs
+  let directInvoice = {
+    invoiceNo: 'SINV-DIR-1',
+    jobCardId: null,
+    partsItems: [{ itemCode: 'SSD-1TB', quantity: 2 }]
+  };
+  directInvoice.partsItems.forEach(p => {
+    recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_CONSUME', outQty: p.quantity });
+  });
+  let item = inventory.find(i => i.itemCode === 'SSD-1TB');
+  assert(item.availableStock === 8, 'Created Direct Invoice (2 SSD) -> Stock is 8');
+
+  // Step 2: Edit Direct Service Invoice from 2 to 1 SSD (reversal + re-consumption)
+  directInvoice.partsItems.forEach(p => {
+    recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_REVERSAL', inQty: p.quantity });
+  });
+  assert(inventory.find(i => i.itemCode === 'SSD-1TB').availableStock === 10, 'Reversed prior consumption -> Stock back to 10');
+
+  directInvoice.partsItems = [{ itemCode: 'SSD-1TB', quantity: 1 }];
+  directInvoice.partsItems.forEach(p => {
+    recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_CONSUME', outQty: p.quantity });
+  });
+  assert(inventory.find(i => i.itemCode === 'SSD-1TB').availableStock === 9, 'Re-consumed edited qty (1 SSD) -> Stock is 9');
+
+  // Step 3: Delete Direct Service Invoice -> Restore consumed stock
+  directInvoice.partsItems.forEach(p => {
+    recordStockMovementSim(inventory, { itemCode: p.itemCode, type: 'SERVICE_REVERSAL', inQty: p.quantity });
+  });
+  assert(inventory.find(i => i.itemCode === 'SSD-1TB').availableStock === 10, 'Deleted Direct Invoice -> All stock restored to 10');
+}
+
 console.log('\n========================================');
 console.log(`${passed} passed, ${failed} failed`);
 console.log('========================================');
 process.exit(failed > 0 ? 1 : 0);
+
