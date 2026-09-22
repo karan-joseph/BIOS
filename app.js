@@ -61,7 +61,9 @@ let state = {
   serviceEstimations: [], // Service Quotations & Estimations
   serviceInvoices: [],    // Service Bills & Invoices
   expenses: [],           // Operating expenses (rent, salary, etc.)
-  otherIncome: []         // Non-product sales income
+  otherIncome: [],        // Non-product sales income
+  outsourceRepairs: [],   // Outsource repair dispatches
+  openingBalance: null    // Company opening cash/bank balance
 };
 
 // LocalStorage Keys
@@ -80,11 +82,13 @@ const STORAGE_KEYS = {
   SERVICE_ESTIMATIONS: 'bios_service_estimations',
   SERVICE_INVOICES: 'bios_service_invoices',
   EXPENSES: 'bios_expenses',
-  OTHER_INCOME: 'bios_other_income'
+  OTHER_INCOME: 'bios_other_income',
+  OUTSOURCE_REPAIRS: 'bios_outsource_repairs',
+  OPENING_BALANCE: 'bios_opening_balance'
 };
 
 /** Schema version for LocalStorage migrations (increment when structure changes). */
-const CURRENT_DATA_VERSION = 2;
+const CURRENT_DATA_VERSION = 3;
 const DATA_VERSION_KEY = 'bios_data_version';
 
 // ==========================================================================
@@ -132,6 +136,8 @@ function loadFromStorage() {
     state.serviceInvoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_INVOICES)) || [];
     state.expenses = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || [];
     state.otherIncome = JSON.parse(localStorage.getItem(STORAGE_KEYS.OTHER_INCOME)) || [];
+    state.outsourceRepairs = JSON.parse(localStorage.getItem(STORAGE_KEYS.OUTSOURCE_REPAIRS)) || [];
+    state.openingBalance = JSON.parse(localStorage.getItem(STORAGE_KEYS.OPENING_BALANCE)) || null;
   } catch (e) {
     console.error('Error loading data from LocalStorage:', e);
   }
