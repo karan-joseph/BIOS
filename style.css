@@ -272,15 +272,8 @@ h1, h2, h3, h4, h5, h6 {
 .print-brand-header {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 1.25rem;
   margin-bottom: 0.5rem;
-  min-width: 0;
-}
-
-.print-brand-info {
-  flex: 1 1 180px;
-  min-width: 0;
 }
 
 .print-brand-logo {
@@ -387,11 +380,6 @@ header {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.header-right-mobile {
-  display: none;
-  flex-shrink: 0;
 }
 
 .mobile-menu-btn {
@@ -859,8 +847,6 @@ tr:hover td {
   z-index: 200;
   padding: 1.5rem;
   animation: fadeIn 0.25s ease-out;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .modal-overlay.active {
@@ -873,9 +859,7 @@ tr:hover td {
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
-  min-width: 0;
   overflow-y: auto;
-  overflow-x: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
   animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -960,54 +944,36 @@ tr:hover td {
 
 /* --- INVOICE PRINT PREVIEW MODAL --- */
 .invoice-modal {
-  width: 100%;
-  max-width: min(800px, calc(100vw - 3rem));
-  min-width: 0;
-}
-
-.invoice-modal .modal-body {
-  max-width: 100%;
-  overflow-x: hidden;
+  max-width: 800px;
 }
 
 .invoice-preview-card {
   background: #ffffff;
-  padding: clamp(1rem, 2.5vw, 2.5rem);
+  padding: 2.5rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   color: #334155;
-  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
+  font-size: 0.9rem;
 }
 
 .invoice-header-row {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.25rem;
   margin-bottom: 2.5rem;
 }
 
 .invoice-title {
   font-family: var(--font-heading);
-  font-size: clamp(1.35rem, 4vw, 2.25rem);
+  font-size: 2.25rem;
   font-weight: 800;
   color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.25rem;
-  line-height: 1.15;
 }
 
 .invoice-meta {
   text-align: right;
-  flex: 1 1 160px;
-  min-width: 0;
 }
 
 .invoice-meta-label {
@@ -1056,9 +1022,7 @@ tr:hover td {
 
 .invoice-table {
   width: 100%;
-  max-width: 100%;
   margin-bottom: 2rem;
-  table-layout: fixed;
 }
 
 .invoice-table th {
@@ -1070,8 +1034,6 @@ tr:hover td {
 .invoice-table td {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
-  word-break: break-word;
-  overflow-wrap: anywhere;
 }
 
 .invoice-summary-area {
@@ -1080,8 +1042,7 @@ tr:hover td {
 }
 
 .invoice-summary-box {
-  width: 100%;
-  max-width: 300px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1167,31 +1128,9 @@ tr:hover td {
   gap: 1rem;
 }
 
-@media screen and (max-width: 900px) {
+@media (max-width: 900px) {
   .form-grid-3, .form-grid-4 {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .invoice-header-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .invoice-meta {
-    text-align: left;
-  }
-
-  .invoice-details-grid {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  .invoice-summary-area {
-    justify-content: stretch;
-  }
-
-  .invoice-summary-box {
-    max-width: 100%;
   }
 }
 
@@ -1507,13 +1446,8 @@ tr:hover td {
   color: var(--text-muted);
 }
 
-/* RESPONSIVE DESIGN — sidebar / mobile menu (screen only) */
-@media screen and (max-width: 768px) {
-  .header-right-mobile {
-    display: flex;
-    align-items: center;
-  }
-
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
   .sidebar {
     position: fixed;
     left: -280px;
@@ -1630,42 +1564,6 @@ body.printing-modal {
     margin: 0 !important;
     break-after: avoid;
     page-break-after: avoid;
-    font-size: 0.9rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  body.printing-modal .invoice-header-row {
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-  }
-
-  body.printing-modal .invoice-meta {
-    text-align: right !important;
-  }
-
-  body.printing-modal .invoice-title {
-    font-size: 2rem !important;
-  }
-
-  body.printing-modal .invoice-details-grid {
-    grid-template-columns: 1fr 1fr !important;
-  }
-
-  body.printing-modal .invoice-summary-box {
-    width: 300px !important;
-    max-width: 300px !important;
-  }
-
-  body.printing-modal .invoice-table {
-    table-layout: auto !important;
-  }
-
-  body.printing-modal .invoice-table th,
-  body.printing-modal .invoice-table td {
-    font-size: inherit !important;
-    padding: 0.65rem 0.85rem !important;
   }
 
   /* Standardized BIOS Brand Logo in Print */
@@ -1714,15 +1612,15 @@ body.printing-modal {
   }
 }
 /* =========================================================
-   MOBILE INVOICE PREVIEW FIX (screen only — does not affect @media print)
+   MOBILE INVOICE PREVIEW FIX
    ========================================================= */
-@media screen and (max-width: 600px) {
+@media (max-width: 600px) {
 
-  /* Invoice popup should fit phone screen (avoid 100vw horizontal scroll) */
+  /* Invoice popup should fit phone screen */
   .invoice-modal {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    margin: 8px !important;
   }
 
   .invoice-modal .modal-body {
@@ -2086,11 +1984,10 @@ img  { max-width: 100%; height: auto; }
   .metric-cards-row       { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
   .modal-content.modal-xl,
   .modal-content.modal-full { max-width: 95vw; }
-  .invoice-modal { max-width: min(800px, calc(100vw - 2rem)); }
 }
 
 /* ── TABLET (769px – 1023px) ── */
-@media screen and (max-width: 1023px) {
+@media (max-width: 1023px) {
   .content-area { padding: 1.25rem; }
 
   .dashboard-brand-banner {
@@ -2121,10 +2018,7 @@ img  { max-width: 100%; height: auto; }
   .modal-content.modal-lg,
   .modal-content.modal-xl,
   .modal-content.modal-full { max-width: 95vw; }
-  .invoice-modal {
-    max-width: min(800px, calc(100vw - 2rem));
-    width: 100%;
-  }
+  .invoice-modal            { max-width: 95vw; }
 
   .filter-bar { gap: 0.75rem; }
   .form-group-inline { min-width: 140px; }
@@ -2135,7 +2029,7 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── MOBILE (≤ 768px) — FULL AUDIT ── */
-@media screen and (max-width: 768px) {
+@media (max-width: 768px) {
   /* LAYOUT */
   .app-container  { flex-direction: column; }
   .main-wrapper   { width: 100%; min-width: 0; }
@@ -2239,12 +2133,6 @@ img  { max-width: 100%; height: auto; }
     max-height: 95vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
-
-  .invoice-modal {
-    max-width: 100%;
-    width: 100%;
-  }
-
   .modal-header   { padding: 1rem; }
   .modal-header h4 { font-size: 1rem; }
   .modal-body     { padding: 1rem; }
@@ -2350,15 +2238,16 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── INVOICE PREVIEW — 601px to 768px gap ── */
-@media screen and (max-width: 768px) and (min-width: 601px) {
-  .invoice-modal            { max-width: 100%; width: 100%; }
-  .invoice-preview-card     { padding: 1.5rem; }
+@media (max-width: 768px) and (min-width: 601px) {
+  .invoice-modal            { max-width: 96vw; }
+  .invoice-preview-card     { padding: 1.5rem; font-size: 0.84rem; }
+  .invoice-title            { font-size: 1.75rem; }
   .invoice-details-grid     { grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .invoice-summary-box      { max-width: 260px; }
+  .invoice-summary-box      { width: 260px; }
 }
 
 /* ── SMALL-SCREEN INVOICE FIXES ── */
-@media screen and (max-width: 640px) {
+@media (max-width: 640px) {
   .invoice-summary-box         { width: 100% !important; }
   .invoice-table                { font-size: 0.75rem; }
   .invoice-table th,
@@ -2374,99 +2263,6 @@ img  { max-width: 100%; height: auto; }
 }
 
 /* ── MODAL BODY INLINE PRICE ROWS — SMALL SCREENS ── */
-/* ── FINANCE MODULE ── */
-.finance-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.85rem;
-  margin-bottom: 1.25rem;
-}
-.finance-kpi-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 1rem 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-.finance-kpi-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em; }
-.finance-kpi-value { font-size: 1.25rem; font-weight: 800; color: var(--text-main); font-family: var(--font-heading); }
-.finance-kpi-sub { font-size: 0.72rem; color: var(--text-muted); line-height: 1.35; }
-.finance-kpi-profit .finance-kpi-value { color: var(--success-dark); }
-.finance-kpi-loss .finance-kpi-value { color: var(--danger-dark); }
-.finance-charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-}
-.finance-chart-card h4 { font-size: 0.95rem; margin-bottom: 0.75rem; }
-.finance-bar-row {
-  display: grid;
-  grid-template-columns: minmax(80px, 28%) 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
-  font-size: 0.78rem;
-  margin-bottom: 0.45rem;
-}
-.finance-bar-track {
-  height: 8px;
-  background: var(--secondary-light);
-  border-radius: 999px;
-  overflow: hidden;
-  min-width: 0;
-}
-.finance-bar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
-.finance-notice-banner {
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  color: #92400e;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  margin-bottom: 1rem;
-}
-.finance-summary-table { width: 100%; max-width: 420px; border-collapse: collapse; }
-.finance-summary-table td { padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
-.finance-summary-table td:last-child { text-align: right; font-weight: 700; }
-.finance-pl-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.finance-pl-table td { padding: 0.5rem 0.65rem; border-bottom: 1px solid var(--border); }
-.finance-pl-table td:last-child { text-align: right; font-weight: 600; }
-.finance-pl-indent { padding-left: 1.25rem !important; color: var(--text-muted); font-size: 0.85rem; }
-.finance-pl-highlight td { background: #eef2ff; }
-.finance-pl-total td { font-size: 1.05rem; border-top: 2px solid var(--border); }
-.finance-cashflow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
-.finance-cash-list { list-style: none; font-size: 0.88rem; }
-.finance-cash-list li { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px dashed var(--border); }
-.finance-pl-card { max-width: 100%; min-width: 0; }
-.finance-sub-tabs { margin-bottom: 1rem; flex-wrap: wrap; }
-
-@media screen and (max-width: 768px) {
-  .finance-kpi-grid { grid-template-columns: 1fr 1fr; }
-  .finance-bar-row { grid-template-columns: 1fr; gap: 0.25rem; }
-}
-@media screen and (max-width: 480px) {
-  .finance-kpi-grid { grid-template-columns: 1fr; }
-}
-
-@media print {
-  body.printing-finance > * { display: none !important; }
-  body.printing-finance #finance-section,
-  body.printing-finance #finance-section * { visibility: visible !important; }
-  body.printing-finance #finance-section {
-    display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-  }
-  body.printing-finance .finance-sub-tabs,
-  body.printing-finance .filter-bar,
-  body.printing-finance .section-header button { display: none !important; }
-}
-
 @media (max-width: 600px) {
   .modal-body div[style*="justify-content: flex-end"],
   .modal-body div[style*="justify-content:flex-end"] {
@@ -2478,4 +2274,86 @@ img  { max-width: 100%; height: auto; }
     width: auto !important;
     max-width: 100% !important;
   }
+}
+
+
+/* ==========================================================================
+   FINANCE & P&L MODULE - ADDITIVE STYLES
+   ========================================================================== */
+.finance-action-row{display:flex;gap:.55rem;flex-wrap:wrap}
+.finance-control-card,.finance-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1rem}
+.finance-control-card{padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.finance-period-tabs{display:flex;gap:.35rem;flex-wrap:wrap}
+.finance-period-btn{border:1px solid var(--border);background:var(--bg-main);color:var(--text-muted);padding:.55rem .9rem;border-radius:999px;font-weight:700;cursor:pointer}
+.finance-period-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.finance-custom-dates{display:flex;align-items:end;gap:.6rem;flex-wrap:wrap}
+.finance-custom-dates label{font-size:.78rem;font-weight:700;color:var(--text-muted);display:flex;flex-direction:column;gap:.25rem}
+.finance-custom-dates input{height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 .6rem;background:#fff}
+.finance-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-bottom:1rem}
+.finance-kpi{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;box-shadow:var(--shadow-sm);border-left:4px solid var(--primary)}
+.finance-kpi.revenue{border-left-color:var(--success)}.finance-kpi.cogs{border-left-color:var(--warning)}.finance-kpi.gross{border-left-color:var(--info)}.finance-kpi.expense{border-left-color:var(--danger)}.finance-kpi.profit{border-left-color:var(--primary)}.finance-kpi.cash{border-left-color:#8b5cf6}
+.finance-kpi span{display:block;font-size:.78rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.finance-kpi strong{display:block;font-family:var(--font-heading);font-size:1.55rem;margin:.3rem 0}
+.finance-kpi small{display:block;color:var(--text-muted);font-size:.72rem}
+.finance-two-col{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:1rem}
+.finance-panel{padding:1rem}
+.finance-panel-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.75rem}
+.finance-panel-head h4{font-family:var(--font-heading);font-size:1.05rem}
+.finance-panel-head p{font-size:.75rem;color:var(--text-muted);margin-top:.2rem}
+.finance-pnl{border-top:1px solid var(--border)}
+.pnl-row{display:flex;justify-content:space-between;gap:1rem;padding:.72rem .25rem;border-bottom:1px solid var(--border)}
+.pnl-row.main{font-weight:700}.pnl-row.sub{color:var(--text-muted);font-size:.88rem;padding-left:1rem}.pnl-row.total{font-weight:800;background:var(--bg-main);padding-left:.5rem;padding-right:.5rem}.pnl-row.grand{font-size:1.08rem;font-weight:900;background:var(--primary-light);color:var(--primary);padding:.9rem .5rem;border-radius:.5rem;margin-top:.45rem}
+.finance-source-list{display:flex;flex-direction:column;gap:.65rem}
+.finance-source-item{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center}
+.finance-source-label{font-size:.85rem;font-weight:700}.finance-source-value{font-weight:800}
+.finance-source-track{grid-column:1/-1;height:8px;border-radius:99px;background:var(--secondary-light);overflow:hidden}
+.finance-source-fill{height:100%;background:var(--primary);border-radius:99px}
+.finance-mini-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;margin-top:1rem}
+.finance-mini-summary div{background:var(--bg-main);padding:.7rem;border-radius:.6rem}.finance-mini-summary span{display:block;color:var(--text-muted);font-size:.72rem}.finance-mini-summary strong{font-size:1.05rem}
+.finance-trend-panel{overflow:hidden}.finance-ledger-search{max-width:280px;width:100%;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 .7rem}
+.finance-modal-content{max-width:680px}
+.finance-modal-note{background:var(--bg-main);border:1px solid var(--border);border-radius:.6rem;padding:.7rem;font-size:.78rem;color:var(--text-muted);margin-top:.75rem}
+.finance-type-badge{display:inline-flex;padding:.25rem .5rem;border-radius:999px;font-size:.68rem;font-weight:800}
+.finance-type-badge.expense{background:var(--danger-light);color:var(--danger-dark)}.finance-type-badge.income{background:var(--success-light);color:var(--success-dark)}.finance-type-badge.outside{background:var(--primary-light);color:var(--primary)}
+.finance-actions{display:flex;gap:.3rem;white-space:nowrap}.finance-actions button{border:0;background:transparent;cursor:pointer;padding:.25rem}
+@media(max-width:1000px){.finance-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-two-col{grid-template-columns:1fr}}
+@media(max-width:650px){.finance-kpi-grid{grid-template-columns:1fr}.finance-control-card{align-items:stretch}.finance-period-tabs{width:100%}.finance-period-btn{flex:1}.finance-custom-dates{width:100%}.finance-custom-dates label{flex:1}.finance-panel{padding:.75rem}.finance-panel-head{align-items:flex-start;flex-direction:column}.finance-ledger-search{max-width:none}.finance-action-row{width:100%}.finance-action-row .btn{flex:1}.finance-modal-content .form-grid{grid-template-columns:1fr!important}}
+
+/* ==========================================================================
+   FINANCE / REPORTS - LITE PROFESSIONAL POLISH (additive only)
+   ========================================================================== */
+.finance-action-row .btn{border-radius:8px;box-shadow:none;font-weight:700;padding:.55rem .8rem}
+.finance-control-card{border-radius:10px;padding:.65rem .8rem;box-shadow:none}
+.finance-period-btn{background:transparent;padding:.45rem .72rem;font-size:.78rem;border-radius:7px}
+.finance-period-btn.active{box-shadow:none}
+.finance-kpi-grid{gap:.7rem}
+.finance-kpi{border-radius:10px;padding:.8rem .9rem;box-shadow:none;border-left-width:3px}
+.finance-kpi strong{font-size:1.35rem;margin:.18rem 0}
+.finance-kpi span{font-size:.7rem;letter-spacing:.03em}
+.finance-kpi small{font-size:.68rem;line-height:1.35}
+.finance-panel{border-radius:10px;padding:.85rem;box-shadow:none}
+.finance-panel-head{margin-bottom:.6rem}
+.finance-panel-head h4{font-size:.95rem}
+.finance-panel-head p{font-size:.7rem}
+.finance-pnl .pnl-row{padding:.52rem .7rem;font-size:.82rem}
+.finance-source-list{gap:.5rem}
+.finance-source-item{font-size:.78rem}
+.finance-source-track{height:5px}
+.finance-mini-summary div{padding:.55rem;border-radius:7px}
+.finance-mini-summary span{font-size:.67rem}
+.finance-mini-summary strong{font-size:.95rem}
+.finance-trend-panel .table-responsive,.finance-panel .table-responsive{border-radius:8px}
+.finance-ledger-search{height:34px;font-size:.78rem}
+#reports-section .filter-bar{gap:.6rem;padding:.7rem;border-radius:10px}
+#reports-section .filter-bar label{font-size:.7rem;font-weight:700}
+#reports-section .filter-bar input,#reports-section .filter-bar select{height:38px;font-size:.8rem}
+#reports-section #report-table{font-size:.78rem}
+#reports-section #report-table th{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;padding:.65rem .7rem}
+#reports-section #report-table td{padding:.62rem .7rem}
+#reports-section .section-header p{font-size:.78rem}
+@media(max-width:650px){
+  .finance-action-row .btn{padding:.5rem .55rem;font-size:.75rem}
+  #reports-section .filter-bar{display:grid;grid-template-columns:1fr 1fr}
+  #reports-section .filter-bar .form-group-inline:first-child,#reports-section .filter-bar .form-group-inline:nth-child(2){grid-column:1/-1}
+  #reports-section .filter-bar #reset-report-filters-btn{grid-column:1/-1;width:100%}
 }
