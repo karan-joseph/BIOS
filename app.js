@@ -59,11 +59,7 @@ let state = {
   stockLedger: [],        // Complete stock movement history
   serviceJobCards: [],    // Service & Repair Job Cards
   serviceEstimations: [], // Service Quotations & Estimations
-  serviceInvoices: [],    // Service Bills & Invoices
-  expenses: [],           // Operating expenses (rent, salary, etc.)
-  otherIncome: [],        // Non-product sales income
-  outsourceRepairs: [],   // Outsource repair dispatches
-  openingBalance: null    // Company opening cash/bank balance
+  serviceInvoices: []     // Service Bills & Invoices
 };
 
 // LocalStorage Keys
@@ -80,23 +76,16 @@ const STORAGE_KEYS = {
   STOCK_LEDGER: 'bios_stock_ledger',
   SERVICE_JOB_CARDS: 'bios_service_job_cards',
   SERVICE_ESTIMATIONS: 'bios_service_estimations',
-  SERVICE_INVOICES: 'bios_service_invoices',
-  EXPENSES: 'bios_expenses',
-  OTHER_INCOME: 'bios_other_income',
-  OUTSOURCE_REPAIRS: 'bios_outsource_repairs',
-  OPENING_BALANCE: 'bios_opening_balance'
+  SERVICE_INVOICES: 'bios_service_invoices'
 };
-
-/** Schema version for LocalStorage migrations (increment when structure changes). */
-const CURRENT_DATA_VERSION = 3;
-const DATA_VERSION_KEY = 'bios_data_version';
 
 // ==========================================================================
 // INITIALIZATION & DATA SEEDING
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
   loadFromStorage();
-  migrateBusinessDataIfNeeded();
+  clearPurchaseInventoryTestDataOnce();
+  // Initial Purchase & Inventory test-data seeding has been disabled.
   setupNavigation();
   setupMobileMenu();
   setupSubTabs();
@@ -115,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderReturnsTables();
   renderServiceModule();
   renderReports();
-  initFinanceModule();
 });
 
 // Load data from LocalStorage
@@ -134,181 +122,49 @@ function loadFromStorage() {
     state.serviceJobCards = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_JOB_CARDS)) || [];
     state.serviceEstimations = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_ESTIMATIONS)) || [];
     state.serviceInvoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_INVOICES)) || [];
-    state.expenses = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || [];
-    state.otherIncome = JSON.parse(localStorage.getItem(STORAGE_KEYS.OTHER_INCOME)) || [];
-    state.outsourceRepairs = JSON.parse(localStorage.getItem(STORAGE_KEYS.OUTSOURCE_REPAIRS)) || [];
-    state.openingBalance = JSON.parse(localStorage.getItem(STORAGE_KEYS.OPENING_BALANCE)) || null;
   } catch (e) {
     console.error('Error loading data from LocalStorage:', e);
   }
 }
 
-function sumPaymentTransactions(payments) {
-  return (payments || []).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-}
+// One-time cleanup of old Purchase & Inventory TEST DATA.
+// This deliberately preserves Customers/Enquiries, Bookings, Billing/Sales, PC Builds,
+// Service Job Cards, Service Estimations and Service Invoices.
+function clearPurchaseInventoryTestDataOnce() {
+  const RESET_KEY = 'bios_purchase_inventory_test_reset_v1';
+  try {
+    if (localStorage.getItem(RESET_KEY) === 'done') return;
 
-function syncBillingPaymentFields(invoice) {
-  if (!invoice) return;
-  if (!invoice.payments) invoice.payments = [];
-  invoice.paidAmount = sumPaymentTransactions(invoice.payments);
-  const total = parseFloat(invoice.totalAmount || 0);
-  invoice.balanceAmount = Math.max(0, total - invoice.paidAmount);
-  if (invoice.balanceAmount <= 0) invoice.status = 'Paid';
-  else if (invoice.paidAmount > 0) invoice.status = 'Partial';
-  else invoice.status = 'Unpaid';
-}
+    // Clear Purchase & Inventory master/test records.
+    state.inventory = [];
+    state.purchases = [];
+    state.suppliers = [];
+    state.stockLedger = [];
 
-function syncPurchasePaymentFields(purchase) {
-  if (!purchase) return;
-  if (!purchase.payments) purchase.payments = [];
-  purchase.paidAmount = sumPaymentTransactions(purchase.payments);
-  const total = parseFloat(purchase.totalAmount || 0);
-  purchase.balanceAmount = Math.max(0, total - purchase.paidAmount);
-  if (purchase.balanceAmount <= 0) purchase.status = 'Paid';
-  else if (purchase.paidAmount > 0) purchase.status = 'Partial';
-  else purchase.status = 'Unpaid';
-}
+    localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.STOCK_LEDGER, JSON.stringify([]));
 
-function sumPaymentsInDateRange(records, from, to) {
-  let total = 0;
-  (records || []).forEach(rec => {
-    (rec.payments || []).forEach(p => {
-      if (financeIsInRange(p.date, from, to)) total += parseFloat(p.amount || 0);
+    // Keep Sales Returns, remove only Purchase Returns from the mixed returns store.
+    state.returns = (state.returns || []).filter(r => r && r.type !== 'PURCHASE_RETURN');
+    localStorage.setItem(STORAGE_KEYS.RETURNS, JSON.stringify(state.returns));
+
+    // Remove Purchase/Inventory activity entries, while preserving unrelated activity.
+    state.activities = (state.activities || []).filter(a => {
+      if (!a) return false;
+      if (a.type === 'purchase' || a.type === 'inventory') return false;
+      if (a.type === 'return' && /purchase return|purchase-return|stock deducted/i.test(a.description || '')) return false;
+      return true;
     });
-  });
-  return total;
-}
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(state.activities));
 
-function migrateBusinessDataIfNeeded() {
-  let version = parseInt(localStorage.getItem(DATA_VERSION_KEY) || '1', 10);
-  if (!Number.isFinite(version) || version < 1) version = 1;
-
-  if (version < 2) {
-    state.billings.forEach(b => {
-      if (!b.payments) {
-        b.payments = parseFloat(b.paidAmount || 0) > 0
-          ? [{ id: 'CPAY-MIG-' + b.id, date: b.date || getTodayDateString(), amount: parseFloat(b.paidAmount), method: b.paymentMethod || 'Unspecified', notes: 'Migrated from invoice paid balance' }]
-          : [];
-      }
-      syncBillingPaymentFields(b);
-    });
-    state.purchases.forEach(p => {
-      if (!p.payments) {
-        p.payments = parseFloat(p.paidAmount || 0) > 0
-          ? [{ id: 'SPAY-MIG-' + p.id, date: p.date || getTodayDateString(), amount: parseFloat(p.paidAmount), method: 'Unspecified', notes: 'Migrated from purchase paid balance' }]
-          : [];
-      }
-      syncPurchasePaymentFields(p);
-    });
-    version = 2;
-    localStorage.setItem(DATA_VERSION_KEY, String(CURRENT_DATA_VERSION));
-    saveAllBusinessDataToStorage();
+    // Prevent the old seeded test data from returning on refresh/browser restart.
+    localStorage.setItem(RESET_KEY, 'done');
+    console.info('Purchase & Inventory test data cleared successfully.');
+  } catch (e) {
+    console.error('Error clearing Purchase & Inventory test data:', e);
   }
-}
-
-function saveAllBusinessDataToStorage() {
-  Object.entries(STORAGE_KEYS).forEach(([, key]) => {
-    const prop = key.replace('bios_', '').toLowerCase();
-    // Map storage keys to state properties
-  });
-  saveToStorage(STORAGE_KEYS.ENQUIRIES, state.enquiries);
-  saveToStorage(STORAGE_KEYS.BOOKINGS, state.bookings);
-  saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
-  saveToStorage(STORAGE_KEYS.ACTIVITIES, state.activities);
-  saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
-  saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
-  saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
-  saveToStorage(STORAGE_KEYS.PC_BUILDS, state.pcBuilds);
-  saveToStorage(STORAGE_KEYS.RETURNS, state.returns);
-  saveToStorage(STORAGE_KEYS.STOCK_LEDGER, state.stockLedger);
-  saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
-  saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
-  saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
-  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
-  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
-}
-
-function exportFullBackupJson() {
-  const payload = {
-    meta: {
-      app: 'BIOS Billing Suite',
-      dataVersion: CURRENT_DATA_VERSION,
-      exportedAt: new Date().toISOString()
-    },
-    data: {
-      enquiries: state.enquiries,
-      bookings: state.bookings,
-      billings: state.billings,
-      activities: state.activities,
-      inventory: state.inventory,
-      purchases: state.purchases,
-      suppliers: state.suppliers,
-      pcBuilds: state.pcBuilds,
-      returns: state.returns,
-      stockLedger: state.stockLedger,
-      serviceJobCards: state.serviceJobCards,
-      serviceEstimations: state.serviceEstimations,
-      serviceInvoices: state.serviceInvoices,
-      expenses: state.expenses,
-      otherIncome: state.otherIncome
-    }
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `BIOS-Full-Backup-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  addActivity('inventory', 'Exported full business data backup (JSON)');
-}
-
-function importFullBackupJsonFromFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(reader.result);
-      if (!parsed || !parsed.data || typeof parsed.data !== 'object') {
-        alert('❌ Invalid backup file structure.');
-        return;
-      }
-      const required = ['billings', 'purchases', 'inventory'];
-      for (const k of required) {
-        if (!Array.isArray(parsed.data[k])) {
-          alert('❌ Backup is missing required data: ' + k);
-          return;
-        }
-      }
-      if (!confirm('⚠️ Restore backup?\n\nThis will REPLACE all current business data in this browser.\n\nExport a backup first if you need to keep today\'s data.')) return;
-      if (!confirm('Final confirmation: overwrite all LocalStorage business records with this backup?')) return;
-
-      const d = parsed.data;
-      state.enquiries = d.enquiries || [];
-      state.bookings = d.bookings || [];
-      state.billings = d.billings || [];
-      state.activities = d.activities || [];
-      state.inventory = d.inventory || [];
-      state.purchases = d.purchases || [];
-      state.suppliers = d.suppliers || [];
-      state.pcBuilds = d.pcBuilds || [];
-      state.returns = d.returns || [];
-      state.stockLedger = d.stockLedger || [];
-      state.serviceJobCards = d.serviceJobCards || [];
-      state.serviceEstimations = d.serviceEstimations || [];
-      state.serviceInvoices = d.serviceInvoices || [];
-      state.expenses = d.expenses || [];
-      state.otherIncome = d.otherIncome || [];
-      migrateBusinessDataIfNeeded();
-      saveAllBusinessDataToStorage();
-      localStorage.setItem(DATA_VERSION_KEY, String(parsed.meta?.dataVersion || CURRENT_DATA_VERSION));
-      addActivity('inventory', 'Restored business data from JSON backup');
-      alert('✅ Backup restored successfully. Reloading views.');
-      location.reload();
-    } catch (e) {
-      console.error(e);
-      alert('❌ Failed to read backup file.');
-    }
-  };
-  reader.readAsText(file);
 }
 
 // Save data to LocalStorage
@@ -483,18 +339,6 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-IN', options);
 }
 
-/** Parse minimum stock: empty = invalid; 0 = valid; positive = valid */
-function parseMinStockField(rawValue) {
-  if (rawValue === '' || rawValue === null || rawValue === undefined) {
-    return { ok: false, message: '❌ Minimum stock is required. Enter 0 if you do not want low-stock alerts.' };
-  }
-  const minStock = parseFloat(String(rawValue).trim());
-  if (!Number.isFinite(minStock) || minStock < 0) {
-    return { ok: false, message: '❌ Minimum stock must be 0 or a positive number.' };
-  }
-  return { ok: true, value: minStock };
-}
-
 // Format Date & Time for ledger
 function formatDateTime(isoStr) {
   if (!isoStr) return '';
@@ -564,8 +408,6 @@ function setupNavigation() {
         renderPCBuildHistoryTable();
       } else if (targetSectionId === 'returns') {
         renderReturnsTables();
-      } else if (targetSectionId === 'finance') {
-        renderFinanceModule();
       } else if (targetSectionId === 'reports') {
         renderReports();
       }
@@ -637,22 +479,6 @@ function setupSubTabs() {
       else if (target === 'customers') renderServiceCustomersTable();
     });
   });
-
-  const financeTabs = document.querySelectorAll('[data-finance-tab]');
-  financeTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      financeTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.getAttribute('data-finance-tab');
-      document.querySelectorAll('#finance-section .sub-tab-pane').forEach(p => p.classList.remove('active'));
-      const pane = document.getElementById(`finance-tab-${target}`);
-      if (pane) pane.classList.add('active');
-      if (target === 'reports') renderFinanceReportTable();
-      else if (target === 'expenses') renderExpensesTable();
-      else if (target === 'other-income') renderOtherIncomeTable();
-      else renderFinanceModule();
-    });
-  });
 }
 
 // Helper to handle Modal Opening/Closing
@@ -702,10 +528,6 @@ function setupEventListeners() {
   setupModalToggle(null, 'close-jobcard-view-btn', 'close-jobcard-view-btn2', 'jobcard-view-modal');
   setupModalToggle(null, 'close-estimation-view-btn', 'close-estimation-view-btn2', 'estimation-view-modal');
   setupModalToggle(null, 'close-svc-inv-view-btn', 'close-svc-inv-view-btn2', 'svc-invoice-view-modal');
-  setupModalToggle(null, 'close-pay-modal-btn', 'cancel-pay-modal-btn', 'payment-collection-modal');
-
-  const payCollectionForm = document.getElementById('payment-collection-form');
-  if (payCollectionForm) payCollectionForm.addEventListener('submit', handlePaymentCollectionSubmit);
 
   // Service Print Buttons
   const printJobCardBtn = document.getElementById('print-jobcard-btn');
@@ -866,7 +688,7 @@ function setupEventListeners() {
         document.getElementById('purchase-model').value = existing.model || '';
         document.getElementById('purchase-rate').value = existing.purchaseRate || '';
         document.getElementById('purchase-selling-rate').value = existing.sellingRate || '';
-        document.getElementById('purchase-min-stock').value = existing.minStock != null ? existing.minStock : 2;
+        document.getElementById('purchase-min-stock').value = existing.minStock || 2;
         calculatePurchaseTotals();
       }
     });
@@ -892,16 +714,6 @@ function setupEventListeners() {
       if (purchaseFilterFrom) purchaseFilterFrom.value = '';
       if (purchaseFilterTo) purchaseFilterTo.value = '';
       renderPurchasesTable();
-    });
-  }
-
-  const editPurchaseFromViewBtn = document.getElementById('edit-purchase-from-view-btn');
-  if (editPurchaseFromViewBtn) {
-    editPurchaseFromViewBtn.addEventListener('click', () => {
-      const viewModal = document.getElementById('purchase-view-modal');
-      const purchaseId = viewModal?.dataset?.purchaseId;
-      if (purchaseId) editPurchase(purchaseId);
-      else alert('❌ Unable to edit purchase bill. Please close and try again from the list.');
     });
   }
 
@@ -1052,8 +864,6 @@ function setupEventListeners() {
 
   if (reportExportBtn) reportExportBtn.addEventListener('click', handleReportExport);
   if (reportPrintBtn) reportPrintBtn.addEventListener('click', handleReportPrint);
-
-  setupFinanceEventListeners();
 
   // --- Service Module Listeners ---
   setupCustomerAutoFill('jobcard-customer-name', 'jobcard-customer-mobile', 'jobcard-customer-address');
@@ -1665,8 +1475,19 @@ window.deleteBooking = function(id) {
 // ==========================================================================
 function generateInvoiceNumber() {
   const currentYear = new Date().getFullYear();
-  const ids = (state.billings || []).map(b => b.invoiceNo || b.id);
-  return nextSequentialDocumentId('BIOS', currentYear, ids);
+  const prefix = `BIOS-${currentYear}-`;
+  let maxSeq = 0;
+  state.billings.forEach(inv => {
+    if (inv.invoiceNo && inv.invoiceNo.startsWith(prefix)) {
+      const parts = inv.invoiceNo.split('-');
+      if (parts.length === 3) {
+        const seq = parseInt(parts[2], 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+      }
+    }
+  });
+  const nextSeq = String(maxSeq + 1).padStart(4, '0');
+  return `${prefix}${nextSeq}`;
 }
 
 function populateBillingBookingDropdown() {
@@ -1828,13 +1649,11 @@ function handleBillingSubmit(e) {
     gstAmount,
     totalAmount,
     costPrice,
-    payments: [],
     paidAmount: 0,
     balanceAmount: totalAmount,
     status: 'Unpaid',
     bookingId: bookingId || null
   };
-  syncBillingPaymentFields(newInvoice);
 
   state.billings.push(newInvoice);
   saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
@@ -1855,7 +1674,7 @@ function renderBillingsTable() {
   if (sorted.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="9" class="no-data-msg">
+        <td colspan="8" class="no-data-msg">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
           <p>No sales invoices generated yet.</p>
         </td>
@@ -1880,12 +1699,7 @@ function renderBillingsTable() {
       <td>${formatCurrency(item.baseAmount)}</td>
       <td>${formatCurrency(item.gstAmount)} <small style="color: var(--text-muted);">(${item.gstRate || 18}%)</small></td>
       <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(item.totalAmount)}</td>
-      <td>
-        <span class="badge ${item.status === 'Paid' ? 'badge-paid' : item.status === 'Partial' ? 'badge-partial' : 'badge-unpaid'}">${item.status || 'Unpaid'}</span>
-        ${parseFloat(item.balanceAmount || 0) > 0 ? `<br><small style="color:var(--danger-dark);">Bal: ${formatCurrency(item.balanceAmount)}</small>` : ''}
-      </td>
       <td class="actions-cell">
-        <button class="btn btn-success btn-sm" onclick="openCollectPaymentModal('billing','${item.id}')" title="Record payment">₹ Pay</button>
         <button class="btn btn-primary btn-sm" onclick="previewInvoice('${item.id}')">⎙ Print</button>
         <button class="btn btn-outline btn-sm btn-danger" onclick="deleteInvoice('${item.id}')">Delete</button>
       </td>
@@ -1897,212 +1711,6 @@ window.previewInvoice = function(id) {
   const item = state.billings.find(i => i.id === id);
   if (!item) return;
   openInvoicePreviewModal(item);
-};
-window.openCollectPaymentModal = function(targetType, targetId) {
-  const modal = document.getElementById('payment-collection-modal');
-  if (!modal) return;
-
-  document.getElementById('pay-target-type').value = targetType;
-  document.getElementById('pay-target-id').value = targetId;
-  const form = document.getElementById('payment-collection-form');
-  if (form) form.reset();
-  document.getElementById('pay-date').value = getTodayDateString();
-
-  let partyName = '';
-  let docNo = '';
-  let totalAmt = 0;
-  let prevPaid = 0;
-  let balanceDue = 0;
-  let payments = [];
-
-  if (targetType === 'billing') {
-    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
-    if (!inv) { alert('❌ Invoice not found.'); return; }
-    syncBillingPaymentFields(inv);
-    partyName = inv.customerName || 'Customer';
-    docNo = inv.invoiceNo;
-    totalAmt = parseFloat(inv.totalAmount || 0);
-    prevPaid = parseFloat(inv.paidAmount || 0);
-    balanceDue = parseFloat(inv.balanceAmount || 0);
-    payments = inv.payments || [];
-    document.getElementById('pay-modal-title').textContent = `Record Payment Collection — ${docNo}`;
-    document.getElementById('pay-party-label').textContent = 'Customer Name:';
-    document.getElementById('pay-doc-label').textContent = 'Invoice #:';
-  } else if (targetType === 'purchase') {
-    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
-    if (!pur) { alert('❌ Purchase bill not found.'); return; }
-    syncPurchasePaymentFields(pur);
-    partyName = pur.supplier || 'Supplier';
-    docNo = pur.invoiceNo;
-    totalAmt = parseFloat(pur.totalAmount || 0);
-    prevPaid = parseFloat(pur.paidAmount || 0);
-    balanceDue = parseFloat(pur.balanceAmount || 0);
-    payments = pur.payments || [];
-    document.getElementById('pay-modal-title').textContent = `Record Supplier Payment — ${docNo}`;
-    document.getElementById('pay-party-label').textContent = 'Supplier Name:';
-    document.getElementById('pay-doc-label').textContent = 'Purchase Bill #:';
-  } else {
-    return;
-  }
-
-  document.getElementById('pay-party-name').textContent = partyName;
-  document.getElementById('pay-doc-no').textContent = docNo;
-  document.getElementById('pay-total-amt').textContent = formatCurrency(totalAmt);
-  document.getElementById('pay-prev-paid').textContent = formatCurrency(prevPaid);
-  document.getElementById('pay-balance-due').textContent = formatCurrency(balanceDue);
-  document.getElementById('pay-amount').value = balanceDue > 0 ? balanceDue.toFixed(2) : '';
-
-  renderPaymentHistoryList(targetType, targetId, payments);
-  modal.classList.add('active');
-};
-
-function renderPaymentHistoryList(targetType, targetId, payments) {
-  const container = document.getElementById('pay-history-container');
-  if (!container) return;
-
-  if (!payments || payments.length === 0) {
-    container.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 0.5rem 0;">No previous payment transactions recorded.</p>`;
-    return;
-  }
-
-  container.innerHTML = `
-    <table style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
-      <thead>
-        <tr style="border-bottom: 1px solid var(--border); text-align: left;">
-          <th style="padding: 0.35rem;">Date</th>
-          <th style="padding: 0.35rem;">Amount</th>
-          <th style="padding: 0.35rem;">Method</th>
-          <th style="padding: 0.35rem;">Ref / Notes</th>
-          <th style="padding: 0.35rem; text-align: right;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${payments.map(p => `
-          <tr style="border-bottom: 1px dashed var(--border);">
-            <td style="padding: 0.35rem;">${formatDate(p.date)}</td>
-            <td style="padding: 0.35rem; font-weight: 700; color: var(--success-dark);">${formatCurrency(p.amount)}</td>
-            <td style="padding: 0.35rem;"><span class="badge badge-category" style="font-size: 0.7rem;">${p.method || 'Cash'}</span></td>
-            <td style="padding: 0.35rem; color: var(--text-muted); font-size: 0.78rem;">${p.reference ? `Ref: ${p.reference} ` : ''}${p.notes || ''}</td>
-            <td style="padding: 0.35rem; text-align: right;">
-              <button type="button" class="btn-remove-row" onclick="deletePaymentTransaction('${targetType}', '${targetId}', '${p.id}')" title="Delete payment entry">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-function handlePaymentCollectionSubmit(e) {
-  e.preventDefault();
-  const targetType = document.getElementById('pay-target-type').value;
-  const targetId = document.getElementById('pay-target-id').value;
-  const payDate = document.getElementById('pay-date').value;
-  const payAmount = parseFloat(document.getElementById('pay-amount').value || 0);
-  const payMethod = document.getElementById('pay-method').value;
-  const payRef = document.getElementById('pay-reference').value.trim();
-  const payNotes = document.getElementById('pay-notes').value.trim();
-
-  if (!payDate || !Number.isFinite(payAmount) || payAmount <= 0) {
-    alert('❌ Please enter a valid payment date and an amount greater than zero.');
-    return;
-  }
-
-  if (targetType === 'billing') {
-    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
-    if (!inv) { alert('❌ Invoice not found.'); return; }
-    syncBillingPaymentFields(inv);
-    if (payAmount > inv.balanceAmount + 0.01) {
-      alert(`❌ Payment amount (${formatCurrency(payAmount)}) exceeds remaining balance due (${formatCurrency(inv.balanceAmount)}).`);
-      return;
-    }
-    const payEntry = {
-      id: 'CPAY-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      date: payDate,
-      amount: payAmount,
-      method: payMethod,
-      reference: payRef,
-      notes: payNotes || 'Payment collection'
-    };
-    if (!inv.payments) inv.payments = [];
-    inv.payments.push(payEntry);
-    syncBillingPaymentFields(inv);
-    saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
-    addActivity('billing', `Recorded ${formatCurrency(payAmount)} payment (${payMethod}) for Sales Invoice <strong>${inv.invoiceNo}</strong> (${inv.customerName})`);
-    alert(`✅ Payment of ${formatCurrency(payAmount)} recorded successfully for Invoice ${inv.invoiceNo}.\nRemaining Balance: ${formatCurrency(inv.balanceAmount)}`);
-    renderBillingsTable();
-  } else if (targetType === 'purchase') {
-    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
-    if (!pur) { alert('❌ Purchase bill not found.'); return; }
-    syncPurchasePaymentFields(pur);
-    if (payAmount > pur.balanceAmount + 0.01) {
-      alert(`❌ Payment amount (${formatCurrency(payAmount)}) exceeds remaining balance due (${formatCurrency(pur.balanceAmount)}).`);
-      return;
-    }
-    const payEntry = {
-      id: 'SPAY-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      date: payDate,
-      amount: payAmount,
-      method: payMethod,
-      reference: payRef,
-      notes: payNotes || 'Supplier payment'
-    };
-    if (!pur.payments) pur.payments = [];
-    pur.payments.push(payEntry);
-    syncPurchasePaymentFields(pur);
-
-    const sup = state.suppliers.find(x => x.name.toLowerCase() === pur.supplier.toLowerCase());
-    if (sup) {
-      const supplierPurchases = state.purchases.filter(p => p.supplier.toLowerCase() === pur.supplier.toLowerCase());
-      sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
-      saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
-    }
-
-    saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
-    addActivity('purchase', `Recorded ${formatCurrency(payAmount)} supplier payment (${payMethod}) for Purchase Bill <strong>${pur.invoiceNo}</strong> (${pur.supplier})`);
-    alert(`✅ Supplier payment of ${formatCurrency(payAmount)} recorded successfully for Purchase ${pur.invoiceNo}.\nRemaining Balance: ${formatCurrency(pur.balanceAmount)}`);
-    renderPurchasesTable();
-  }
-
-  document.getElementById('payment-collection-modal').classList.remove('active');
-  renderDashboard();
-  renderReports();
-  if (typeof renderFinanceModule === 'function') renderFinanceModule();
-}
-
-window.deletePaymentTransaction = function(targetType, targetId, paymentId) {
-  if (!confirm('Are you sure you want to delete this payment entry?')) return;
-
-  if (targetType === 'billing') {
-    const inv = state.billings.find(b => b.id === targetId || b.invoiceNo === targetId);
-    if (inv && inv.payments) {
-      inv.payments = inv.payments.filter(p => p.id !== paymentId);
-      syncBillingPaymentFields(inv);
-      saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
-      renderBillingsTable();
-      openCollectPaymentModal('billing', targetId);
-    }
-  } else if (targetType === 'purchase') {
-    const pur = state.purchases.find(p => p.id === targetId || p.invoiceNo === targetId);
-    if (pur && pur.payments) {
-      pur.payments = pur.payments.filter(p => p.id !== paymentId);
-      syncPurchasePaymentFields(pur);
-      const sup = state.suppliers.find(x => x.name.toLowerCase() === pur.supplier.toLowerCase());
-      if (sup) {
-        const supplierPurchases = state.purchases.filter(p => p.supplier.toLowerCase() === pur.supplier.toLowerCase());
-        sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
-        saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
-      }
-      saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
-      renderPurchasesTable();
-      openCollectPaymentModal('purchase', targetId);
-    }
-  }
-  renderDashboard();
-  renderReports();
-  if (typeof renderFinanceModule === 'function') renderFinanceModule();
 };
 
 function openInvoicePreviewModal(invoice) {
@@ -2221,12 +1829,7 @@ function handlePurchaseSubmit(e) {
   const category = document.getElementById('purchase-category').value;
   const brand = document.getElementById('purchase-brand').value.trim();
   const model = document.getElementById('purchase-model').value.trim();
-  const minStockParsed = parseMinStockField(document.getElementById('purchase-min-stock').value);
-  if (!minStockParsed.ok) {
-    alert(minStockParsed.message);
-    return;
-  }
-  const minStock = minStockParsed.value;
+  const minStock = parseFloat(document.getElementById('purchase-min-stock').value || 2);
   const serialRaw = document.getElementById('purchase-serial-numbers').value.trim();
   const serials = serialRaw ? serialRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   const qty = parseFloat(document.getElementById('purchase-qty').value || 1);
@@ -2248,20 +1851,10 @@ function handlePurchaseSubmit(e) {
 
   const oldPurchase = editId ? state.purchases.find(p => p.id === editId) : null;
   if (oldPurchase) {
-    recordStockMovement({
-      itemCode: oldPurchase.itemCode,
-      itemName: oldPurchase.itemName,
-      category: oldPurchase.category || 'General',
-      type: 'PURCHASE_REVERSAL',
-      refNo: `EDIT-REVERSAL-${oldPurchase.invoiceNo}`,
-      outQty: oldPurchase.qty || 0,
-      unitCost: oldPurchase.rate || 0,
-      remarks: `Reversed old purchase ${oldPurchase.invoiceNo} before editing`
-    });
     const oldItem = state.inventory.find(i => i.itemCode === oldPurchase.itemCode);
-    if (oldItem && oldPurchase.serials?.length) {
+    if (oldItem) {
+      recordStockMovement({ itemCode: oldPurchase.itemCode, itemName: oldPurchase.itemName, category: oldPurchase.category, type: 'PURCHASE_REVERSAL', refNo: `EDIT-REVERSAL-${oldPurchase.invoiceNo}`, outQty: oldPurchase.qty || 0, unitCost: oldPurchase.rate || 0, remarks: `Reversed old purchase ${oldPurchase.invoiceNo} before editing` });
       oldItem.serials = (oldItem.serials || []).filter(sn => !(oldPurchase.serials || []).includes(sn));
-      saveToStorage(STORAGE_KEYS.INVENTORY, state.inventory);
     }
     const oldSup = state.suppliers.find(x => x.name.toLowerCase() === oldPurchase.supplier.toLowerCase());
     if (oldSup) {
@@ -2281,68 +1874,14 @@ function handlePurchaseSubmit(e) {
   else { sup.totalPurchases = parseFloat(sup.totalPurchases || 0) + totalAmount; sup.balanceDue = parseFloat(sup.balanceDue || 0) + balanceAmount; if (supplierPhone) sup.phone = supplierPhone; }
   saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
 
-  let purchasePayments = [];
-  if (editId && oldPurchase?.payments) purchasePayments = [...oldPurchase.payments];
-  else if (!editId && paidAmount > 0) {
-    purchasePayments.push({
-      id: 'SPAY-' + Date.now(),
-      date: date || getTodayDateString(),
-      amount: paidAmount,
-      method: 'Cash',
-      notes: 'Initial payment on purchase bill'
-    });
-  }
-  const newPurchase = {
-    id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount,
-    payments: purchasePayments, serials, minStock
-  };
-  syncPurchasePaymentFields(newPurchase);
+  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials };
   if (editId) { const idx = state.purchases.findIndex(p => p.id === editId); if (idx !== -1) state.purchases[idx] = newPurchase; }
   else state.purchases.push(newPurchase);
   saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
-  addActivity('purchase', editId
-    ? `Updated Purchase Bill <strong>${invoiceNo}</strong> from ${supplier} (Stock recalculated)`
-    : `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
+  addActivity('purchase', `Recorded Purchase <strong>${invoiceNo}</strong> from ${supplier} (Qty: ${qty}x ${itemName}, Stock Increased)`);
   document.getElementById('purchase-modal').classList.remove('active');
   renderPurchasesTable(); renderInventoryTable(); renderDashboard(); renderReports();
-  if (typeof renderFinanceModule === 'function') renderFinanceModule();
-  alert(editId ? '✅ Purchase bill updated successfully.\nStock has been recalculated.' : '✅ Purchase bill saved successfully.\nStock has been updated.');
 }
-
-window.editPurchase = function(id) {
-  const item = state.purchases.find(p => p.id === id);
-  if (!item) {
-    alert('❌ Purchase bill not found.');
-    return;
-  }
-
-  document.getElementById('purchase-modal-title').textContent = `Edit Purchase Bill — ${item.invoiceNo}`;
-  document.getElementById('purchase-edit-id').value = item.id;
-  document.getElementById('purchase-supplier').value = item.supplier || '';
-  document.getElementById('purchase-supplier-phone').value = item.supplierPhone || '';
-  document.getElementById('purchase-invoice-no').value = item.invoiceNo || '';
-  document.getElementById('purchase-date').value = item.date || getTodayDateString();
-  document.getElementById('purchase-item-code').value = item.itemCode || '';
-  document.getElementById('purchase-item-name').value = item.itemName || '';
-  document.getElementById('purchase-category').value = item.category || 'General';
-  document.getElementById('purchase-brand').value = item.brand || '';
-  document.getElementById('purchase-model').value = item.model || '';
-  const invForMin = state.inventory.find(i => i.itemCode === item.itemCode);
-  const minStockDisplay = item.minStock != null ? item.minStock : (invForMin && invForMin.minStock != null ? invForMin.minStock : 2);
-  document.getElementById('purchase-min-stock').value = minStockDisplay;
-  document.getElementById('purchase-serial-numbers').value = (item.serials || []).join(', ');
-  document.getElementById('purchase-qty').value = item.qty || 1;
-  document.getElementById('purchase-rate').value = item.rate || 0;
-  document.getElementById('purchase-discount').value = item.discount || 0;
-  document.getElementById('purchase-gst-rate').value = item.gstRate !== undefined ? item.gstRate : 18;
-  document.getElementById('purchase-selling-rate').value = item.sellingRate || '';
-  document.getElementById('purchase-paid-amount').value = item.paidAmount || 0;
-
-  populatePurchaseDataLists();
-  calculatePurchaseTotals();
-  document.getElementById('purchase-view-modal')?.classList.remove('active');
-  document.getElementById('purchase-modal').classList.add('active');
-};
 
 function renderPurchasesTable() {
   const tableBody = document.getElementById('purchases-table-body');
@@ -2435,8 +1974,6 @@ function renderPurchasesTable() {
         <td><span class="badge ${statusClass}">${item.status}</span></td>
         <td class="actions-cell">
           <button class="btn btn-primary btn-sm" onclick="previewPurchaseInvoice('${item.id}')">⎙ View</button>
-          <button class="btn btn-success btn-sm" onclick="openCollectPaymentModal('purchase','${item.id}')" title="Record supplier payment">₹ Pay</button>
-          <button class="btn btn-secondary btn-sm" onclick="editPurchase('${item.id}')" title="Edit Purchase Bill">Edit</button>
           <button class="btn btn-outline btn-sm btn-danger" onclick="deletePurchase('${item.id}')">Delete</button>
         </td>
       </tr>
@@ -2470,9 +2007,7 @@ window.previewPurchaseInvoice = function(id) {
   document.getElementById('purch-prev-paid').textContent = formatCurrency(item.paidAmount);
   document.getElementById('purch-prev-balance').textContent = formatCurrency(item.balanceAmount);
 
-  const viewModal = document.getElementById('purchase-view-modal');
-  if (viewModal) viewModal.dataset.purchaseId = id;
-  viewModal.classList.add('active');
+  document.getElementById('purchase-view-modal').classList.add('active');
 };
 
 window.deletePurchase = function(id) {
@@ -2483,7 +2018,7 @@ window.deletePurchase = function(id) {
     recordStockMovement({
       itemCode: item.itemCode,
       itemName: item.itemName,
-      type: 'PURCHASE_REVERSAL',
+      type: 'PURCHASE_RETURN',
       refNo: `REVERSAL-${item.invoiceNo}`,
       inQty: 0,
       outQty: item.qty,
@@ -2494,8 +2029,7 @@ window.deletePurchase = function(id) {
     const sup = state.suppliers.find(x => x.name.toLowerCase() === item.supplier.toLowerCase());
     if (sup) {
       sup.totalPurchases = Math.max(0, parseFloat(sup.totalPurchases || 0) - parseFloat(item.totalAmount || 0));
-      const supplierPurchases = state.purchases.filter(p => p.id !== id && p.supplier.toLowerCase() === item.supplier.toLowerCase());
-      sup.balanceDue = supplierPurchases.reduce((sum, p) => sum + parseFloat(p.balanceAmount || 0), 0);
+      sup.balanceDue = Math.max(0, parseFloat(sup.balanceDue || 0) - parseFloat(item.balanceAmount || 0));
       saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
     }
     state.purchases = state.purchases.filter(p => p.id !== id);
@@ -2504,8 +2038,6 @@ window.deletePurchase = function(id) {
     renderPurchasesTable();
     renderInventoryTable();
     renderDashboard();
-    renderReports();
-    if (typeof renderFinanceModule === 'function') renderFinanceModule();
   }
 };
 
@@ -2610,7 +2142,7 @@ function renderInventoryTable() {
         <td>${formatCurrency(item.purchaseRate)}</td>
         <td style="font-weight: 600; color: var(--primary);">${formatCurrency(item.sellingRate)}</td>
         <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(stockValue)}</td>
-        <td style="text-align: center; color: var(--text-muted);">${item.minStock ?? 2}</td>
+        <td style="text-align: center; color: var(--text-muted);">${item.minStock || 2}</td>
         <td><span class="badge ${statusClass}">${status}</span></td>
         <td class="actions-cell">
           <button class="btn btn-outline btn-sm" onclick="quickStockAdjust('${item.itemCode}')" title="Adjust Stock (±)">± Adjust</button>
@@ -3375,62 +2907,26 @@ function renderServiceDashboard() {
   if (elTodayAmt) elTodayAmt.textContent = formatCurrency(todayRevenue);
 }
 
-// 2. ID Generators (sequential by max existing number — safe after deletes)
-function nextSequentialDocumentId(prefix, year, existingIds) {
-  let maxNum = 0;
-  const pattern = new RegExp(`^${prefix}-${year}-(\\d+)$`, 'i');
-  (existingIds || []).forEach(id => {
-    const match = String(id || '').match(pattern);
-    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
-  });
-  return `${prefix}-${year}-${String(maxNum + 1).padStart(4, '0')}`;
-}
-
+// 2. ID Generators
 function generateJobCardNumber() {
   const currentYear = new Date().getFullYear();
-  const ids = (state.serviceJobCards || []).map(j => j.id);
-  return nextSequentialDocumentId('JC', currentYear, ids);
+  const list = state.serviceJobCards || [];
+  const nextNum = list.length + 1;
+  return `JC-${currentYear}-${String(nextNum).padStart(4, '0')}`;
 }
 
 function generateEstimationNumber() {
   const currentYear = new Date().getFullYear();
-  const ids = (state.serviceEstimations || []).map(e => e.id);
-  return nextSequentialDocumentId('EST', currentYear, ids);
+  const list = state.serviceEstimations || [];
+  const nextNum = list.length + 1;
+  return `EST-${currentYear}-${String(nextNum).padStart(4, '0')}`;
 }
 
 function generateServiceInvoiceNumber() {
   const currentYear = new Date().getFullYear();
-  const ids = (state.serviceInvoices || []).map(i => i.invoiceNo || i.id);
-  return nextSequentialDocumentId('SINV', currentYear, ids);
-}
-
-function getEstimationConversionMissingFields(est) {
-  const missing = [];
-  if (!est.customerName || !String(est.customerName).trim()) missing.push('Customer Name');
-  if (!est.customerMobile || !String(est.customerMobile).trim()) missing.push('Mobile Number');
-  if (!est.deviceBrand || !String(est.deviceBrand).trim()) missing.push('Device Brand');
-  if (!est.deviceModel || !String(est.deviceModel).trim()) missing.push('Device Model');
-  if (!est.complaint || !String(est.complaint).trim()) missing.push('Problem / Complaint');
-  return missing;
-}
-
-function updateJobCardSourceEstimationBanner(sourceEstimationId) {
-  const banner = document.getElementById('jobcard-source-estimation-banner');
-  const label = document.getElementById('jobcard-source-estimation-label');
-  const btn = document.getElementById('jobcard-open-source-estimation-btn');
-  if (!banner || !label || !btn) return;
-  if (sourceEstimationId) {
-    banner.style.display = 'block';
-    label.textContent = sourceEstimationId;
-    btn.onclick = () => {
-      document.getElementById('jobcard-modal')?.classList.remove('active');
-      openEstimationPrintModal(sourceEstimationId);
-    };
-  } else {
-    banner.style.display = 'none';
-    label.textContent = '';
-    btn.onclick = null;
-  }
+  const list = state.serviceInvoices || [];
+  const nextNum = list.length + 1;
+  return `SINV-${currentYear}-${String(nextNum).padStart(4, '0')}`;
 }
 
 // 3. Render Job Cards Table
@@ -3476,7 +2972,6 @@ function renderJobCardsTable() {
           <a href="#" onclick="openJobCardPrintModal('${jc.id}'); return false;" style="font-family: monospace; font-weight: 700; color: var(--primary); text-decoration: underline;">
             ${jc.id}
           </a>
-          ${jc.sourceEstimationId ? `<div style="font-size: 0.72rem; margin-top: 0.15rem;"><a href="#" onclick="openEstimationPrintModal('${jc.sourceEstimationId}'); return false;" title="View source estimation">Est: ${jc.sourceEstimationId}</a></div>` : ''}
         </td>
         <td>
           <div style="font-weight: 600;">${formatDate(jc.date)}</div>
@@ -3587,14 +3082,12 @@ function renderEstimationsTable() {
             <button class="btn btn-secondary btn-sm" onclick="openEstimationPrintModal('${est.id}')" title="Print Quotation / Estimate">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             </button>
-            ${!est.convertedJobCardId ? `
+            ${est.status !== 'Approved' ? `
               <button class="btn btn-success btn-sm" onclick="convertEstimationToJobCard('${est.id}')" title="Convert to Job Card (Customer Approved)">
                 ⚡ Convert to Job Card
               </button>
             ` : `
-              <button class="btn btn-outline btn-sm badge-ready" onclick="openJobCardModal('${est.convertedJobCardId}')" title="Open Job Card ${est.convertedJobCardId}">
-                Job Card: ${est.convertedJobCardId}
-              </button>
+              <span class="badge badge-ready" title="Job Card Created: ${est.convertedJobCardId || ''}">Job Card Active</span>
             `}
             <button class="btn btn-secondary btn-sm" onclick="openEstimationModal('${est.id}')" title="Edit Estimate">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -4284,8 +3777,6 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
       jc.partsItems.forEach(p => addJobCardPartRow(p.itemCode, p.partName, p.qty, p.rate));
     }
 
-    updateJobCardSourceEstimationBanner(jc.sourceEstimationId || null);
-
   } else if (fromEstimationObj) {
     // Convert from Estimation
     document.getElementById('jobcard-modal-title').textContent = `New Job Card (From Estimation ${fromEstimationObj.id})`;
@@ -4324,12 +3815,6 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
       addJobCardPartRow('', 'Approved Estimation Spare Parts', 1, fromEstimationObj.partsAmount);
     }
 
-    const accAmt = parseFloat(fromEstimationObj.accessoriesAmount || 0);
-    const otherAmt = parseFloat(fromEstimationObj.otherCharges || 0);
-    if (accAmt > 0) addJobCardLabourRow('Accessories (from estimation)', accAmt);
-    if (otherAmt > 0) addJobCardLabourRow('Other charges (from estimation)', otherAmt);
-
-    updateJobCardSourceEstimationBanner(fromEstimationObj.id);
 
   } else {
     // New Job Card from Scratch
@@ -4347,7 +3832,6 @@ window.openJobCardModal = function(jobCardId = null, fromEstimationObj = null) {
     document.getElementById('jobcard-tax-rate').value = 18;
 
     addJobCardLabourRow('General Diagnostic & Hardware Servicing', 500);
-    updateJobCardSourceEstimationBanner(null);
   }
 
   recalcJobCardTotals();
@@ -4404,8 +3888,7 @@ function handleJobCardSubmit(e) {
 
   const editId = document.getElementById('jobcard-edit-id').value;
   const fromEstId = document.getElementById('jobcard-from-estimation-id').value;
-  const displayedJcNumber = document.getElementById('jobcard-number')?.value?.trim();
-  const jcNumber = editId || displayedJcNumber || generateJobCardNumber();
+  const jcNumber = editId || generateJobCardNumber();
   const date = document.getElementById('jobcard-date').value;
   const deliveryDate = document.getElementById('jobcard-delivery-date').value;
   const status = document.getElementById('jobcard-status').value;
@@ -4421,27 +3904,6 @@ function handleJobCardSubmit(e) {
   const techRemarks = document.getElementById('jobcard-tech-remarks').value.trim();
   const discount = parseFloat(document.getElementById('jobcard-discount').value || 0);
   const taxRate = parseFloat(document.getElementById('jobcard-tax-rate').value || 18);
-
-  if (!customerName || !customerMobile || !deviceBrand || !deviceModel || !complaint || !technician) {
-    alert('❌ Please complete the required fields: Customer Name, Mobile, Device Brand, Model, Complaint, and Technician.');
-    return;
-  }
-  if (!date || !deliveryDate) {
-    alert('❌ Please complete the required fields: Received Date and Expected Delivery Date.');
-    return;
-  }
-
-  if (fromEstId && !editId) {
-    const estCheck = (state.serviceEstimations || []).find(e => e.id === fromEstId);
-    if (estCheck?.convertedJobCardId) {
-      alert('❌ This estimation has already been converted to Job Card ' + estCheck.convertedJobCardId + '.');
-      return;
-    }
-  }
-  if (!editId && (state.serviceJobCards || []).some(j => j.id === jcNumber)) {
-    alert('❌ Unable to convert estimation to job card: Job Card number already exists. Please try again.');
-    return;
-  }
 
   // Collect Labour items
   const labourItems = [];
@@ -4562,8 +4024,7 @@ function handleJobCardSubmit(e) {
     taxRate,
     taxAmount,
     grandTotal,
-    invoiceId: existingJC ? existingJC.invoiceId : null,
-    sourceEstimationId: existingJC?.sourceEstimationId || fromEstId || null
+    invoiceId: existingJC ? existingJC.invoiceId : null
   };
 
   if (editId) {
@@ -4599,23 +4060,9 @@ function handleJobCardSubmit(e) {
 // 15. Convert Estimation to Job Card
 window.convertEstimationToJobCard = function(estId) {
   const est = (state.serviceEstimations || []).find(e => e.id === estId);
-  if (!est) {
-    alert('❌ Unable to convert estimation to job card: estimation not found.');
-    return;
-  }
+  if (!est) return;
 
-  if (est.convertedJobCardId) {
-    alert('❌ This estimation has already been converted to Job Card ' + est.convertedJobCardId + '.');
-    return;
-  }
-
-  const missing = getEstimationConversionMissingFields(est);
-  if (missing.length > 0) {
-    alert('❌ Please complete the required fields on the estimation before converting:\n\n• ' + missing.join('\n• '));
-    return;
-  }
-
-  if (confirm(`Convert Estimation ${est.id} into an Active Service Job Card for "${est.customerName}"?\n\nThe estimation will remain saved; a new Job Card will be created when you click Save.`)) {
+  if (confirm(`Convert Estimation ${est.id} into an Active Service Job Card for "${est.customerName}"?`)) {
     openJobCardModal(null, est);
   }
 };
@@ -4656,15 +4103,6 @@ window.deleteJobCard = function(jobCardId) {
       });
     }
 
-    if (jc.sourceEstimationId) {
-      const linkedEst = (state.serviceEstimations || []).find(e => e.id === jc.sourceEstimationId);
-      if (linkedEst && linkedEst.convertedJobCardId === jc.id) {
-        linkedEst.convertedJobCardId = null;
-        if (linkedEst.status === 'Approved') linkedEst.status = 'Draft';
-        saveToStorage(STORAGE_KEYS.SERVICE_ESTIMATIONS, state.serviceEstimations);
-      }
-    }
-
     state.serviceJobCards = state.serviceJobCards.filter(j => j.id !== jobCardId);
     saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
 
@@ -4672,8 +4110,6 @@ window.deleteJobCard = function(jobCardId) {
     renderServiceModule();
     renderInventoryTable();
     renderDashboard();
-    renderReports();
-    if (typeof renderFinanceModule === 'function') renderFinanceModule();
   }
 };
 
@@ -4767,8 +4203,7 @@ function handleEstimationSubmit(e) {
   e.preventDefault();
 
   const editId = document.getElementById('estimation-edit-id').value;
-  const displayedEstNumber = document.getElementById('estimation-number')?.value?.trim();
-  const estNumber = editId || displayedEstNumber || generateEstimationNumber();
+  const estNumber = editId || generateEstimationNumber();
   const date = document.getElementById('estimation-date').value;
   const status = document.getElementById('estimation-status').value;
   const customerName = document.getElementById('estimation-customer-name').value.trim();
@@ -4784,11 +4219,6 @@ function handleEstimationSubmit(e) {
   const discount = parseFloat(document.getElementById('estimation-discount').value || 0);
   const taxRate = parseFloat(document.getElementById('estimation-tax-rate').value || 18);
   const notes = document.getElementById('estimation-notes').value.trim();
-
-  if (!customerName || !customerMobile || !deviceBrand || !deviceModel || !complaint) {
-    alert('❌ Please complete the required fields: Customer Name, Mobile, Device Brand, Model, and Complaint.');
-    return;
-  }
 
   // Collect labour rows
   const labourItems = [];
@@ -4995,8 +4425,7 @@ function handleServiceInvoiceSubmit(e) {
 
   const editId = document.getElementById('svc-inv-edit-id').value;
   const jobCardId = document.getElementById('svc-inv-jobcard-id').value || document.getElementById('svc-inv-jobcard-select').value;
-  const displayedInvNumber = document.getElementById('svc-inv-number')?.value?.trim();
-  const invNumber = editId || displayedInvNumber || generateServiceInvoiceNumber();
+  const invNumber = editId || generateServiceInvoiceNumber();
   const date = document.getElementById('svc-inv-date').value;
   const customerName = document.getElementById('svc-inv-cust-name').value.trim();
   const customerMobile = document.getElementById('svc-inv-cust-mobile').value.trim();
@@ -5161,17 +4590,6 @@ window.openJobCardPrintModal = function(jobCardId) {
   document.getElementById('jc-prev-tax-amt').textContent = formatCurrency(jc.taxAmount);
   document.getElementById('jc-prev-grand-total').textContent = formatCurrency(jc.grandTotal);
 
-  const estLinkRow = document.getElementById('jc-prev-source-estimation-row');
-  if (estLinkRow) {
-    if (jc.sourceEstimationId) {
-      estLinkRow.style.display = 'block';
-      estLinkRow.innerHTML = `Source Estimation: <button type="button" class="btn btn-link btn-sm" style="padding:0; font-weight:700;" onclick="openEstimationPrintModal('${jc.sourceEstimationId}')">${jc.sourceEstimationId}</button>`;
-    } else {
-      estLinkRow.style.display = 'none';
-      estLinkRow.innerHTML = '';
-    }
-  }
-
   document.getElementById('jobcard-view-modal').classList.add('active');
 };
 
@@ -5297,8 +4715,68 @@ function renderReports() {
   let tableHeadersHtml = '';
   let tableRowsHtml = '';
 
+  // FINANCE REPORTS (additive)
+  if (moduleVal.startsWith('Finance')) {
+    const financeRecords = (() => { try { return JSON.parse(localStorage.getItem('bios_finance_records_v1')) || []; } catch(e) { return []; } })();
+    const sales = (state.billings || []).filter(x => isWithinDateRange(x.date));
+    const services = (state.serviceInvoices || []).filter(x => isWithinDateRange(x.date));
+    const outside = financeRecords.filter(x => x.type === 'OUTSIDE_SERVICE' && isWithinDateRange(x.date));
+    const expenses = financeRecords.filter(x => x.type === 'EXPENSE' && isWithinDateRange(x.date));
+    const income = financeRecords.filter(x => x.type === 'OTHER_INCOME' && isWithinDateRange(x.date));
+    const returns = (state.returns || []).filter(x => x.type === 'SALES_RETURN' && isWithinDateRange(x.date));
+    const sum = (arr, fn) => arr.reduce((n,x) => n + (Number(fn(x)) || 0), 0);
+    const salesRevenue = sum(sales, x => x.baseAmount), serviceRevenue = sum(services, x => x.subtotal ?? x.grandTotal);
+    const outsideRevenue = sum(outside, x => x.amount), otherIncome = sum(income, x => x.amount), refunds = sum(returns, x => x.amount);
+    const productCOGS = sum(sales, x => (Number(x.costPrice)||0) * (Number(x.qty)||1));
+    const directOutside = sum(outside, x => x.directCost), opExpenses = sum(expenses, x => x.amount);
+    const netRevenue = salesRevenue + serviceRevenue + outsideRevenue - refunds;
+    const grossProfit = netRevenue - productCOGS - directOutside;
+    const netProfit = grossProfit + otherIncome - opExpenses;
+    const moneyR = n => formatCurrency(Number(n)||0);
+
+    if (moduleVal === 'FinanceSummary') {
+      tableHeadersHtml = '<tr><th>Financial Metric</th><th>Amount (INR)</th><th>Notes</th></tr>';
+      const rows = [
+        ['Product Sales Revenue', salesRevenue, 'Billing / sales'],
+        ['Service Revenue', serviceRevenue, 'Service invoices'],
+        ['Outside Service Revenue', outsideRevenue, 'Manually recorded outside jobs'],
+        ['Less: Sales Returns', -refunds, 'Refund / return adjustment'],
+        ['Net Operating Revenue', netRevenue, 'Revenue after returns'],
+        ['Less: Product COGS', -productCOGS, 'Cost of goods sold'],
+        ['Less: Outside Service Direct Cost', -directOutside, 'Direct cost for outside jobs'],
+        ['Gross Profit', grossProfit, 'Before company operating expenses'],
+        ['Other Income', otherIncome, 'Non-sales income'],
+        ['Company Operating Expenses', -opExpenses, 'Rent, salary, utilities, etc.'],
+        ['NET PROFIT / LOSS', netProfit, netProfit >= 0 ? 'Profit' : 'Loss']
+      ];
+      tableRowsHtml = rows.map(r => `<tr><td style="font-weight:${r[0].includes('NET')||r[0]==='Gross Profit'?'800':'600'}">${r[0]}</td><td style="font-weight:800;${r[1]<0?'color:var(--danger-dark)':''}">${moneyR(r[1])}</td><td>${r[2]}</td></tr>`).join('');
+    } else if (moduleVal === 'FinanceTrend') {
+      tableHeadersHtml = '<tr><th>Month</th><th>Sales</th><th>Service</th><th>Outside Service</th><th>Other Income</th><th>Net Revenue</th><th>COGS</th><th>Expenses</th><th>Net Profit / Loss</th></tr>';
+      const dates = [...sales,...services,...outside,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean);
+      const months = [...new Set(dates)].sort().reverse();
+      const monthRows = months.map(k => {
+        const inM = x => String(x.date||'').slice(0,7)===k;
+        const sr=sum(sales.filter(inM),x=>x.baseAmount), sv=sum(services.filter(inM),x=>x.subtotal ?? x.grandTotal), ov=sum(outside.filter(inM),x=>x.amount), oi=sum(income.filter(inM),x=>x.amount), rf=sum(returns.filter(inM),x=>x.amount), cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)), dc=sum(outside.filter(inM),x=>x.directCost), ex=sum(expenses.filter(inM),x=>x.amount);
+        const rev=sr+sv+ov-rf, net=rev-cg-dc+oi-ex;
+        return [k,sr,sv,ov,oi,rev,cg+dc,ex,net];
+      });
+      tableRowsHtml = monthRows.length ? monthRows.map(r=>`<tr><td style="font-weight:800">${new Date(r[0]+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</td>${r.slice(1).map((v,i)=>`<td style="font-weight:${i===4||i===7?'800':'500'}">${moneyR(v)}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="9" class="no-data-msg">No financial data found.</td></tr>';
+    } else if (moduleVal === 'FinanceLedger') {
+      tableHeadersHtml = '<tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th><th>Direct Cost</th><th>Profit / Impact</th></tr>';
+      let rows = financeRecords.filter(x => isWithinDateRange(x.date));
+      rows = rows.filter(x => !searchVal || [x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)));
+      tableRowsHtml = rows.length ? rows.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(x=>{const impact=x.type==='OUTSIDE_SERVICE'?Number(x.amount||0)-Number(x.directCost||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0); const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service'; return `<tr><td>${formatDate(x.date)}</td><td>${type}</td><td style="font-weight:600">${x.description||'--'}${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td>${moneyR(x.amount)}</td><td>${x.type==='OUTSIDE_SERVICE'?moneyR(x.directCost):'--'}</td><td style="font-weight:800">${moneyR(impact)}</td></tr>`}).join('') : '<tr><td colspan="8" class="no-data-msg">No finance transactions found.</td></tr>';
+    } else {
+      const map={FinanceExpenses:['Company Expenses','EXPENSE'],FinanceOutside:['Outside Services','OUTSIDE_SERVICE'],FinanceIncome:['Other Income','OTHER_INCOME']};
+      const [title,type]=map[moduleVal];
+      tableHeadersHtml = type==='OUTSIDE_SERVICE' ? '<tr><th>Date</th><th>Customer / Job</th><th>Description</th><th>Category</th><th>Revenue</th><th>Direct Cost</th><th>Job Profit</th></tr>' : '<tr><th>Date</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th></tr>';
+      let rows=financeRecords.filter(x=>x.type===type&&isWithinDateRange(x.date)).filter(x=>!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      if(type==='OUTSIDE_SERVICE') tableRowsHtml=rows.length?rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td>${x.customer||'--'}</td><td>${x.description||'--'}</td><td>${x.category||'--'}</td><td>${moneyR(x.amount)}</td><td>${moneyR(x.directCost)}</td><td style="font-weight:800">${moneyR(Number(x.amount||0)-Number(x.directCost||0))}</td></tr>`).join(''):'<tr><td colspan="7" class="no-data-msg">No records found.</td></tr>';
+      else tableRowsHtml=rows.length?rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td style="font-weight:600">${x.description||'--'}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${moneyR(x.amount)}</td></tr>`).join(''):'<tr><td colspan="5" class="no-data-msg">No records found.</td></tr>';
+    }
+
   // 1. ENQUIRIES REPORT (EXISTING)
-  if (moduleVal === 'Enquiries') {
+  } else if (moduleVal === 'Enquiries') {
     tableHeadersHtml = `
       <tr>
         <th>Customer Name</th>
@@ -6030,8 +5508,22 @@ function handleReportExport() {
     return str;
   };
 
+  // Finance reports
+  if (moduleVal.startsWith('Finance')) {
+    const financeRecords = (() => { try { return JSON.parse(localStorage.getItem('bios_finance_records_v1')) || []; } catch(e) { return []; } })();
+    const sales = (state.billings || []).filter(x=>isWithinDateRange(x.date)), services=(state.serviceInvoices||[]).filter(x=>isWithinDateRange(x.date));
+    const outside=financeRecords.filter(x=>x.type==='OUTSIDE_SERVICE'&&isWithinDateRange(x.date)), expenses=financeRecords.filter(x=>x.type==='EXPENSE'&&isWithinDateRange(x.date)), income=financeRecords.filter(x=>x.type==='OTHER_INCOME'&&isWithinDateRange(x.date));
+    const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isWithinDateRange(x.date)); const sum=(a,f)=>a.reduce((n,x)=>n+(Number(f(x))||0),0); const esc=escapeCSV;
+    if(moduleVal==='FinanceSummary'){
+      const sr=sum(sales,x=>x.baseAmount), sv=sum(services,x=>x.subtotal??x.grandTotal), ov=sum(outside,x=>x.amount), oi=sum(income,x=>x.amount), rf=sum(returns,x=>x.amount), cg=sum(sales,x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)), dc=sum(outside,x=>x.directCost), ex=sum(expenses,x=>x.amount), rev=sr+sv+ov-rf, gp=rev-cg-dc, np=gp+oi-ex;
+      csvContent+='Financial Metric,Amount (INR),Notes\n'; [['Product Sales Revenue',sr,'Billing / sales'],['Service Revenue',sv,'Service invoices'],['Outside Service Revenue',ov,'Outside jobs'],['Less: Sales Returns',-rf,'Return adjustment'],['Net Operating Revenue',rev,'Revenue after returns'],['Less: Product COGS',-cg,'Cost of goods sold'],['Less: Outside Service Direct Cost',-dc,'Direct job cost'],['Gross Profit',gp,'Before operating expenses'],['Other Income',oi,'Non-sales income'],['Company Operating Expenses',-ex,'Operating expenses'],['NET PROFIT / LOSS',np,np>=0?'Profit':'Loss']].forEach(r=>csvContent+=`${esc(r[0])},${esc(r[1])},${esc(r[2])}\n`);
+    } else if(moduleVal==='FinanceLedger'){
+      const rows=financeRecords.filter(x=>isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No finance transactions to export!'); csvContent+='Date,Type,Description,Customer,Category,Reference,Amount (INR),Direct Cost (INR),Profit / Impact (INR)\n'; rows.forEach(x=>{const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service'; const impact=x.type==='OUTSIDE_SERVICE'?Number(x.amount||0)-Number(x.directCost||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0); csvContent+=`${esc(x.date)},${esc(type)},${esc(x.description)},${esc(x.customer||'')},${esc(x.category)},${esc(x.reference)},${esc(x.amount)},${esc(x.directCost||0)},${esc(impact)}\n`;});
+    } else if(moduleVal==='FinanceTrend'){
+      const dates=[...sales,...services,...outside,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean), months=[...new Set(dates)].sort(); csvContent+='Month,Sales,Service,Outside Service,Other Income,Net Revenue,COGS,Expenses,Net Profit / Loss\n'; months.forEach(k=>{const inM=x=>String(x.date||'').slice(0,7)===k;const sr=sum(sales.filter(inM),x=>x.baseAmount),sv=sum(services.filter(inM),x=>x.subtotal??x.grandTotal),ov=sum(outside.filter(inM),x=>x.amount),oi=sum(income.filter(inM),x=>x.amount),rf=sum(returns.filter(inM),x=>x.amount),cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)),dc=sum(outside.filter(inM),x=>x.directCost),ex=sum(expenses.filter(inM),x=>x.amount),rev=sr+sv+ov-rf,np=rev-cg-dc+oi-ex;csvContent+=`${esc(k)},${sr},${sv},${ov},${oi},${rev},${cg+dc},${ex},${np}\n`;});
+    } else { const type={FinanceExpenses:'EXPENSE',FinanceOutside:'OUTSIDE_SERVICE',FinanceIncome:'OTHER_INCOME'}[moduleVal]; const rows=financeRecords.filter(x=>x.type===type&&isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No records to export!'); if(type==='OUTSIDE_SERVICE'){csvContent+='Date,Customer / Job,Description,Category,Revenue (INR),Direct Cost (INR),Job Profit (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.customer||'')},${esc(x.description)},${esc(x.category)},${esc(x.amount)},${esc(x.directCost||0)},${esc(Number(x.amount||0)-Number(x.directCost||0))}\n`);}else{csvContent+='Date,Description,Category,Reference,Amount (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.description)},${esc(x.category)},${esc(x.reference)},${esc(x.amount)}\n`);}}
   // 1. Enquiries
-  if (moduleVal === 'Enquiries') {
+  } else if (moduleVal === 'Enquiries') {
     const list = state.enquiries.filter(e => isWithinDateRange(e.date));
     if (list.length === 0) return alert("No data available to export!");
     csvContent += "Customer Name,Mobile Number,Enquiry Date,Source,Status\n";
@@ -6216,656 +5708,234 @@ function handleReportExport() {
   document.body.removeChild(link);
 }
 
-// ==========================================================================
-// FINANCE — REVENUE, COGS, EXPENSES, P/L & CASH FLOW
-// ==========================================================================
-const FINANCE_EXPENSE_CATEGORIES = [
-  'Rent', 'Electricity', 'Internet', 'Salary', 'Staff Expenses', 'Transport', 'Delivery',
-  'Maintenance', 'Shop Expenses', 'Office Expenses', 'Marketing', 'Advertising',
-  'Software Subscriptions', 'Equipment', 'Repairs', 'Bank Charges', 'Other Expenses'
-];
+/* ==========================================================================
+   FINANCE & P&L MODULE - ADDITIVE ONLY
+   Existing sales/service/inventory workflows are not replaced.
+   ========================================================================== */
+(function initFinanceModule(){
+  const FINANCE_KEY = 'bios_finance_records_v1';
+  const financeState = { records: [], period: 'month', from: '', to: '' };
 
-function financeParseDate(str) {
-  if (!str) return null;
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return null;
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function financeIsInRange(dateStr, from, to) {
-  const d = financeParseDate(dateStr);
-  if (!d) return false;
-  if (from && d < from) return false;
-  if (to && d > to) return false;
-  return true;
-}
-
-function getFinancePeriodRange(preset, customFrom, customTo) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let from = new Date(today);
-  let to = new Date(today);
-  if (preset === 'week') {
-    const dow = from.getDay();
-    const monOffset = dow === 0 ? 6 : dow - 1;
-    from.setDate(from.getDate() - monOffset);
-  } else if (preset === 'month') {
-    from = new Date(today.getFullYear(), today.getMonth(), 1);
-    to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  } else if (preset === 'year') {
-    from = new Date(today.getFullYear(), 0, 1);
-    to = new Date(today.getFullYear(), 11, 31);
-  } else if (preset === 'custom') {
-    from = financeParseDate(customFrom) || today;
-    to = financeParseDate(customTo) || today;
-    if (from > to) { const t = from; from = to; to = t; }
+  function loadFinance(){
+    try { financeState.records = JSON.parse(localStorage.getItem(FINANCE_KEY)) || []; }
+    catch(e){ financeState.records = []; console.error('Finance data load failed', e); }
   }
-  return { from, to };
-}
+  function saveFinance(){ localStorage.setItem(FINANCE_KEY, JSON.stringify(financeState.records)); }
 
-function generateExpenseId() {
-  const y = new Date().getFullYear();
-  return nextSequentialDocumentId('EXP', y, (state.expenses || []).map(e => e.id));
-}
-
-function generateOtherIncomeId() {
-  const y = new Date().getFullYear();
-  return nextSequentialDocumentId('OIN', y, (state.otherIncome || []).map(o => o.id));
-}
-
-function getPartUnitCost(itemCode, fallbackRate) {
-  if (itemCode) {
-    const item = state.inventory.find(i => i.itemCode === itemCode);
-    if (item && parseFloat(item.purchaseRate || 0) > 0) return parseFloat(item.purchaseRate);
+  function todayISO(){
+    const d = new Date();
+    const m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return `${d.getFullYear()}-${m}-${day}`;
   }
-  return parseFloat(fallbackRate || 0);
-}
-
-function computeFinanceMetrics(from, to) {
-  const billings = state.billings.filter(b => financeIsInRange(b.date, from, to));
-  const svcInvoices = (state.serviceInvoices || []).filter(i => financeIsInRange(i.date, from, to));
-  const purchases = state.purchases.filter(p => financeIsInRange(p.date, from, to));
-  const expenses = (state.expenses || []).filter(e => financeIsInRange(e.date, from, to));
-  const otherIncomeRows = (state.otherIncome || []).filter(o => financeIsInRange(o.date, from, to));
-  const salesReturns = state.returns.filter(r => r.type === 'SALES_RETURN' && financeIsInRange(r.date, from, to));
-  const purchaseReturns = state.returns.filter(r => r.type === 'PURCHASE_RETURN' && financeIsInRange(r.date, from, to));
-  const bookingsInPeriod = state.bookings.filter(b => financeIsInRange(b.date, from, to));
-
-  const productSales = billings.reduce((s, b) => s + parseFloat(b.totalAmount || 0), 0);
-  const serviceSales = svcInvoices.reduce((s, i) => s + parseFloat(i.grandTotal || 0), 0);
-  const otherIncomeTotal = otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
-  const salesReturnTotal = salesReturns.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-
-  const totalSales = productSales + serviceSales;
-  const netRevenue = Math.max(0, totalSales + otherIncomeTotal - salesReturnTotal);
-
-  let productCogs = billings.reduce((s, b) => s + parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1), 0);
-  const billingsMissingCost = billings.filter(b => !(parseFloat(b.costPrice || 0) > 0)).length;
-  salesReturns.forEach(r => {
-    const inv = state.billings.find(b => b.invoiceNo === r.invNo);
-    if (inv) productCogs -= parseFloat(inv.costPrice || 0) * parseFloat(r.qty || 0);
-  });
-  productCogs = Math.max(0, productCogs);
-
-  let servicePartsCogs = 0;
-  svcInvoices.forEach(inv => {
-    const jc = inv.jobCardId ? (state.serviceJobCards || []).find(j => j.id === inv.jobCardId) : null;
-    (jc?.partsItems || []).forEach(p => {
-      servicePartsCogs += getPartUnitCost(p.itemCode, p.rate) * parseFloat(p.qty || 0);
-    });
-  });
-  const totalCogs = productCogs + servicePartsCogs;
-  const grossProfit = netRevenue - totalCogs;
-
-  const totalOperatingExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-  const netProfit = grossProfit - totalOperatingExpenses;
-
-  const totalPurchase = purchases.reduce((s, p) => s + parseFloat(p.totalAmount || 0), 0);
-  const purchaseReturnTotal = purchaseReturns.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
-  const netPurchaseCost = Math.max(0, totalPurchase - purchaseReturnTotal);
-
-  const customerOutstanding =
-    state.billings.reduce((s, b) => s + parseFloat(b.balanceAmount ?? 0), 0) +
-    (state.serviceInvoices || []).reduce((s, i) => s + parseFloat(i.balanceAmount ?? 0), 0);
-  const supplierOutstanding = state.purchases.reduce((s, p) => s + parseFloat(p.balanceAmount ?? 0), 0);
-
-  const cashFromBillings = billings.reduce((s, b) => s + parseFloat(b.paidAmount || 0), 0);
-  const cashFromService = svcInvoices.reduce((s, i) => s + parseFloat(i.paidAmount || 0), 0);
-  const cashFromBookings = bookingsInPeriod.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
-  const cashFromOtherIncome = otherIncomeRows.reduce((s, o) => s + parseFloat(o.amount || 0), 0);
-  const cashReceived = cashFromBillings + cashFromService + cashFromBookings + cashFromOtherIncome;
-
-  const cashPaidPurchases = purchases.reduce((s, p) => s + parseFloat(p.paidAmount || 0), 0);
-  const cashPaidExpenses = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-  const cashPaid = cashPaidPurchases + cashPaidExpenses;
-  const netCashFlow = cashReceived - cashPaid;
-
-  const paymentBreakdown = {};
-  const addPay = (method, amt) => {
-    const m = method || 'Unspecified';
-    paymentBreakdown[m] = (paymentBreakdown[m] || 0) + parseFloat(amt || 0);
-  };
-  svcInvoices.forEach(i => addPay(i.paymentMethod, i.paidAmount || i.grandTotal));
-  bookingsInPeriod.forEach(b => addPay(b.payment, b.amount));
-  expenses.forEach(e => addPay(e.paymentMethod, e.amount));
-  otherIncomeRows.forEach(o => addPay(o.paymentMethod, o.amount));
-  billings.forEach(b => addPay(b.paymentMethod || 'Credit / Unspecified', b.paidAmount || 0));
-
-  const grossMarginPct = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : null;
-  const netMarginPct = netRevenue > 0 ? (netProfit / netRevenue) * 100 : null;
-  const expensePct = netRevenue > 0 ? (totalOperatingExpenses / netRevenue) * 100 : null;
-
-  return {
-    from, to, billings, svcInvoices, purchases, expenses, otherIncomeRows, salesReturns, purchaseReturns,
-    productSales, serviceSales, otherIncomeTotal, salesReturnTotal, totalSales, netRevenue,
-    productCogs, servicePartsCogs, totalCogs, grossProfit, totalOperatingExpenses, netProfit,
-    totalPurchase, purchaseReturnTotal, netPurchaseCost,
-    customerOutstanding, supplierOutstanding, cashReceived, cashPaid, netCashFlow, paymentBreakdown,
-    grossMarginPct, netMarginPct, expensePct, billingsMissingCost
-  };
-}
-
-function getActiveFinanceMetrics() {
-  const preset = document.getElementById('finance-period-preset')?.value || 'month';
-  const customFrom = document.getElementById('finance-from-date')?.value;
-  const customTo = document.getElementById('finance-to-date')?.value;
-  const { from, to } = getFinancePeriodRange(preset, customFrom, customTo);
-  return computeFinanceMetrics(from, to);
-}
-
-function financePctLabel(pct) {
-  return pct === null || !Number.isFinite(pct) ? '—' : pct.toFixed(1) + '%';
-}
-
-function renderFinanceKpis(m) {
-  const el = document.getElementById('finance-kpi-grid');
-  if (!el) return;
-  const netLabel = m.netProfit >= 0 ? 'Net Profit' : 'Net Loss';
-  const netVal = Math.abs(m.netProfit);
-  const netClass = m.netProfit >= 0 ? 'finance-kpi-profit' : 'finance-kpi-loss';
-  const cards = [
-    { label: 'Total Revenue (Net)', value: m.netRevenue, sub: 'Sales + other income − returns' },
-    { label: 'Total Sales', value: m.totalSales, sub: `Product ${formatCurrency(m.productSales)} · Service ${formatCurrency(m.serviceSales)}` },
-    { label: 'Inventory Purchases (Period)', value: m.netPurchaseCost, sub: 'Not COGS — stock inward cost' },
-    { label: 'Cost of Goods Sold', value: m.totalCogs, sub: 'Sold items at purchase cost' },
-    { label: 'Gross Profit', value: m.grossProfit, sub: `Margin ${financePctLabel(m.grossMarginPct)}` },
-    { label: 'Operating Expenses', value: m.totalOperatingExpenses, sub: 'Rent, salary, utilities, etc.' },
-    { label: netLabel, value: netVal, sub: `Margin ${financePctLabel(m.netMarginPct)}`, cls: netClass },
-    { label: 'Customer Outstanding', value: m.customerOutstanding, sub: 'All open invoice balances' },
-    { label: 'Supplier Outstanding', value: m.supplierOutstanding, sub: 'Unpaid purchase balances' },
-    { label: 'Cash Received', value: m.cashReceived, sub: 'Receipts in selected period' },
-    { label: 'Cash Paid', value: m.cashPaid, sub: 'Supplier + expense payouts' },
-    { label: 'Net Cash Flow', value: m.netCashFlow, sub: 'Money in − money out (not P/L)' }
-  ];
-  el.innerHTML = cards.map(c => `
-    <div class="finance-kpi-card ${c.cls || ''}">
-      <span class="finance-kpi-label">${c.label}</span>
-      <span class="finance-kpi-value">${formatCurrency(c.value)}</span>
-      <span class="finance-kpi-sub">${c.sub}</span>
-    </div>
-  `).join('');
-}
-
-function renderFinanceCharts(m) {
-  const el = document.getElementById('finance-charts-grid');
-  if (!el) return;
-  const maxBar = Math.max(m.netRevenue, m.totalOperatingExpenses, m.netPurchaseCost, m.grossProfit, 1);
-  const bar = (label, val, color) => {
-    const w = Math.max(4, (Math.abs(val) / maxBar) * 100);
-    return `<div class="finance-bar-row"><span>${label}</span><div class="finance-bar-track"><div class="finance-bar-fill" style="width:${w}%;background:${color}"></div></div><span>${formatCurrency(val)}</span></div>`;
-  };
-  const expenseByCat = {};
-  m.expenses.forEach(e => { expenseByCat[e.category] = (expenseByCat[e.category] || 0) + parseFloat(e.amount || 0); });
-  const topExp = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  el.innerHTML = `
-    <div class="dashboard-card finance-chart-card">
-      <h4>Revenue vs Expenses vs Purchases</h4>
-      ${bar('Net Revenue', m.netRevenue, '#4f46e5')}
-      ${bar('COGS', m.totalCogs, '#64748b')}
-      ${bar('Gross Profit', m.grossProfit, '#10b981')}
-      ${bar('Operating Expenses', m.totalOperatingExpenses, '#f59e0b')}
-      ${bar('Purchases (stock)', m.netPurchaseCost, '#94a3b8')}
-    </div>
-    <div class="dashboard-card finance-chart-card">
-      <h4>Expense Categories (Top)</h4>
-      ${topExp.length ? topExp.map(([cat, amt]) => bar(cat, amt, '#ef4444')).join('') : '<p class="finance-kpi-sub">No expenses in this period.</p>'}
-    </div>
-  `;
-}
-
-function renderFinanceMonthlySummary() {
-  const monthInput = document.getElementById('finance-month-select');
-  let y, mo;
-  if (monthInput?.value) {
-    [y, mo] = monthInput.value.split('-').map(Number);
-  } else {
-    const t = new Date();
-    y = t.getFullYear(); mo = t.getMonth() + 1;
-    if (monthInput) monthInput.value = `${y}-${String(mo).padStart(2, '0')}`;
+  function money(n){ return formatCurrency(Number(n)||0); }
+  function dateKey(v){
+    if(!v) return '';
+    const d = new Date(v);
+    if(Number.isNaN(d.getTime())) return String(v).slice(0,10);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
-  const from = new Date(y, mo - 1, 1);
-  const to = new Date(y, mo, 0);
-  const cur = computeFinanceMetrics(from, to);
-  const prevFrom = new Date(y, mo - 2, 1);
-  const prevTo = new Date(y, mo - 1, 0);
-  const prev = computeFinanceMetrics(prevFrom, prevTo);
-  const tbl = document.getElementById('finance-monthly-summary-table');
-  if (tbl) {
-    tbl.innerHTML = `<table class="finance-summary-table"><tbody>
-      <tr><td>Revenue</td><td>${formatCurrency(cur.netRevenue)}</td></tr>
-      <tr><td>COGS</td><td>${formatCurrency(cur.totalCogs)}</td></tr>
-      <tr><td>Gross Profit</td><td>${formatCurrency(cur.grossProfit)}</td></tr>
-      <tr><td>Operating Expenses</td><td>${formatCurrency(cur.totalOperatingExpenses)}</td></tr>
-      <tr><td>${cur.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</td><td>${formatCurrency(Math.abs(cur.netProfit))}</td></tr>
-      <tr><td>Profit Margin</td><td>${financePctLabel(cur.netMarginPct)}</td></tr>
-    </tbody></table>`;
+  function isInRange(date, from, to){
+    const k=dateKey(date); return (!from || k>=from) && (!to || k<=to);
   }
-  const cmp = document.getElementById('finance-period-comparison');
-  if (cmp) {
-    const revDelta = cur.netRevenue - prev.netRevenue;
-    const profitDelta = cur.netProfit - prev.netProfit;
-    cmp.textContent = `Vs previous month: Revenue ${revDelta >= 0 ? '+' : ''}${formatCurrency(revDelta)} · Net P/L ${profitDelta >= 0 ? '+' : ''}${formatCurrency(profitDelta)}`;
-  }
-}
-
-function renderFinancePL(m) {
-  const el = document.getElementById('finance-pl-statement');
-  if (!el) return;
-  const netLine = m.netProfit >= 0 ? 'Net Profit' : 'Net Loss';
-  el.innerHTML = `
-    <h3 style="margin-bottom:1rem;color:var(--primary);">Profit & Loss Statement</h3>
-    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">${formatDate(m.from.toISOString().slice(0, 10))} — ${formatDate(m.to.toISOString().slice(0, 10))} · Generated ${new Date().toLocaleString()}</p>
-    <table class="finance-pl-table">
-      <tr><td><strong>Revenue — Net Sales & Service</strong></td><td>${formatCurrency(m.netRevenue)}</td></tr>
-      <tr><td class="finance-pl-indent">Product sales (net of returns)</td><td>${formatCurrency(m.productSales - m.salesReturnTotal)}</td></tr>
-      <tr><td class="finance-pl-indent">Service invoices</td><td>${formatCurrency(m.serviceSales)}</td></tr>
-      <tr><td class="finance-pl-indent">Other income</td><td>${formatCurrency(m.otherIncomeTotal)}</td></tr>
-      <tr><td><strong>Less: Cost of Goods Sold</strong></td><td>${formatCurrency(m.totalCogs)}</td></tr>
-      <tr class="finance-pl-highlight"><td><strong>= Gross Profit</strong></td><td>${formatCurrency(m.grossProfit)} (${financePctLabel(m.grossMarginPct)})</td></tr>
-      <tr><td><strong>Less: Operating Expenses</strong></td><td>${formatCurrency(m.totalOperatingExpenses)} (${financePctLabel(m.expensePct)})</td></tr>
-      <tr class="finance-pl-total"><td><strong>= ${netLine}</strong></td><td>${formatCurrency(Math.abs(m.netProfit))} (${financePctLabel(m.netMarginPct)})</td></tr>
-    </table>
-    <p style="margin-top:1rem;font-size:0.78rem;color:var(--text-muted);">COGS uses invoice cost (product sales) and inventory purchase cost (service spare parts). Inventory purchases in the period are <strong>not</strong> treated as COGS.</p>
-  `;
-}
-
-function renderFinanceCashFlow(m) {
-  const el = document.getElementById('finance-cashflow-panel');
-  if (!el) return;
-  el.innerHTML = `
-    <div class="dashboard-card"><h4>Money In</h4>
-      <ul class="finance-cash-list">
-        <li>Customer / sales receipts <span>${formatCurrency(m.cashReceived)}</span></li>
-      </ul>
-      <p class="finance-kpi-sub">Includes paid amounts on sales & service invoices, booking deposits, and other income recorded in the period.</p>
-    </div>
-    <div class="dashboard-card"><h4>Money Out</h4>
-      <ul class="finance-cash-list">
-        <li>Supplier & expense payments <span>${formatCurrency(m.cashPaid)}</span></li>
-      </ul></div>
-    <div class="dashboard-card finance-kpi-card"><h4>Net Cash Flow</h4>
-      <span class="finance-kpi-value">${formatCurrency(m.netCashFlow)}</span>
-      <p class="finance-kpi-sub">Cash movement only — differs from accounting profit.</p>
-    </div>
-  `;
-}
-
-function renderFinanceModule() {
-  const m = getActiveFinanceMetrics();
-  const notice = document.getElementById('finance-cogs-notice');
-  if (notice) {
-    if (m.billingsMissingCost > 0) {
-      notice.style.display = 'block';
-      notice.textContent = `Note: ${m.billingsMissingCost} product invoice(s) in this period have no cost price stored — COGS may be understated. Link sales to inventory items when billing.`;
-    } else notice.style.display = 'none';
-  }
-  renderFinanceKpis(m);
-  renderFinanceCharts(m);
-  renderFinanceMonthlySummary();
-  renderFinancePL(m);
-  renderFinanceCashFlow(m);
-}
-
-function populateExpenseCategorySelects() {
-  ['expense-category', 'expense-filter-category'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const isFilter = id.includes('filter');
-    sel.innerHTML = (isFilter ? '<option value="All">All Categories</option>' : '') +
-      FINANCE_EXPENSE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  });
-}
-
-function openExpenseModal(editId = null) {
-  const modal = document.getElementById('expense-modal');
-  if (!modal) return;
-  document.getElementById('expense-edit-id').value = editId || '';
-  populateExpenseCategorySelects();
-  if (editId) {
-    const ex = (state.expenses || []).find(e => e.id === editId);
-    if (!ex) return;
-    document.getElementById('expense-modal-title').textContent = 'Edit Expense';
-    document.getElementById('expense-number').value = ex.id;
-    document.getElementById('expense-date').value = ex.date;
-    document.getElementById('expense-category').value = ex.category;
-    document.getElementById('expense-amount').value = ex.amount;
-    document.getElementById('expense-payment-method').value = ex.paymentMethod || 'Cash';
-    document.getElementById('expense-reference').value = ex.reference || '';
-    document.getElementById('expense-description').value = ex.description || '';
-    document.getElementById('expense-notes').value = ex.notes || '';
-  } else {
-    document.getElementById('expense-modal-title').textContent = 'Add Expense';
-    document.getElementById('expense-form').reset();
-    document.getElementById('expense-number').value = generateExpenseId();
-    document.getElementById('expense-date').value = getTodayDateString();
-  }
-  modal.classList.add('active');
-}
-
-function handleExpenseSubmit(e) {
-  e.preventDefault();
-  const editId = document.getElementById('expense-edit-id').value;
-  const id = editId || document.getElementById('expense-number').value.trim() || generateExpenseId();
-  const now = new Date().toISOString();
-  const payload = {
-    id,
-    date: document.getElementById('expense-date').value,
-    category: document.getElementById('expense-category').value,
-    amount: parseFloat(document.getElementById('expense-amount').value || 0),
-    paymentMethod: document.getElementById('expense-payment-method').value,
-    reference: document.getElementById('expense-reference').value.trim(),
-    description: document.getElementById('expense-description').value.trim(),
-    notes: document.getElementById('expense-notes').value.trim(),
-    updatedAt: now
-  };
-  if (!payload.date || !payload.category || !payload.description || !(payload.amount >= 0)) {
-    alert('❌ Please complete date, category, description and amount.'); return;
-  }
-  if (editId) {
-    const idx = state.expenses.findIndex(x => x.id === editId);
-    if (idx !== -1) {
-      payload.createdAt = state.expenses[idx].createdAt || now;
-      state.expenses[idx] = payload;
-      addActivity('billing', `Updated expense <strong>${id}</strong> (${payload.category}: ${formatCurrency(payload.amount)})`);
+  function periodRange(){
+    const now=new Date(), y=now.getFullYear(), m=now.getMonth();
+    if(financeState.period==='month'){
+      return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`};
     }
-  } else {
-    payload.createdAt = now;
-    state.expenses.unshift(payload);
-    addActivity('billing', `Recorded expense <strong>${id}</strong> — ${payload.category} (${formatCurrency(payload.amount)})`);
+    if(financeState.period==='year') return {from:`${y}-01-01`,to:`${y}-12-31`};
+    if(financeState.period==='custom') return {from:financeState.from,to:financeState.to};
+    return {from:'',to:''};
   }
-  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
-  document.getElementById('expense-modal').classList.remove('active');
-  renderExpensesTable();
-  renderFinanceModule();
-  alert('✅ Expense saved successfully.');
-}
-
-window.editExpense = function(id) { openExpenseModal(id); };
-window.deleteExpense = function(id) {
-  if (!confirm('Delete this expense record?')) return;
-  state.expenses = (state.expenses || []).filter(e => e.id !== id);
-  saveToStorage(STORAGE_KEYS.EXPENSES, state.expenses);
-  addActivity('billing', `Deleted expense ${id}`);
-  renderExpensesTable();
-  renderFinanceModule();
-};
-
-function renderExpensesTable() {
-  const body = document.getElementById('expense-table-body');
-  if (!body) return;
-  const search = (document.getElementById('expense-search')?.value || '').toLowerCase();
-  const cat = document.getElementById('expense-filter-category')?.value || 'All';
-  const from = financeParseDate(document.getElementById('expense-filter-from')?.value);
-  const to = financeParseDate(document.getElementById('expense-filter-to')?.value);
-  const rows = (state.expenses || []).filter(e => {
-    if (cat !== 'All' && e.category !== cat) return false;
-    if (!financeIsInRange(e.date, from, to)) return false;
-    const hay = `${e.id} ${e.description} ${e.reference || ''} ${e.category}`.toLowerCase();
-    return hay.includes(search);
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="8" class="no-data-msg">No expenses found.</td></tr>';
-    return;
+  function getFinanceData(){
+    const range=periodRange();
+    const sales=(state.billings||[]).filter(x=>isInRange(x.date,range.from,range.to));
+    const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,range.from,range.to));
+    const outside=financeState.records.filter(x=>x.type==='OUTSIDE_SERVICE' && isInRange(x.date,range.from,range.to));
+    const expenses=financeState.records.filter(x=>x.type==='EXPENSE' && isInRange(x.date,range.from,range.to));
+    const other=financeState.records.filter(x=>x.type==='OTHER_INCOME' && isInRange(x.date,range.from,range.to));
+    const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN' && isInRange(x.date,range.from,range.to));
+    const salesRevenue=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0);
+    const serviceRevenue=services.reduce((s,x)=>s+(Number(x.subtotal ?? x.grandTotal)||0),0);
+    const outsideRevenue=outside.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const refund=returns.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const productCOGS=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)
+      - returns.reduce((s,r)=>{
+          const inv=sales.find(x=>x.invoiceNo===r.invNo);
+          return s+(inv ? (Number(inv.costPrice)||0)*(Number(r.qty)||0) : 0);
+        },0);
+    const directOutside=outside.reduce((s,x)=>s+(Number(x.directCost)||0),0);
+    const expenseTotal=expenses.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const otherIncome=other.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const netOperatingRevenue=salesRevenue+serviceRevenue+outsideRevenue-refund;
+    const grossProfit=netOperatingRevenue-productCOGS-directOutside;
+    const netProfit=grossProfit+otherIncome-expenseTotal;
+    const collectedSales=sales.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
+    const collectedService=services.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
+    const collectedOutside=outside.reduce((s,x)=>s+(Number(x.paidAmount ?? x.amount)||0),0);
+    const collectedOther=otherIncome;
+    const cashCollected=collectedSales+collectedService+collectedOutside+collectedOther;
+    const outstandingSales=sales.reduce((s,x)=>s+Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0)),0);
+    const outstandingService=services.reduce((s,x)=>s+Math.max(0,(Number(x.grandTotal)||0)-(Number(x.paidAmount)||0)),0);
+    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,outsideRevenue,refund,productCOGS,directOutside,expenseTotal,otherIncome,netOperatingRevenue,grossProfit,netProfit,cashCollected,outstanding:outstandingSales+outstandingService};
   }
-  body.innerHTML = rows.map(e => `
-    <tr>
-      <td style="font-family:monospace;font-weight:700;">${e.id}</td>
-      <td>${formatDate(e.date)}</td>
-      <td>${e.category}</td>
-      <td>${e.description}</td>
-      <td style="font-weight:700;">${formatCurrency(e.amount)}</td>
-      <td>${e.paymentMethod || '—'}</td>
-      <td>${e.reference || '—'}</td>
-      <td class="actions-cell">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="editExpense('${e.id}')">Edit</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="deleteExpense('${e.id}')">Delete</button>
-      </td>
-    </tr>
-  `).join('');
-}
 
-function openOtherIncomeModal(editId = null) {
-  const modal = document.getElementById('other-income-modal');
-  if (!modal) return;
-  document.getElementById('other-income-edit-id').value = editId || '';
-  if (editId) {
-    const row = (state.otherIncome || []).find(o => o.id === editId);
-    if (!row) return;
-    document.getElementById('other-income-modal-title').textContent = 'Edit Other Income';
-    document.getElementById('other-income-number').value = row.id;
-    document.getElementById('other-income-date').value = row.date;
-    document.getElementById('other-income-category').value = row.category;
-    document.getElementById('other-income-amount').value = row.amount;
-    document.getElementById('other-income-payment-method').value = row.paymentMethod || 'Cash';
-    document.getElementById('other-income-description').value = row.description;
-    document.getElementById('other-income-notes').value = row.notes || '';
-  } else {
-    document.getElementById('other-income-modal-title').textContent = 'Add Other Income';
-    document.getElementById('other-income-form').reset();
-    document.getElementById('other-income-number').value = generateOtherIncomeId();
-    document.getElementById('other-income-date').value = getTodayDateString();
-  }
-  modal.classList.add('active');
-}
+  function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+  function renderFinance(){
+    const d=getFinanceData(), r=d.range;
+    const label = r.from && r.to ? `${r.from} to ${r.to}` : 'All recorded periods';
+    setText('finance-pnl-period-label',label);
+    setText('fin-revenue',money(d.netOperatingRevenue));
+    setText('fin-cogs',money(d.productCOGS+d.directOutside));
+    setText('fin-gross-profit',money(d.grossProfit));
+    setText('fin-expenses',money(d.expenseTotal));
+    setText('fin-net-profit',money(d.netProfit));
+    setText('fin-cash-collected',money(d.cashCollected));
+    setText('fin-outstanding',`Outstanding: ${money(d.outstanding)}`);
+    setText('fin-revenue-note','Sales + Service + Outside Service');
+    setText('fin-gross-margin',`${d.netOperatingRevenue ? ((d.grossProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% margin`);
+    setText('fin-net-margin',`${d.netOperatingRevenue ? ((d.netProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% net margin`);
+    setText('pnl-sales',money(d.salesRevenue));
+    setText('pnl-service',money(d.serviceRevenue));
+    setText('pnl-outside',money(d.outsideRevenue));
+    setText('pnl-returns',money(d.refund));
+    setText('pnl-net-revenue',money(d.netOperatingRevenue));
+    setText('pnl-product-cogs',money(d.productCOGS));
+    setText('pnl-direct-service-cost',money(d.directOutside));
+    setText('pnl-gross',money(d.grossProfit));
+    setText('pnl-other-income',money(d.otherIncome));
+    setText('pnl-operating-expense',money(d.expenseTotal));
+    setText('pnl-net',money(d.netProfit));
+    setText('fin-invoice-count',String(d.sales.length+d.services.length));
+    setText('fin-outside-count',String(d.outside.length));
+    setText('fin-expense-count',String(d.expenses.length));
+    setText('fin-income-count',String(d.other.length));
 
-function handleOtherIncomeSubmit(e) {
-  e.preventDefault();
-  const editId = document.getElementById('other-income-edit-id').value;
-  const id = editId || document.getElementById('other-income-number').value.trim() || generateOtherIncomeId();
-  const now = new Date().toISOString();
-  const payload = {
-    id, date: document.getElementById('other-income-date').value,
-    category: document.getElementById('other-income-category').value,
-    amount: parseFloat(document.getElementById('other-income-amount').value || 0),
-    paymentMethod: document.getElementById('other-income-payment-method').value,
-    description: document.getElementById('other-income-description').value.trim(),
-    notes: document.getElementById('other-income-notes').value.trim(),
-    updatedAt: now
-  };
-  if (!payload.date || !payload.description || !(payload.amount >= 0)) { alert('❌ Complete date, description and amount.'); return; }
-  if (editId) {
-    const idx = state.otherIncome.findIndex(o => o.id === editId);
-    if (idx !== -1) { payload.createdAt = state.otherIncome[idx].createdAt || now; state.otherIncome[idx] = payload; }
-    addActivity('billing', `Updated other income ${id}`);
-  } else {
-    payload.createdAt = now;
-    state.otherIncome.unshift(payload);
-    addActivity('billing', `Recorded other income ${id} (${formatCurrency(payload.amount)})`);
-  }
-  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
-  document.getElementById('other-income-modal').classList.remove('active');
-  renderOtherIncomeTable();
-  renderFinanceModule();
-}
-
-window.editOtherIncome = function(id) { openOtherIncomeModal(id); };
-window.deleteOtherIncome = function(id) {
-  if (!confirm('Delete this income record?')) return;
-  state.otherIncome = (state.otherIncome || []).filter(o => o.id !== id);
-  saveToStorage(STORAGE_KEYS.OTHER_INCOME, state.otherIncome);
-  renderOtherIncomeTable();
-  renderFinanceModule();
-};
-
-function renderOtherIncomeTable() {
-  const body = document.getElementById('other-income-table-body');
-  if (!body) return;
-  const rows = (state.otherIncome || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="no-data-msg">No other income recorded.</td></tr>'; return; }
-  body.innerHTML = rows.map(o => `
-    <tr>
-      <td style="font-family:monospace;">${o.id}</td>
-      <td>${formatDate(o.date)}</td>
-      <td>${o.category}</td>
-      <td>${o.description}</td>
-      <td style="font-weight:700;">${formatCurrency(o.amount)}</td>
-      <td>${o.paymentMethod || '—'}</td>
-      <td class="actions-cell">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="editOtherIncome('${o.id}')">Edit</button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="deleteOtherIncome('${o.id}')">Delete</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function renderFinanceReportTable() {
-  const type = document.getElementById('finance-report-type')?.value || 'Revenue';
-  const m = getActiveFinanceMetrics();
-  const head = document.getElementById('finance-report-head');
-  const body = document.getElementById('finance-report-body');
-  if (!head || !body) return;
-  let headers = '';
-  let rows = '';
-
-  if (type === 'Revenue' || type === 'Sales') {
-    headers = '<tr><th>Source</th><th>Date</th><th>Reference</th><th>Customer</th><th>Amount</th></tr>';
-    m.billings.forEach(b => { rows += `<tr><td>Product Sale</td><td>${formatDate(b.date)}</td><td>${b.invoiceNo}</td><td>${b.customerName}</td><td>${formatCurrency(b.totalAmount)}</td></tr>`; });
-    m.svcInvoices.forEach(i => { rows += `<tr><td>Service Invoice</td><td>${formatDate(i.date)}</td><td>${i.invoiceNo || i.id}</td><td>${i.customerName}</td><td>${formatCurrency(i.grandTotal)}</td></tr>`; });
-    m.otherIncomeRows.forEach(o => { rows += `<tr><td>Other Income</td><td>${formatDate(o.date)}</td><td>${o.id}</td><td>${o.description}</td><td>${formatCurrency(o.amount)}</td></tr>`; });
-    m.salesReturns.forEach(r => { rows += `<tr><td>Sales Return</td><td>${formatDate(r.date)}</td><td>${r.invNo}</td><td>${r.customerName}</td><td>-${formatCurrency(r.amount)}</td></tr>`; });
-  } else if (type === 'Purchase') {
-    headers = '<tr><th>Date</th><th>Invoice</th><th>Supplier</th><th>Item</th><th>Category</th><th>Total</th></tr>';
-    m.purchases.forEach(p => { rows += `<tr><td>${formatDate(p.date)}</td><td>${p.invoiceNo}</td><td>${p.supplier}</td><td>${p.itemName}</td><td>${p.category || '—'}</td><td>${formatCurrency(p.totalAmount)}</td></tr>`; });
-  } else if (type === 'Expense') {
-    headers = '<tr><th>ID</th><th>Date</th><th>Category</th><th>Description</th><th>Payment</th><th>Amount</th></tr>';
-    m.expenses.forEach(e => { rows += `<tr><td>${e.id}</td><td>${formatDate(e.date)}</td><td>${e.category}</td><td>${e.description}</td><td>${e.paymentMethod}</td><td>${formatCurrency(e.amount)}</td></tr>`; });
-  } else if (type === 'GrossProfit' || type === 'NetProfit') {
-    headers = '<tr><th>Line</th><th>Amount</th></tr>';
-    rows = `<tr><td>Net Revenue</td><td>${formatCurrency(m.netRevenue)}</td></tr>
-      <tr><td>COGS</td><td>${formatCurrency(m.totalCogs)}</td></tr>
-      <tr><td>Gross Profit</td><td>${formatCurrency(m.grossProfit)}</td></tr>
-      <tr><td>Operating Expenses</td><td>${formatCurrency(m.totalOperatingExpenses)}</td></tr>
-      <tr><td>${m.netProfit >= 0 ? 'Net Profit' : 'Net Loss'}</td><td>${formatCurrency(Math.abs(m.netProfit))}</td></tr>`;
-  } else if (type === 'ProductProfit') {
-    headers = '<tr><th>Invoice</th><th>Product</th><th>Qty</th><th>Revenue</th><th>COGS</th><th>Profit</th></tr>';
-    m.billings.forEach(b => {
-      const cogs = parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1);
-      const rev = parseFloat(b.totalAmount || 0);
-      rows += `<tr><td>${b.invoiceNo}</td><td>${b.productName}</td><td>${b.qty}</td><td>${formatCurrency(rev)}</td><td>${formatCurrency(cogs)}</td><td>${formatCurrency(rev - cogs)}</td></tr>`;
-    });
-  } else if (type === 'CategoryProfit') {
-    headers = '<tr><th>Category</th><th>Revenue</th><th>COGS</th><th>Profit</th></tr>';
-    const map = {};
-    m.billings.forEach(b => {
-      const item = state.inventory.find(i => i.itemCode === b.itemCode);
-      const cat = item?.category || 'General';
-      if (!map[cat]) map[cat] = { rev: 0, cogs: 0 };
-      map[cat].rev += parseFloat(b.totalAmount || 0);
-      map[cat].cogs += parseFloat(b.costPrice || 0) * parseFloat(b.qty || 1);
-    });
-    Object.entries(map).forEach(([cat, v]) => { rows += `<tr><td>${cat}</td><td>${formatCurrency(v.rev)}</td><td>${formatCurrency(v.cogs)}</td><td>${formatCurrency(v.rev - v.cogs)}</td></tr>`; });
-  } else if (type === 'CustomerOutstanding') {
-    headers = '<tr><th>Customer</th><th>Document</th><th>Balance Due</th></tr>';
-    state.billings.filter(b => parseFloat(b.balanceAmount || 0) > 0).forEach(b => { rows += `<tr><td>${b.customerName}</td><td>${b.invoiceNo}</td><td>${formatCurrency(b.balanceAmount)}</td></tr>`; });
-    (state.serviceInvoices || []).filter(i => parseFloat(i.balanceAmount || 0) > 0).forEach(i => { rows += `<tr><td>${i.customerName}</td><td>${i.invoiceNo}</td><td>${formatCurrency(i.balanceAmount)}</td></tr>`; });
-  } else if (type === 'SupplierOutstanding') {
-    headers = '<tr><th>Supplier</th><th>Purchase Inv</th><th>Balance</th></tr>';
-    state.purchases.filter(p => parseFloat(p.balanceAmount || 0) > 0).forEach(p => { rows += `<tr><td>${p.supplier}</td><td>${p.invoiceNo}</td><td>${formatCurrency(p.balanceAmount)}</td></tr>`; });
-  } else if (type === 'CashFlow') {
-    headers = '<tr><th>Flow</th><th>Amount</th></tr>';
-    rows = `<tr><td>Cash Received</td><td>${formatCurrency(m.cashReceived)}</td></tr><tr><td>Cash Paid</td><td>${formatCurrency(m.cashPaid)}</td></tr><tr><td>Net Cash Flow</td><td>${formatCurrency(m.netCashFlow)}</td></tr>`;
-  } else if (type === 'PaymentMethods') {
-    headers = '<tr><th>Payment Method</th><th>Amount</th></tr>';
-    Object.entries(m.paymentBreakdown).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => { rows += `<tr><td>${k}</td><td>${formatCurrency(v)}</td></tr>`; });
-  } else if (type === 'MonthlySummary' || type === 'YearlySummary') {
-    headers = '<tr><th>Period</th><th>Revenue</th><th>COGS</th><th>Gross Profit</th><th>Expenses</th><th>Net P/L</th></tr>';
-    const year = m.from.getFullYear();
-    if (type === 'YearlySummary') {
-      const fm = computeFinanceMetrics(new Date(year, 0, 1), new Date(year, 11, 31));
-      rows = `<tr><td>${year}</td><td>${formatCurrency(fm.netRevenue)}</td><td>${formatCurrency(fm.totalCogs)}</td><td>${formatCurrency(fm.grossProfit)}</td><td>${formatCurrency(fm.totalOperatingExpenses)}</td><td>${formatCurrency(fm.netProfit)}</td></tr>`;
-    } else {
-      for (let mo = 0; mo < 12; mo++) {
-        const fm = computeFinanceMetrics(new Date(year, mo, 1), new Date(year, mo + 1, 0));
-        rows += `<tr><td>${new Date(year, mo, 1).toLocaleString('en-IN', { month: 'short', year: 'numeric' })}</td><td>${formatCurrency(fm.netRevenue)}</td><td>${formatCurrency(fm.totalCogs)}</td><td>${formatCurrency(fm.grossProfit)}</td><td>${formatCurrency(fm.totalOperatingExpenses)}</td><td>${formatCurrency(fm.netProfit)}</td></tr>`;
-      }
+    const sourceEl=document.getElementById('finance-source-breakdown');
+    if(sourceEl){
+      const sources=[['Product Sales',d.salesRevenue],['Service Invoices',d.serviceRevenue],['Outside Services',d.outsideRevenue],['Other Income',d.otherIncome]];
+      const max=Math.max(1,...sources.map(x=>x[1]));
+      sourceEl.innerHTML=sources.map(([name,val])=>`<div class="finance-source-item"><span class="finance-source-label">${name}</span><span class="finance-source-value">${money(val)}</span><div class="finance-source-track"><div class="finance-source-fill" style="width:${Math.min(100,(val/max)*100)}%"></div></div></div>`).join('');
     }
+    renderMonthlyTable();
+    renderFinanceLedger();
   }
 
-  head.innerHTML = headers;
-  body.innerHTML = rows || '<tr><td colspan="6" class="no-data-msg">No data for selected period.</td></tr>';
-}
+  function monthsForRange(){
+    const r=periodRange(), out=[];
+    let start=r.from ? new Date(r.from+'T00:00:00') : null;
+    let end=r.to ? new Date(r.to+'T00:00:00') : null;
+    if(!start){
+      const all=[...(state.billings||[]),...(state.serviceInvoices||[]),...financeState.records].map(x=>dateKey(x.date)).filter(Boolean).sort();
+      if(!all.length) return [];
+      start=new Date(all[0]+'T00:00:00'); end=new Date(all[all.length-1]+'T00:00:00');
+    }
+    start=new Date(start.getFullYear(),start.getMonth(),1); end=new Date(end.getFullYear(),end.getMonth(),1);
+    for(let d=new Date(start);d<=end;d.setMonth(d.getMonth()+1)) out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    return out;
+  }
+  function monthData(key){
+    const [y,m]=key.split('-').map(Number), from=`${key}-01`, to=`${y}-${String(m).padStart(2,'0')}-${new Date(y,m,0).getDate()}`;
+    const sales=(state.billings||[]).filter(x=>isInRange(x.date,from,to));
+    const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,from,to));
+    const out=financeState.records.filter(x=>x.type==='OUTSIDE_SERVICE'&&isInRange(x.date,from,to));
+    const exp=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,from,to));
+    const inc=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,from,to));
+    const ret=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,from,to));
+    const salesRev=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0), svcRev=services.reduce((s,x)=>s+(Number(x.subtotal??x.grandTotal)||0),0);
+    const outsideRev=out.reduce((s,x)=>s+(Number(x.amount)||0),0), refunds=ret.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const cogs=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)-ret.reduce((s,r)=>{const inv=sales.find(x=>x.invoiceNo===r.invNo);return s+(inv?(Number(inv.costPrice)||0)*(Number(r.qty)||0):0)},0);
+    const direct=out.reduce((s,x)=>s+(Number(x.directCost)||0),0), expenses=exp.reduce((s,x)=>s+(Number(x.amount)||0),0), other=inc.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const revenue=salesRev+svcRev+outsideRev-refunds, net=revenue-cogs-direct+other-expenses;
+    return {salesRev,svcRev,outsideRev,other,cogs:cogs+direct,expenses,revenue,net};
+  }
+  function renderMonthlyTable(){
+    const body=document.getElementById('finance-monthly-table-body'); if(!body)return;
+    const months=monthsForRange();
+    if(!months.length){body.innerHTML='<tr><td colspan="9" class="no-data-msg">No financial data yet.</td></tr>';return;}
+    body.innerHTML=months.map(k=>{
+      const d=monthData(k), label=new Date(k+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+      return `<tr><td style="font-weight:800">${label}</td><td>${money(d.salesRev)}</td><td>${money(d.svcRev)}</td><td>${money(d.outsideRev)}</td><td>${money(d.other)}</td><td style="font-weight:800">${money(d.revenue+d.other)}</td><td>${money(d.cogs)}</td><td>${money(d.expenses)}</td><td style="font-weight:800;color:${d.net>=0?'var(--success-dark)':'var(--danger-dark)'}">${money(d.net)}</td></tr>`;
+    }).join('');
+  }
 
-function handleFinanceExportCsv() {
-  renderFinanceReportTable();
-  const type = document.getElementById('finance-report-type')?.value || 'Revenue';
-  const table = document.querySelector('#finance-report-print-area table');
-  if (!table) return;
-  let csv = 'BIOS Finance Report,' + type + '\n';
-  table.querySelectorAll('tr').forEach(tr => {
-    csv += Array.from(tr.querySelectorAll('th,td')).map(td => `"${(td.textContent || '').replace(/"/g, '""')}"`).join(',') + '\n';
-  });
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `BIOS-Finance-${type}-${Date.now()}.csv`;
-  link.click();
-}
+  function renderFinanceLedger(){
+    const body=document.getElementById('finance-ledger-body');if(!body)return;
+    const q=(document.getElementById('finance-ledger-search')?.value||'').toLowerCase().trim();
+    const records=financeState.records.filter(x=>!q || [x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    if(!records.length){body.innerHTML='<tr><td colspan="8" class="no-data-msg">No manual finance transactions yet.</td></tr>';return;}
+    body.innerHTML=records.map(x=>{
+      const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service';
+      const cls=x.type==='EXPENSE'?'expense':x.type==='OTHER_INCOME'?'income':'outside';
+      return `<tr><td>${formatDate(x.date)}</td><td><span class="finance-type-badge ${cls}">${type}</span></td><td><strong>${x.description||'--'}</strong>${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${money(x.amount)}</td><td>${x.type==='OUTSIDE_SERVICE'?money(x.directCost):'--'}</td><td><div class="finance-actions"><button title="Edit" onclick="window.editFinanceRecord('${x.id}')">✏️</button><button title="Delete" onclick="window.deleteFinanceRecord('${x.id}')">🗑️</button></div></td></tr>`;
+    }).join('');
+  }
 
-function handleFinancePrint() {
-  document.body.classList.add('printing-finance');
-  window.print();
-  window.addEventListener('afterprint', () => document.body.classList.remove('printing-finance'), { once: true });
-}
+  function openFinanceModal(type, record){
+    const modal=document.getElementById('finance-transaction-modal'); if(!modal)return;
+    const title=type==='EXPENSE'?'Add Company Expense':type==='OTHER_INCOME'?'Add Other Income':'Add Outside Service';
+    document.getElementById('finance-modal-title').textContent=record ? `Edit ${title.replace('Add ','')}` : title;
+    document.getElementById('finance-record-id').value=record?.id||'';
+    document.getElementById('finance-record-type').value=type;
+    document.getElementById('finance-record-date').value=record?.date||todayISO();
+    document.getElementById('finance-record-amount').value=record?.amount??'';
+    document.getElementById('finance-record-category').value=record?.category|| (type==='EXPENSE'?'General':type==='OTHER_INCOME'?'Other Income':'Outside Service');
+    document.getElementById('finance-record-reference').value=record?.reference||'';
+    document.getElementById('finance-record-description').value=record?.description||'';
+    document.getElementById('finance-record-direct-cost').value=record?.directCost??0;
+    document.getElementById('finance-record-customer').value=record?.customer||'';
+    const isOutside=type==='OUTSIDE_SERVICE';
+    document.getElementById('finance-direct-cost-wrap').style.display=isOutside?'block':'none';
+    document.getElementById('finance-customer-wrap').style.display=isOutside?'block':'none';
+    document.getElementById('finance-modal-note').textContent=
+      type==='EXPENSE'?'Company expenses reduce Net Profit. Inventory purchases are not automatically treated as an expense here because stock becomes an asset until sold.':
+      type==='OTHER_INCOME'?'Use this for income outside normal product/service sales. It is shown separately in the P&L.':
+      'Use this for service work done outside the normal service-invoice workflow. Enter the customer/job, revenue received/earned and any direct cost used for that job.';
+    modal.classList.add('active');
+  }
 
-function setupFinanceEventListeners() {
-  setupModalToggle('open-expense-modal-btn', 'close-expense-modal-btn', 'cancel-expense-btn', 'expense-modal');
-  setupModalToggle('open-other-income-modal-btn', 'close-other-income-modal-btn', 'cancel-other-income-btn', 'other-income-modal');
-  const expForm = document.getElementById('expense-form');
-  if (expForm) expForm.addEventListener('submit', handleExpenseSubmit);
-  const oiForm = document.getElementById('other-income-form');
-  if (oiForm) oiForm.addEventListener('submit', handleOtherIncomeSubmit);
-
-  const preset = document.getElementById('finance-period-preset');
-  const toggleCustom = () => {
-    const show = preset?.value === 'custom';
-    document.querySelectorAll('.finance-custom-dates').forEach(el => { el.style.display = show ? '' : 'none'; });
+  window.editFinanceRecord=function(id){const r=financeState.records.find(x=>x.id===id);if(r)openFinanceModal(r.type,r);};
+  window.deleteFinanceRecord=function(id){
+    const r=financeState.records.find(x=>x.id===id); if(!r)return;
+    if(!confirm(`Delete this ${r.type==='EXPENSE'?'expense':r.type==='OTHER_INCOME'?'other income':'outside service'} record?`))return;
+    financeState.records=financeState.records.filter(x=>x.id!==id);saveFinance();renderFinance();
   };
-  if (preset) {
-    preset.addEventListener('change', () => { toggleCustom(); renderFinanceModule(); });
-    toggleCustom();
-  }
-  ['finance-from-date', 'finance-to-date', 'finance-month-select'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => renderFinanceModule());
-  });
-  document.getElementById('finance-refresh-btn')?.addEventListener('click', renderFinanceModule);
-  document.getElementById('finance-report-type')?.addEventListener('change', renderFinanceReportTable);
-  document.getElementById('finance-export-csv-btn')?.addEventListener('click', handleFinanceExportCsv);
-  document.getElementById('finance-print-btn')?.addEventListener('click', handleFinancePrint);
 
-  ['expense-search', 'expense-filter-category', 'expense-filter-from', 'expense-filter-to'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', renderExpensesTable);
-    document.getElementById(id)?.addEventListener('change', renderExpensesTable);
-  });
-}
-
-function initFinanceModule() {
-  populateExpenseCategorySelects();
-  const monthSel = document.getElementById('finance-month-select');
-  if (monthSel && !monthSel.value) {
-    const t = new Date();
-    monthSel.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+  function bindFinance(){
+    const open=(type)=>()=>openFinanceModal(type);
+    document.getElementById('finance-add-expense-btn')?.addEventListener('click',open('EXPENSE'));
+    document.getElementById('finance-add-income-btn')?.addEventListener('click',open('OTHER_INCOME'));
+    document.getElementById('finance-add-outside-btn')?.addEventListener('click',open('OUTSIDE_SERVICE'));
+    document.getElementById('finance-modal-close')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
+    document.getElementById('finance-modal-cancel')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
+    document.getElementById('finance-transaction-form')?.addEventListener('submit',e=>{
+      e.preventDefault();
+      const type=document.getElementById('finance-record-type').value, id=document.getElementById('finance-record-id').value;
+      const amount=Number(document.getElementById('finance-record-amount').value||0);
+      const directCost=Number(document.getElementById('finance-record-direct-cost').value||0);
+      if(amount<=0){alert('Enter an amount greater than 0.');return;}
+      if(type==='OUTSIDE_SERVICE' && directCost>amount){if(!confirm('Direct cost is higher than the service revenue. Save this loss-making job?'))return;}
+      const record={id:id||'FIN-'+Date.now(),type,date:document.getElementById('finance-record-date').value||todayISO(),amount,category:document.getElementById('finance-record-category').value.trim(),reference:document.getElementById('finance-record-reference').value.trim(),description:document.getElementById('finance-record-description').value.trim(),directCost:type==='OUTSIDE_SERVICE'?directCost:0,customer:type==='OUTSIDE_SERVICE'?document.getElementById('finance-record-customer').value.trim():'',paidAmount:amount};
+      if(!record.description){alert('Description is required.');return;}
+      const idx=financeState.records.findIndex(x=>x.id===id);
+      if(idx>=0) financeState.records[idx]=record; else financeState.records.unshift(record);
+      saveFinance(); document.getElementById('finance-transaction-modal').classList.remove('active'); renderFinance();
+    });
+    document.querySelectorAll('[data-finance-period]').forEach(btn=>btn.addEventListener('click',()=>{
+      document.querySelectorAll('[data-finance-period]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+      financeState.period=btn.dataset.financePeriod;
+      document.getElementById('finance-custom-dates').style.display=financeState.period==='custom'?'flex':'none';
+      if(financeState.period==='custom' && !financeState.from){financeState.from=todayISO();financeState.to=todayISO();document.getElementById('finance-from-date').value=financeState.from;document.getElementById('finance-to-date').value=financeState.to;}
+      renderFinance();
+    }));
+    document.getElementById('finance-apply-date-btn')?.addEventListener('click',()=>{
+      financeState.from=document.getElementById('finance-from-date').value;financeState.to=document.getElementById('finance-to-date').value;
+      if(!financeState.from||!financeState.to){alert('Select both From and To dates.');return;} renderFinance();
+    });
+    document.getElementById('finance-ledger-search')?.addEventListener('input',renderFinanceLedger);
+    document.getElementById('finance-transaction-modal')?.addEventListener('click',e=>{if(e.target.id==='finance-transaction-modal')e.currentTarget.classList.remove('active');});
+    document.querySelectorAll('.nav-link[data-target="finance"]').forEach(link=>link.addEventListener('click',()=>setTimeout(renderFinance,0)));
   }
-  if (document.getElementById('finance-section')?.classList.contains('active')) renderFinanceModule();
-}
+
+  loadFinance();
+  document.addEventListener('DOMContentLoaded',()=>{bindFinance();renderFinance();});
+})();
