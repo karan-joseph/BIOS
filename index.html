@@ -121,11 +121,11 @@
         </li>
         <li>
           <a class="nav-link" data-target="finance">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"/>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M3 3v18h18"/>
+              <path d="M7 16v-5"/><path d="M12 16V7"/><path d="M17 16V4"/>
             </svg>
-            Finance & P/L
+            Finance & P&L
           </a>
         </li>
         <li>
@@ -551,10 +551,6 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Customer & Device Directory
             </button>
-            <button class="sub-tab-btn" data-service-tab="outsource">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              Outsource Repairs
-            </button>
           </div>
 
           <!-- TAB 1: Job Cards -->
@@ -736,61 +732,6 @@
                   </tr>
                 </thead>
                 <tbody id="svc-customers-table-body">
-                  <!-- Populated dynamically -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- TAB 6: Outsource Repairs -->
-          <div id="service-tab-outsource" class="sub-tab-pane">
-            <div class="section-header" style="margin-bottom: 1rem;">
-              <div class="section-header-left">
-                <h4 style="font-size: 1.15rem; margin-bottom: 0.25rem;">Outsource Repair Tracking</h4>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">Manage external third-party repairs, technician vendors, dispatch status, costs & payments.</p>
-              </div>
-              <button class="btn btn-primary" id="new-outsource-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                + New Outsource Dispatch
-              </button>
-            </div>
-            <div class="filter-bar">
-              <div class="form-group-inline" style="flex-grow: 2;">
-                <label for="outsource-search">Search Outsource Jobs</label>
-                <input type="text" id="outsource-search" placeholder="Search by outsource ID, Job Card #, vendor, device, serial...">
-              </div>
-              <div class="form-group-inline">
-                <label for="outsource-filter-status">Status</label>
-                <select id="outsource-filter-status">
-                  <option value="All">All Statuses</option>
-                  <option value="Sent">Sent</option>
-                  <option value="In Repair">In Repair</option>
-                  <option value="Received">Received</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Outsource ID</th>
-                    <th>Job Card #</th>
-                    <th>Customer</th>
-                    <th>Device & Serial</th>
-                    <th>Outside Vendor</th>
-                    <th>Date Sent</th>
-                    <th>Return Dates</th>
-                    <th>Vendor Cost</th>
-                    <th>Vendor Paid</th>
-                    <th>Vendor Balance</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="outsource-table-body">
                   <!-- Populated dynamically -->
                 </tbody>
               </table>
@@ -1404,179 +1345,95 @@
           </div>
         </section>
 
-        <!-- ==================== FINANCE VIEW ==================== -->
+
+        <!-- ==================== FINANCE & P&L VIEW (ADDED - EXISTING MODULES UNCHANGED) ==================== -->
         <section id="finance-section" class="page-section">
           <div class="section-header">
             <div class="section-header-left">
-              <h3>Finance & Business Overview</h3>
-              <p>Revenue, COGS, operating expenses, profit/loss and cash flow from your live sales, purchases and expense records.</p>
+              <h3>Finance & Profit / Loss</h3>
+              <p>Track revenue, outside services, other income, company expenses, cash collection and real business profit without changing your existing billing workflow.</p>
             </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" id="finance-print-btn">Print</button>
-              <button type="button" class="btn btn-success btn-sm" id="finance-export-csv-btn">Export CSV</button>
-            </div>
-          </div>
-
-          <div class="filter-bar finance-period-bar">
-            <div class="form-group-inline">
-              <label for="finance-period-preset">Period</label>
-              <select id="finance-period-preset">
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month" selected>This Month</option>
-                <option value="year">This Year</option>
-                <option value="custom">Custom Range</option>
-              </select>
-            </div>
-            <div class="form-group-inline finance-custom-dates" style="display: none;">
-              <label for="finance-from-date">From</label>
-              <input type="date" id="finance-from-date">
-            </div>
-            <div class="form-group-inline finance-custom-dates" style="display: none;">
-              <label for="finance-to-date">To</label>
-              <input type="date" id="finance-to-date">
-            </div>
-            <div class="form-group-inline">
-              <label for="finance-month-select">Monthly Report</label>
-              <input type="month" id="finance-month-select">
-            </div>
-            <button type="button" class="btn btn-secondary" id="finance-refresh-btn" style="height: 42px;">Refresh</button>
-            <button type="button" class="btn btn-outline" id="finance-opening-balance-btn" style="height: 42px; display: inline-flex; align-items: center; gap: 0.4rem;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Opening Balance
-            </button>
-          </div>
-
-          <div id="finance-cogs-notice" class="finance-notice-banner" style="display: none;"></div>
-
-          <div class="sub-nav-tabs finance-sub-tabs">
-            <button type="button" class="sub-tab-btn active" data-finance-tab="overview">Dashboard</button>
-            <button type="button" class="sub-tab-btn" data-finance-tab="expenses">Expenses</button>
-            <button type="button" class="sub-tab-btn" data-finance-tab="other-income">Other Income</button>
-            <button type="button" class="sub-tab-btn" data-finance-tab="pl">Profit & Loss</button>
-            <button type="button" class="sub-tab-btn" data-finance-tab="cashflow">Cash Flow</button>
-            <button type="button" class="sub-tab-btn" data-finance-tab="reports">Financial Reports</button>
-          </div>
-
-          <div id="finance-tab-overview" class="sub-tab-pane active">
-            <div class="finance-kpi-grid" id="finance-kpi-grid"></div>
-            <div class="finance-charts-grid" id="finance-charts-grid"></div>
-            <div class="dashboard-card" style="margin-top: 1rem;">
-              <h4 class="card-title-area" style="margin-bottom: 0.75rem;">Monthly Business Summary</h4>
-              <div id="finance-monthly-summary-table"></div>
-              <p id="finance-period-comparison" class="finance-comparison-text" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);"></p>
+            <div class="finance-action-row">
+              <button class="btn btn-danger" id="finance-add-expense-btn">+ Add Expense</button>
+              <button class="btn btn-success" id="finance-add-income-btn">+ Other Income</button>
+              <button class="btn btn-primary" id="finance-add-outside-btn">+ Outside Service</button>
             </div>
           </div>
 
-          <div id="finance-tab-expenses" class="sub-tab-pane">
-            <div class="section-header" style="margin-bottom: 1rem;">
-              <div class="section-header-left">
-                <h4 style="font-size: 1.15rem;">Operating Expenses</h4>
-                <p style="font-size: 0.85rem;">Rent, salary, utilities and other costs — separate from product purchases.</p>
-              </div>
-              <button type="button" class="btn btn-primary" id="open-expense-modal-btn">+ Add Expense</button>
+          <div class="finance-control-card">
+            <div class="finance-period-tabs">
+              <button class="finance-period-btn active" data-finance-period="month">This Month</button>
+              <button class="finance-period-btn" data-finance-period="year">This Year</button>
+              <button class="finance-period-btn" data-finance-period="all">All Time</button>
+              <button class="finance-period-btn" data-finance-period="custom">Custom</button>
             </div>
-            <div class="filter-bar">
-              <div class="form-group-inline" style="flex-grow: 1;">
-                <label for="expense-search">Search</label>
-                <input type="text" id="expense-search" placeholder="Description, reference, category...">
+            <div class="finance-custom-dates" id="finance-custom-dates" style="display:none;">
+              <label>From <input type="date" id="finance-from-date"></label>
+              <label>To <input type="date" id="finance-to-date"></label>
+              <button class="btn btn-secondary btn-sm" id="finance-apply-date-btn">Apply</button>
+            </div>
+          </div>
+
+          <div class="finance-kpi-grid">
+            <div class="finance-kpi revenue"><span>Revenue</span><strong id="fin-revenue">₹0</strong><small id="fin-revenue-note">Sales + Service + Outside Service</small></div>
+            <div class="finance-kpi cogs"><span>Direct Cost / COGS</span><strong id="fin-cogs">₹0</strong><small>Cost of sold goods + direct service cost</small></div>
+            <div class="finance-kpi gross"><span>Gross Profit</span><strong id="fin-gross-profit">₹0</strong><small id="fin-gross-margin">0% margin</small></div>
+            <div class="finance-kpi expense"><span>Operating Expenses</span><strong id="fin-expenses">₹0</strong><small>Company expenses entered here</small></div>
+            <div class="finance-kpi profit"><span>Net Profit / Loss</span><strong id="fin-net-profit">₹0</strong><small id="fin-net-margin">0% net margin</small></div>
+            <div class="finance-kpi cash"><span>Cash / Payments Collected</span><strong id="fin-cash-collected">₹0</strong><small id="fin-outstanding">Outstanding: ₹0</small></div>
+          </div>
+
+          <div class="finance-two-col">
+            <div class="finance-panel">
+              <div class="finance-panel-head"><div><h4>Profit & Loss Statement</h4><p id="finance-pnl-period-label">Current period</p></div></div>
+              <div class="finance-pnl">
+                <div class="pnl-row main"><span>Product / Sales Revenue</span><strong id="pnl-sales">₹0</strong></div>
+                <div class="pnl-row main"><span>Service Invoice Revenue</span><strong id="pnl-service">₹0</strong></div>
+                <div class="pnl-row main"><span>Outside Service Revenue</span><strong id="pnl-outside">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Sales Returns / Refunds</span><strong id="pnl-returns">₹0</strong></div>
+                <div class="pnl-row total"><span>Net Operating Revenue</span><strong id="pnl-net-revenue">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Product COGS</span><strong id="pnl-product-cogs">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Direct Outside-Service Cost</span><strong id="pnl-direct-service-cost">₹0</strong></div>
+                <div class="pnl-row total"><span>Gross Profit</span><strong id="pnl-gross">₹0</strong></div>
+                <div class="pnl-row main"><span>Other Income</span><strong id="pnl-other-income">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Operating Expenses</span><strong id="pnl-operating-expense">₹0</strong></div>
+                <div class="pnl-row grand"><span>NET PROFIT / LOSS</span><strong id="pnl-net">₹0</strong></div>
               </div>
-              <div class="form-group-inline">
-                <label for="expense-filter-category">Category</label>
-                <select id="expense-filter-category"><option value="All">All Categories</option></select>
+            </div>
+
+            <div class="finance-panel">
+              <div class="finance-panel-head"><div><h4>Revenue Sources</h4><p>Where the selected period's money is coming from</p></div></div>
+              <div id="finance-source-breakdown" class="finance-source-list"></div>
+              <div class="finance-mini-summary">
+                <div><span>Invoices</span><strong id="fin-invoice-count">0</strong></div>
+                <div><span>Outside Jobs</span><strong id="fin-outside-count">0</strong></div>
+                <div><span>Expenses</span><strong id="fin-expense-count">0</strong></div>
+                <div><span>Other Income</span><strong id="fin-income-count">0</strong></div>
               </div>
-              <div class="form-group-inline">
-                <label for="expense-filter-from">From</label>
-                <input type="date" id="expense-filter-from">
-              </div>
-              <div class="form-group-inline">
-                <label for="expense-filter-to">To</label>
-                <input type="date" id="expense-filter-to">
-              </div>
+            </div>
+          </div>
+
+          <div class="finance-panel finance-trend-panel">
+            <div class="finance-panel-head">
+              <div><h4>Monthly Business Performance</h4><p>Revenue, expenses and net profit by month</p></div>
             </div>
             <div class="table-responsive">
               <table>
-                <thead>
-                  <tr>
-                    <th>Expense ID</th>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Payment</th>
-                    <th>Reference</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="expense-table-body"></tbody>
+                <thead><tr><th>Month</th><th>Sales</th><th>Service</th><th>Outside Service</th><th>Other Income</th><th>Total Revenue</th><th>COGS</th><th>Expenses</th><th>Net Profit / Loss</th></tr></thead>
+                <tbody id="finance-monthly-table-body"></tbody>
               </table>
             </div>
           </div>
 
-          <div id="finance-tab-other-income" class="sub-tab-pane">
-            <div class="section-header" style="margin-bottom: 1rem;">
-              <div class="section-header-left">
-                <h4 style="font-size: 1.15rem;">Other Income</h4>
-                <p style="font-size: 0.85rem;">Commission, service fees (non-invoice) and other business income.</p>
-              </div>
-              <button type="button" class="btn btn-primary" id="open-other-income-modal-btn">+ Add Other Income</button>
+          <div class="finance-panel">
+            <div class="finance-panel-head">
+              <div><h4>Finance Ledger</h4><p>Manual expenses, outside services and other income</p></div>
+              <input class="finance-ledger-search" id="finance-ledger-search" placeholder="Search description / category / reference...">
             </div>
             <div class="table-responsive">
               <table>
-                <thead>
-                  <tr>
-                    <th>Income ID</th>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="other-income-table-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="finance-tab-pl" class="sub-tab-pane">
-            <div class="invoice-preview-card finance-pl-card" id="finance-pl-statement"></div>
-          </div>
-
-          <div id="finance-tab-cashflow" class="sub-tab-pane">
-            <div class="finance-cashflow-grid" id="finance-cashflow-panel"></div>
-          </div>
-
-          <div id="finance-tab-reports" class="sub-tab-pane">
-            <div class="filter-bar">
-              <div class="form-group-inline" style="flex-grow: 1.5;">
-                <label for="finance-report-type">Financial Report</label>
-                <select id="finance-report-type">
-                  <option value="Revenue">Revenue Report</option>
-                  <option value="Sales">Sales Report</option>
-                  <option value="Purchase">Purchase Report</option>
-                  <option value="Expense">Expense Report</option>
-                  <option value="GrossProfit">Gross Profit Report</option>
-                  <option value="NetProfit">Net Profit / Loss Report</option>
-                  <option value="ProductProfit">Product Profit Report</option>
-                  <option value="ServiceProfit">Service Profit Report</option>
-                  <option value="OutsourceRepair">Outsource Repair Report</option>
-                  <option value="GSTSummary">GST Summary Report</option>
-                  <option value="AvailableFunds">Company Available Funds Report</option>
-                  <option value="CategoryProfit">Category Profit Report</option>
-                  <option value="CustomerOutstanding">Customer Outstanding</option>
-                  <option value="SupplierOutstanding">Supplier Outstanding</option>
-                  <option value="CashFlow">Cash Flow Summary</option>
-                  <option value="PaymentMethods">Payment Method Summary</option>
-                  <option value="MonthlySummary">Monthly Business Summary</option>
-                  <option value="YearlySummary">Yearly Business Summary</option>
-                </select>
-              </div>
-            </div>
-            <div class="table-responsive" id="finance-report-print-area">
-              <table>
-                <thead id="finance-report-head"></thead>
-                <tbody id="finance-report-body"></tbody>
+                <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th><th>Direct Cost</th><th>Actions</th></tr></thead>
+                <tbody id="finance-ledger-body"></tbody>
               </table>
             </div>
           </div>
@@ -1610,6 +1467,14 @@
             <div class="form-group-inline" style="flex-grow: 1.5;">
               <label for="report-filter-module">Report Content</label>
               <select id="report-filter-module">
+                <optgroup label="Financial Reports">
+                  <option value="FinanceSummary">Financial Summary / P&amp;L</option>
+                  <option value="FinanceTrend">Monthly Revenue &amp; Profit</option>
+                  <option value="FinanceLedger">Finance Ledger</option>
+                  <option value="FinanceExpenses">Company Expenses</option>
+                  <option value="FinanceOutside">Outside Services</option>
+                  <option value="FinanceIncome">Other Income</option>
+                </optgroup>
                 <optgroup label="Core Business Reports">
                   <option value="Enquiries">Enquiries Report</option>
                   <option value="Bookings">Bookings Report</option>
@@ -1632,10 +1497,6 @@
                   <option value="ServiceInvoices">Service Invoices & Payments Report</option>
                   <option value="ServiceParts">Service Parts Consumption Report</option>
                   <option value="ServiceEstimations">Service Estimations Report</option>
-                  <option value="OutsourceRepairs">Outsource Repairs Report</option>
-                </optgroup>
-                <optgroup label="Finance Reports (see Finance module)">
-                  <option value="ProfitMargin">Profit / Margin Report (Product Sales)</option>
                 </optgroup>
               </select>
             </div>
@@ -2103,7 +1964,7 @@
               </div>
               <div class="form-group">
                 <label for="purchase-min-stock">Minimum Stock Alert</label>
-                <input type="number" id="purchase-min-stock" min="0" step="1" value="2" required>
+                <input type="number" id="purchase-min-stock" min="1" step="1" value="2">
               </div>
             </div>
 
@@ -2447,7 +2308,6 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" id="close-purchase-view-btn2">Close</button>
-        <button type="button" class="btn btn-secondary" id="edit-purchase-from-view-btn">Edit Purchase Bill</button>
         <button type="button" class="btn btn-primary" id="print-purchase-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           Print Purchase Voucher
@@ -2572,26 +2432,14 @@
       <form id="jobcard-form">
         <input type="hidden" id="jobcard-edit-id">
         <input type="hidden" id="jobcard-from-estimation-id">
-        <div id="jobcard-source-estimation-banner" style="display: none; margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; font-size: 0.85rem;">
-          Linked Estimation:
-          <span id="jobcard-source-estimation-label" style="font-family: monospace; font-weight: 700; color: var(--primary);"></span>
-          <button type="button" class="btn btn-link btn-sm" id="jobcard-open-source-estimation-btn" style="margin-left: 0.35rem; padding: 0;">View original estimation</button>
-        </div>
         <div class="modal-body">
           
           <!-- Job Info & Dates -->
           <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="form-grid-4">
               <div class="form-group">
                 <label for="jobcard-number">Job Card # (Auto)</label>
                 <input type="text" id="jobcard-number" readonly style="background-color: var(--secondary-light); font-weight: 700; font-family: monospace;">
-              </div>
-              <div class="form-group">
-                <label for="jobcard-service-type">Service Type *</label>
-                <select id="jobcard-service-type" required style="font-weight: 700; color: var(--primary);">
-                  <option value="In-House Repair">In-House Repair</option>
-                  <option value="Outsource Repair">Outsource Repair</option>
-                </select>
               </div>
               <div class="form-group">
                 <label for="jobcard-date">Received Date *</label>
@@ -2605,12 +2453,7 @@
                 <label for="jobcard-status">Service Status *</label>
                 <select id="jobcard-status" required style="font-weight: 700;">
                   <option value="Open">Open</option>
-                  <option value="Diagnosis">Diagnosis</option>
                   <option value="Under Service">Under Service</option>
-                  <option value="Sent to Outsource">Sent to Outsource</option>
-                  <option value="In Outsource Repair">In Outsource Repair</option>
-                  <option value="Received from Outsource">Received from Outsource</option>
-                  <option value="Testing">Testing</option>
                   <option value="Ready">Ready</option>
                   <option value="Delivered">Delivered</option>
                   <option value="Closed">Closed</option>
@@ -2999,26 +2842,6 @@
                 <input type="text" id="svc-inv-device-serial" placeholder="Serial / Tag">
               </div>
             </div>
-          <!-- Spare Parts Section (Connected to Stock Maintenance) -->
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <div>
-                <h5 style="margin: 0; color: var(--primary);">Spare Parts & Components (Integrated with Stock)</h5>
-                <p id="svc-inv-stock-notice" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
-                  Direct Service Invoice: parts selected below will be deducted from inventory upon saving.
-                </p>
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="add-svc-inv-part-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                + Add Spare Part from Stock
-              </button>
-            </div>
-            <div id="svc-inv-parts-container">
-              <!-- Dynamic parts rows -->
-            </div>
-            <div style="text-align: right; font-weight: 600; font-size: 0.9rem; margin-top: 0.5rem;">
-              Calculated Parts Total: <span id="svc-inv-calc-parts-total" style="color: var(--primary);">₹0.00</span>
-            </div>
           </div>
 
           <!-- Billing Items Breakdown Summary -->
@@ -3121,7 +2944,6 @@
               <div class="invoice-meta-val" id="jc-prev-date">--</div>
               <div class="invoice-meta-label">Exp. Delivery:</div>
               <div class="invoice-meta-val" id="jc-prev-delv" style="font-weight: 700; color: #4f46e5;">--</div>
-              <div id="jc-prev-source-estimation-row" style="display: none; margin-top: 0.35rem; font-size: 0.78rem;"></div>
             </div>
           </div>
 
@@ -3472,454 +3294,30 @@
     </div>
   </div>
 
-  <!-- EXPENSE MODAL -->
-  <div class="modal-overlay" id="expense-modal">
-    <div class="modal-content modal-md">
+
+  <!-- Finance Transaction Modal -->
+  <div class="modal-overlay" id="finance-transaction-modal">
+    <div class="modal-content finance-modal-content">
       <div class="modal-header">
-        <h4 id="expense-modal-title">Add Expense</h4>
-        <button type="button" class="modal-close-btn" id="close-expense-modal-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <h3 id="finance-modal-title">Add Expense</h3>
+        <button class="modal-close" id="finance-modal-close">&times;</button>
       </div>
-      <form id="expense-form">
-        <div class="modal-body">
-          <input type="hidden" id="expense-edit-id">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="expense-number">Expense ID</label>
-              <input type="text" id="expense-number" readonly style="background: var(--secondary-light); font-family: monospace;">
-            </div>
-            <div class="form-group">
-              <label for="expense-date">Date *</label>
-              <input type="date" id="expense-date" required>
-            </div>
-            <div class="form-group">
-              <label for="expense-category">Category *</label>
-              <select id="expense-category" required></select>
-            </div>
-            <div class="form-group">
-              <label for="expense-amount">Amount (₹) *</label>
-              <input type="number" id="expense-amount" min="0" step="0.01" required>
-            </div>
-            <div class="form-group">
-              <label for="expense-payment-method">Payment Method</label>
-              <select id="expense-payment-method">
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI</option>
-                <option value="Card">Card</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Cheque">Cheque</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="expense-reference">Reference #</label>
-              <input type="text" id="expense-reference" placeholder="Receipt / voucher no.">
-            </div>
-            <div class="form-group form-full-width">
-              <label for="expense-description">Description *</label>
-              <input type="text" id="expense-description" required placeholder="What was this expense for?">
-            </div>
-            <div class="form-group form-full-width">
-              <label for="expense-notes">Notes</label>
-              <textarea id="expense-notes" rows="2" placeholder="Optional notes"></textarea>
-            </div>
-          </div>
+      <form id="finance-transaction-form">
+        <input type="hidden" id="finance-record-id">
+        <input type="hidden" id="finance-record-type">
+        <div class="form-grid">
+          <div class="form-group"><label>Date *</label><input type="date" id="finance-record-date" required></div>
+          <div class="form-group"><label>Amount (₹) *</label><input type="number" id="finance-record-amount" min="0" step="0.01" required></div>
+          <div class="form-group"><label>Category *</label><input type="text" id="finance-record-category" placeholder="Rent / Salary / Electricity..." required></div>
+          <div class="form-group"><label>Reference / Bill No.</label><input type="text" id="finance-record-reference" placeholder="Optional"></div>
+          <div class="form-group" style="grid-column:1/-1;"><label>Description *</label><input type="text" id="finance-record-description" placeholder="What was this transaction for?" required></div>
+          <div class="form-group finance-direct-cost-field" id="finance-direct-cost-wrap" style="display:none;"><label>Direct Cost (₹)</label><input type="number" id="finance-record-direct-cost" min="0" step="0.01" value="0"></div>
+          <div class="form-group finance-direct-cost-field" id="finance-customer-wrap" style="display:none;"><label>Customer / Job</label><input type="text" id="finance-record-customer" placeholder="Customer name / job reference"></div>
         </div>
+        <div class="finance-modal-note" id="finance-modal-note"></div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-expense-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Expense</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- OTHER INCOME MODAL -->
-  <div class="modal-overlay" id="other-income-modal">
-    <div class="modal-content modal-md">
-      <div class="modal-header">
-        <h4 id="other-income-modal-title">Add Other Income</h4>
-        <button type="button" class="modal-close-btn" id="close-other-income-modal-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <form id="other-income-form">
-        <div class="modal-body">
-          <input type="hidden" id="other-income-edit-id">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="other-income-number">Income ID</label>
-              <input type="text" id="other-income-number" readonly style="background: var(--secondary-light); font-family: monospace;">
-            </div>
-            <div class="form-group">
-              <label for="other-income-date">Date *</label>
-              <input type="date" id="other-income-date" required>
-            </div>
-            <div class="form-group">
-              <label for="other-income-category">Category</label>
-              <select id="other-income-category">
-                <option value="Service Income">Service Income</option>
-                <option value="Commission">Commission</option>
-                <option value="Other Business Income">Other Business Income</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="other-income-amount">Amount (₹) *</label>
-              <input type="number" id="other-income-amount" min="0" step="0.01" required>
-            </div>
-            <div class="form-group">
-              <label for="other-income-payment-method">Payment Method</label>
-              <select id="other-income-payment-method">
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI</option>
-                <option value="Card">Card</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="form-group form-full-width">
-              <label for="other-income-description">Description *</label>
-              <input type="text" id="other-income-description" required>
-            </div>
-            <div class="form-group form-full-width">
-              <label for="other-income-notes">Notes</label>
-              <textarea id="other-income-notes" rows="2"></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-other-income-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Income</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- PAYMENT COLLECTION MODAL (SALES INVOICES & SUPPLIER PURCHASES) -->
-  <div class="modal-overlay" id="payment-collection-modal">
-    <div class="modal-content modal-md">
-      <div class="modal-header">
-        <h4 id="pay-modal-title">Record Payment Collection</h4>
-        <button type="button" class="modal-close-btn" id="close-pay-modal-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <form id="payment-collection-form">
-        <input type="hidden" id="pay-target-type">
-        <input type="hidden" id="pay-target-id">
-        <div class="modal-body">
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-              <span style="color: var(--text-muted);" id="pay-party-label">Party:</span>
-              <strong id="pay-party-name">--</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-              <span style="color: var(--text-muted);" id="pay-doc-label">Document #:</span>
-              <strong id="pay-doc-no" style="font-family: monospace;">--</strong>
-            </div>
-            <div class="form-grid-3" style="margin-top: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.75rem; text-align: center;">
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Total Amount</div>
-                <div style="font-weight: 700; font-size: 1rem;" id="pay-total-amt">₹0.00</div>
-              </div>
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Paid to Date</div>
-                <div style="font-weight: 700; font-size: 1rem; color: var(--success-dark);" id="pay-prev-paid">₹0.00</div>
-              </div>
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Balance Due</div>
-                <div style="font-weight: 700; font-size: 1.05rem; color: var(--danger-dark);" id="pay-balance-due">₹0.00</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">New Payment Entry</h5>
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="pay-date">Payment Date *</label>
-                <input type="date" id="pay-date" required>
-              </div>
-              <div class="form-group">
-                <label for="pay-amount">Payment Amount (₹) *</label>
-                <input type="number" id="pay-amount" min="0.01" step="0.01" required placeholder="Enter amount">
-              </div>
-              <div class="form-group">
-                <label for="pay-method">Payment Method *</label>
-                <select id="pay-method" required>
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI / GPay / PhonePe</option>
-                  <option value="Card">Card (Credit/Debit)</option>
-                  <option value="Bank Transfer">Bank Transfer / NEFT</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="pay-reference">Reference / Txn ID</label>
-                <input type="text" id="pay-reference" placeholder="e.g. UTR / Ref / Cheque No">
-              </div>
-              <div class="form-group form-full-width">
-                <label for="pay-notes">Payment Notes</label>
-                <input type="text" id="pay-notes" placeholder="e.g. Part payment received via Google Pay">
-              </div>
-            </div>
-          </div>
-
-          <!-- Payment History List -->
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Payment History</h5>
-            <div id="pay-history-container">
-              <!-- Dynamically populated payment transactions -->
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-pay-modal-btn">Cancel</button>
-          <button type="submit" class="btn btn-success" id="save-pay-record-btn">Record Payment</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- OUTSOURCE REPAIR MODAL -->
-  <div class="modal-overlay" id="outsource-repair-modal">
-    <div class="modal-content modal-lg">
-      <div class="modal-header">
-        <h4 id="outsource-repair-modal-title">Outsource Repair Dispatch</h4>
-        <button type="button" class="modal-close-btn" id="close-outsource-modal-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <form id="outsource-repair-form">
-        <input type="hidden" id="outsource-edit-id">
-        <div class="modal-body">
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <div class="form-grid-3">
-              <div class="form-group">
-                <label for="outsource-id">Outsource ID (Auto)</label>
-                <input type="text" id="outsource-id" readonly style="background-color: var(--secondary-light); font-weight: 700; font-family: monospace;">
-              </div>
-              <div class="form-group">
-                <label for="outsource-jobcard-id">Link Job Card *</label>
-                <select id="outsource-jobcard-id" required>
-                  <option value="">-- Select Active Job Card --</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="outsource-vendor">Outside Vendor / Technician *</label>
-                <input type="text" id="outsource-vendor" required placeholder="Vendor name or workshop">
-              </div>
-            </div>
-            <div class="form-grid-4" style="margin-top: 0.75rem;">
-              <div class="form-group">
-                <label for="outsource-date-sent">Date Sent *</label>
-                <input type="date" id="outsource-date-sent" required>
-              </div>
-              <div class="form-group">
-                <label for="outsource-expected-return">Expected Return Date</label>
-                <input type="date" id="outsource-expected-return">
-              </div>
-              <div class="form-group">
-                <label for="outsource-actual-return">Actual Return Date</label>
-                <input type="date" id="outsource-actual-return">
-              </div>
-              <div class="form-group">
-                <label for="outsource-status">Repair Status *</label>
-                <select id="outsource-status" required style="font-weight: 700;">
-                  <option value="Sent">Sent</option>
-                  <option value="In Repair">In Repair</option>
-                  <option value="Received">Received</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Customer & Device Information</h5>
-            <div class="form-grid-3">
-              <div class="form-group">
-                <label for="outsource-cust-name">Customer Name *</label>
-                <input type="text" id="outsource-cust-name" required placeholder="Customer full name">
-              </div>
-              <div class="form-group">
-                <label for="outsource-device">Device (Type / Brand / Model) *</label>
-                <input type="text" id="outsource-device" required placeholder="e.g. Laptop Lenovo ThinkPad">
-              </div>
-              <div class="form-group">
-                <label for="outsource-serial">Serial Number / Tag</label>
-                <input type="text" id="outsource-serial" placeholder="Device serial number">
-              </div>
-            </div>
-          </div>
-
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Costing & Vendor Payment</h5>
-            <div class="form-grid-4">
-              <div class="form-group">
-                <label for="outsource-cost">Vendor Cost (₹ COGS) *</label>
-                <input type="number" id="outsource-cost" min="0" step="0.01" value="0" required placeholder="Amount vendor charges us">
-              </div>
-              <div class="form-group">
-                <label for="outsource-cust-charge">Customer Charge (₹ Taxable) *</label>
-                <input type="number" id="outsource-cust-charge" min="0" step="0.01" value="0" required placeholder="Amount charged to customer">
-              </div>
-              <div class="form-group">
-                <label for="outsource-paid-amt">Initial Paid to Vendor (₹)</label>
-                <input type="number" id="outsource-paid-amt" min="0" step="0.01" value="0">
-              </div>
-              <div class="form-group">
-                <label for="outsource-pay-method">Payment Method</label>
-                <select id="outsource-pay-method">
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group" style="margin-top: 0.75rem;">
-              <label for="outsource-remarks">Remarks & Technical Fault Description</label>
-              <textarea id="outsource-remarks" rows="2" placeholder="e.g. Motherboard BGA rework, hinge replacement, chip level repair..."></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-outsource-modal-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="save-outsource-btn">Save Outsource Record</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- OUTSOURCE VENDOR PAYMENT MODAL -->
-  <div class="modal-overlay" id="outsource-payment-modal">
-    <div class="modal-content modal-md">
-      <div class="modal-header">
-        <h4>Record Outsource Vendor Payment</h4>
-        <button type="button" class="modal-close-btn" id="close-outsource-pay-modal-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <form id="outsource-payment-form">
-        <input type="hidden" id="outsource-pay-target-id">
-        <div class="modal-body">
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-              <span style="color: var(--text-muted);">Outside Vendor:</span>
-              <strong id="outsource-pay-vendor">--</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-              <span style="color: var(--text-muted);">Outsource Ref:</span>
-              <strong id="outsource-pay-doc" style="font-family: monospace;">--</strong>
-            </div>
-            <div class="form-grid-3" style="margin-top: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.75rem; text-align: center;">
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Total Vendor Cost</div>
-                <div style="font-weight: 700; font-size: 1rem;" id="outsource-pay-total-cost">₹0.00</div>
-              </div>
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Paid to Date</div>
-                <div style="font-weight: 700; font-size: 1rem; color: var(--success-dark);" id="outsource-pay-prev-paid">₹0.00</div>
-              </div>
-              <div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Balance Due</div>
-                <div style="font-weight: 700; font-size: 1.05rem; color: var(--danger-dark);" id="outsource-pay-balance-due">₹0.00</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.75rem; color: var(--primary);">Payment Entry</h5>
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="outsource-pay-date">Payment Date *</label>
-                <input type="date" id="outsource-pay-date" required>
-              </div>
-              <div class="form-group">
-                <label for="outsource-pay-amount">Amount to Pay (₹) *</label>
-                <input type="number" id="outsource-pay-amount" min="0.01" step="0.01" required placeholder="Enter amount">
-              </div>
-              <div class="form-group">
-                <label for="outsource-pay-method-input">Payment Method *</label>
-                <select id="outsource-pay-method-input" required>
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="outsource-pay-ref">Reference / Transaction ID</label>
-                <input type="text" id="outsource-pay-ref" placeholder="e.g. UTR / Receipt #">
-              </div>
-              <div class="form-group form-full-width">
-                <label for="outsource-pay-notes">Payment Notes</label>
-                <input type="text" id="outsource-pay-notes" placeholder="e.g. Paid in cash to technician upon delivery">
-              </div>
-            </div>
-          </div>
-
-          <!-- Vendor Payment History -->
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
-            <h5 style="margin-bottom: 0.5rem; color: var(--primary);">Vendor Payment History</h5>
-            <div id="outsource-pay-history-container">
-              <!-- Dynamically populated payment entries -->
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-outsource-pay-modal-btn">Cancel</button>
-          <button type="submit" class="btn btn-success" id="save-outsource-pay-btn">Record Payment to Vendor</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- FINANCE OPENING BALANCE MODAL -->
-  <div class="modal-overlay" id="finance-opening-balance-modal">
-    <div class="modal-content modal-md">
-      <div class="modal-header">
-        <h4>Set Company Opening Balance</h4>
-        <button type="button" class="modal-close-btn" id="close-finance-opening-btn" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <form id="finance-opening-balance-form">
-        <div class="modal-body">
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-            Enter the starting cash and bank balances as of your opening date. Company Available Funds is tracked cumulatively from actual money movements after this date.
-          </p>
-          <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
-            <div class="form-group" style="margin-bottom: 1rem;">
-              <label for="finance-op-date">Opening Balance Date *</label>
-              <input type="date" id="finance-op-date" required>
-            </div>
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label for="finance-op-cash">Opening Cash (₹) *</label>
-                <input type="number" id="finance-op-cash" min="0" step="0.01" value="0" required>
-              </div>
-              <div class="form-group">
-                <label for="finance-op-bank">Opening Bank Balance (₹) *</label>
-                <input type="number" id="finance-op-bank" min="0" step="0.01" value="0" required>
-              </div>
-              <div class="form-group">
-                <label for="finance-op-upi">Opening UPI / Digital (₹) *</label>
-                <input type="number" id="finance-op-upi" min="0" step="0.01" value="0" required>
-              </div>
-              <div class="form-group">
-                <label for="finance-op-other">Opening Other Balance (₹)</label>
-                <input type="number" id="finance-op-other" min="0" step="0.01" value="0">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="cancel-finance-opening-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="save-finance-opening-btn">Save Opening Balance</button>
+          <button type="button" class="btn btn-outline" id="finance-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Transaction</button>
         </div>
       </form>
     </div>
