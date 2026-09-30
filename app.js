@@ -4720,17 +4720,27 @@ function renderReports() {
     const financeRecords = (() => { try { return JSON.parse(localStorage.getItem('bios_finance_records_v1')) || []; } catch(e) { return []; } })();
     const sales = (state.billings || []).filter(x => isWithinDateRange(x.date));
     const services = (state.serviceInvoices || []).filter(x => isWithinDateRange(x.date));
-    const outside = financeRecords.filter(x => x.type === 'OUTSIDE_SERVICE' && isWithinDateRange(x.date));
+    const outsideCosts = financeRecords.filter(x => x.type === 'OUTSOURCED_COST' && isWithinDateRange(x.date));
     const expenses = financeRecords.filter(x => x.type === 'EXPENSE' && isWithinDateRange(x.date));
     const income = financeRecords.filter(x => x.type === 'OTHER_INCOME' && isWithinDateRange(x.date));
     const returns = (state.returns || []).filter(x => x.type === 'SALES_RETURN' && isWithinDateRange(x.date));
     const sum = (arr, fn) => arr.reduce((n,x) => n + (Number(fn(x)) || 0), 0);
+    const servicePartsCost = inv => {
+      const jc = (state.serviceJobCards || []).find(j => j.id === inv.jobCardId);
+      if (!jc) return 0;
+      return sum(jc.partsItems || [], p => {
+        if (!p.itemCode) return 0;
+        const stock = (state.inventory || []).find(i => i.itemCode === p.itemCode);
+        return (Number(stock?.costPrice ?? stock?.purchasePrice ?? p.costPrice ?? p.unitCost ?? 0) || 0) * (Number(p.qty) || 0);
+      });
+    };
     const salesRevenue = sum(sales, x => x.baseAmount), serviceRevenue = sum(services, x => x.subtotal ?? x.grandTotal);
-    const outsideRevenue = sum(outside, x => x.amount), otherIncome = sum(income, x => x.amount), refunds = sum(returns, x => x.amount);
+    const otherIncome = sum(income, x => x.amount), refunds = sum(returns, x => x.amount);
     const productCOGS = sum(sales, x => (Number(x.costPrice)||0) * (Number(x.qty)||1));
-    const directOutside = sum(outside, x => x.directCost), opExpenses = sum(expenses, x => x.amount);
-    const netRevenue = salesRevenue + serviceRevenue + outsideRevenue - refunds;
-    const grossProfit = netRevenue - productCOGS - directOutside;
+    const servicePartsCOGS = sum(services, servicePartsCost);
+    const outsourcedCost = sum(outsideCosts, x => x.amount), opExpenses = sum(expenses, x => x.amount);
+    const netRevenue = salesRevenue + serviceRevenue - refunds;
+    const grossProfit = netRevenue - productCOGS - servicePartsCOGS - outsourcedCost;
     const netProfit = grossProfit + otherIncome - opExpenses;
     const moneyR = n => formatCurrency(Number(n)||0);
 
@@ -4738,12 +4748,12 @@ function renderReports() {
       tableHeadersHtml = '<tr><th>Financial Metric</th><th>Amount (INR)</th><th>Notes</th></tr>';
       const rows = [
         ['Product Sales Revenue', salesRevenue, 'Billing / sales'],
-        ['Service Revenue', serviceRevenue, 'Service invoices'],
-        ['Outside Service Revenue', outsideRevenue, 'Manually recorded outside jobs'],
+        ['Service Revenue', serviceRevenue, 'Service invoices including labour + spare parts'],
         ['Less: Sales Returns', -refunds, 'Refund / return adjustment'],
         ['Net Operating Revenue', netRevenue, 'Revenue after returns'],
         ['Less: Product COGS', -productCOGS, 'Cost of goods sold'],
-        ['Less: Outside Service Direct Cost', -directOutside, 'Direct cost for outside jobs'],
+        ['Less: Service Spare Parts Cost', -servicePartsCOGS, 'Actual inventory cost of spare parts used in service'],
+        ['Less: Outside Vendor Service Cost', -outsourcedCost, 'Amount paid to external service provider'],
         ['Gross Profit', grossProfit, 'Before company operating expenses'],
         ['Other Income', otherIncome, 'Non-sales income'],
         ['Company Operating Expenses', -opExpenses, 'Rent, salary, utilities, etc.'],
@@ -4751,29 +4761,36 @@ function renderReports() {
       ];
       tableRowsHtml = rows.map(r => `<tr><td style="font-weight:${r[0].includes('NET')||r[0]==='Gross Profit'?'800':'600'}">${r[0]}</td><td style="font-weight:800;${r[1]<0?'color:var(--danger-dark)':''}">${moneyR(r[1])}</td><td>${r[2]}</td></tr>`).join('');
     } else if (moduleVal === 'FinanceTrend') {
-      tableHeadersHtml = '<tr><th>Month</th><th>Sales</th><th>Service</th><th>Outside Service</th><th>Other Income</th><th>Net Revenue</th><th>COGS</th><th>Expenses</th><th>Net Profit / Loss</th></tr>';
-      const dates = [...sales,...services,...outside,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean);
+      tableHeadersHtml = '<tr><th>Month</th><th>Sales</th><th>Service</th><th>Other Income</th><th>Net Revenue</th><th>Product COGS</th><th>Service Parts Cost</th><th>Outside Vendor Cost</th><th>Expenses</th><th>Net Profit / Loss</th></tr>';
+      const dates = [...sales,...services,...outsideCosts,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean);
       const months = [...new Set(dates)].sort().reverse();
       const monthRows = months.map(k => {
         const inM = x => String(x.date||'').slice(0,7)===k;
-        const sr=sum(sales.filter(inM),x=>x.baseAmount), sv=sum(services.filter(inM),x=>x.subtotal ?? x.grandTotal), ov=sum(outside.filter(inM),x=>x.amount), oi=sum(income.filter(inM),x=>x.amount), rf=sum(returns.filter(inM),x=>x.amount), cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)), dc=sum(outside.filter(inM),x=>x.directCost), ex=sum(expenses.filter(inM),x=>x.amount);
-        const rev=sr+sv+ov-rf, net=rev-cg-dc+oi-ex;
-        return [k,sr,sv,ov,oi,rev,cg+dc,ex,net];
+        const sr=sum(sales.filter(inM),x=>x.baseAmount), sv=sum(services.filter(inM),x=>x.subtotal ?? x.grandTotal), oi=sum(income.filter(inM),x=>x.amount), rf=sum(returns.filter(inM),x=>x.amount);
+        const cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1));
+        const sp=sum(services.filter(inM),servicePartsCost), ov=sum(outsideCosts.filter(inM),x=>x.amount), ex=sum(expenses.filter(inM),x=>x.amount);
+        const rev=sr+sv-rf, net=rev-cg-sp-ov+oi-ex;
+        return [k,sr,sv,oi,rev,cg,sp,ov,ex,net];
       });
-      tableRowsHtml = monthRows.length ? monthRows.map(r=>`<tr><td style="font-weight:800">${new Date(r[0]+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</td>${r.slice(1).map((v,i)=>`<td style="font-weight:${i===4||i===7?'800':'500'}">${moneyR(v)}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="9" class="no-data-msg">No financial data found.</td></tr>';
+      tableRowsHtml = monthRows.length ? monthRows.map(r=>`<tr><td style="font-weight:800">${new Date(r[0]+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</td>${r.slice(1).map((v,i)=>`<td style="font-weight:${i===3||i===8?'800':'500'}">${moneyR(v)}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="10" class="no-data-msg">No financial data found.</td></tr>';
     } else if (moduleVal === 'FinanceLedger') {
-      tableHeadersHtml = '<tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th><th>Direct Cost</th><th>Profit / Impact</th></tr>';
+      tableHeadersHtml = '<tr><th>Date</th><th>Type</th><th>Description</th><th>Customer / Vendor</th><th>Category</th><th>Reference</th><th>Amount</th><th>Impact</th></tr>';
       let rows = financeRecords.filter(x => isWithinDateRange(x.date));
       rows = rows.filter(x => !searchVal || [x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)));
-      tableRowsHtml = rows.length ? rows.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(x=>{const impact=x.type==='OUTSIDE_SERVICE'?Number(x.amount||0)-Number(x.directCost||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0); const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service'; return `<tr><td>${formatDate(x.date)}</td><td>${type}</td><td style="font-weight:600">${x.description||'--'}${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td>${moneyR(x.amount)}</td><td>${x.type==='OUTSIDE_SERVICE'?moneyR(x.directCost):'--'}</td><td style="font-weight:800">${moneyR(impact)}</td></tr>`}).join('') : '<tr><td colspan="8" class="no-data-msg">No finance transactions found.</td></tr>';
+      tableRowsHtml = rows.length ? rows.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(x=>{
+        const impact=x.type==='OUTSOURCED_COST'?-Number(x.amount||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0);
+        const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service Cost';
+        return `<tr><td>${formatDate(x.date)}</td><td>${type}</td><td style="font-weight:600">${x.description||'--'}</td><td>${x.customer||'--'}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td>${moneyR(x.amount)}</td><td style="font-weight:800">${moneyR(impact)}</td></tr>`;
+      }).join('') : '<tr><td colspan="8" class="no-data-msg">No finance transactions found.</td></tr>';
     } else {
-      const map={FinanceExpenses:['Company Expenses','EXPENSE'],FinanceOutside:['Outside Services','OUTSIDE_SERVICE'],FinanceIncome:['Other Income','OTHER_INCOME']};
+      const map={FinanceExpenses:['Company Expenses','EXPENSE'],FinanceOutside:['Outside Service Costs','OUTSOURCED_COST'],FinanceIncome:['Other Income','OTHER_INCOME']};
       const [title,type]=map[moduleVal];
-      tableHeadersHtml = type==='OUTSIDE_SERVICE' ? '<tr><th>Date</th><th>Customer / Job</th><th>Description</th><th>Category</th><th>Revenue</th><th>Direct Cost</th><th>Job Profit</th></tr>' : '<tr><th>Date</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th></tr>';
+      tableHeadersHtml = type==='OUTSOURCED_COST' ? '<tr><th>Date</th><th>Vendor / Customer</th><th>Description</th><th>Category</th><th>Reference</th><th>Vendor Payment</th></tr>' : '<tr><th>Date</th><th>Description</th><th>Category</th><th>Reference</th><th>Amount</th></tr>';
       let rows=financeRecords.filter(x=>x.type===type&&isWithinDateRange(x.date)).filter(x=>!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal))).sort((a,b)=>new Date(b.date)-new Date(a.date));
-      if(type==='OUTSIDE_SERVICE') tableRowsHtml=rows.length?rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td>${x.customer||'--'}</td><td>${x.description||'--'}</td><td>${x.category||'--'}</td><td>${moneyR(x.amount)}</td><td>${moneyR(x.directCost)}</td><td style="font-weight:800">${moneyR(Number(x.amount||0)-Number(x.directCost||0))}</td></tr>`).join(''):'<tr><td colspan="7" class="no-data-msg">No records found.</td></tr>';
+      if(type==='OUTSOURCED_COST') tableRowsHtml=rows.length?rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td>${x.customer||'--'}</td><td>${x.description||'--'}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${moneyR(x.amount)}</td></tr>`).join(''):'<tr><td colspan="6" class="no-data-msg">No outsourced service costs found.</td></tr>';
       else tableRowsHtml=rows.length?rows.map(x=>`<tr><td>${formatDate(x.date)}</td><td style="font-weight:600">${x.description||'--'}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${moneyR(x.amount)}</td></tr>`).join(''):'<tr><td colspan="5" class="no-data-msg">No records found.</td></tr>';
     }
+
 
   // 1. ENQUIRIES REPORT (EXISTING)
   } else if (moduleVal === 'Enquiries') {
@@ -5512,16 +5529,16 @@ function handleReportExport() {
   if (moduleVal.startsWith('Finance')) {
     const financeRecords = (() => { try { return JSON.parse(localStorage.getItem('bios_finance_records_v1')) || []; } catch(e) { return []; } })();
     const sales = (state.billings || []).filter(x=>isWithinDateRange(x.date)), services=(state.serviceInvoices||[]).filter(x=>isWithinDateRange(x.date));
-    const outside=financeRecords.filter(x=>x.type==='OUTSIDE_SERVICE'&&isWithinDateRange(x.date)), expenses=financeRecords.filter(x=>x.type==='EXPENSE'&&isWithinDateRange(x.date)), income=financeRecords.filter(x=>x.type==='OTHER_INCOME'&&isWithinDateRange(x.date));
+    const outside=financeRecords.filter(x=>x.type==='OUTSOURCED_COST'&&isWithinDateRange(x.date)), expenses=financeRecords.filter(x=>x.type==='EXPENSE'&&isWithinDateRange(x.date)), income=financeRecords.filter(x=>x.type==='OTHER_INCOME'&&isWithinDateRange(x.date));
     const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isWithinDateRange(x.date)); const sum=(a,f)=>a.reduce((n,x)=>n+(Number(f(x))||0),0); const esc=escapeCSV;
     if(moduleVal==='FinanceSummary'){
-      const sr=sum(sales,x=>x.baseAmount), sv=sum(services,x=>x.subtotal??x.grandTotal), ov=sum(outside,x=>x.amount), oi=sum(income,x=>x.amount), rf=sum(returns,x=>x.amount), cg=sum(sales,x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)), dc=sum(outside,x=>x.directCost), ex=sum(expenses,x=>x.amount), rev=sr+sv+ov-rf, gp=rev-cg-dc, np=gp+oi-ex;
+      const sr=sum(sales,x=>x.baseAmount), sv=sum(services,x=>x.subtotal??x.grandTotal), ov=0, oi=sum(income,x=>x.amount), rf=sum(returns,x=>x.amount), cg=sum(sales,x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)), dc=sum(outside,x=>x.amount), ex=sum(expenses,x=>x.amount), rev=sr+sv-rf, gp=rev-cg-dc, np=gp+oi-ex;
       csvContent+='Financial Metric,Amount (INR),Notes\n'; [['Product Sales Revenue',sr,'Billing / sales'],['Service Revenue',sv,'Service invoices'],['Outside Service Revenue',ov,'Outside jobs'],['Less: Sales Returns',-rf,'Return adjustment'],['Net Operating Revenue',rev,'Revenue after returns'],['Less: Product COGS',-cg,'Cost of goods sold'],['Less: Outside Service Direct Cost',-dc,'Direct job cost'],['Gross Profit',gp,'Before operating expenses'],['Other Income',oi,'Non-sales income'],['Company Operating Expenses',-ex,'Operating expenses'],['NET PROFIT / LOSS',np,np>=0?'Profit':'Loss']].forEach(r=>csvContent+=`${esc(r[0])},${esc(r[1])},${esc(r[2])}\n`);
     } else if(moduleVal==='FinanceLedger'){
-      const rows=financeRecords.filter(x=>isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No finance transactions to export!'); csvContent+='Date,Type,Description,Customer,Category,Reference,Amount (INR),Direct Cost (INR),Profit / Impact (INR)\n'; rows.forEach(x=>{const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service'; const impact=x.type==='OUTSIDE_SERVICE'?Number(x.amount||0)-Number(x.directCost||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0); csvContent+=`${esc(x.date)},${esc(type)},${esc(x.description)},${esc(x.customer||'')},${esc(x.category)},${esc(x.reference)},${esc(x.amount)},${esc(x.directCost||0)},${esc(impact)}\n`;});
+      const rows=financeRecords.filter(x=>isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No finance transactions to export!'); csvContent+='Date,Type,Description,Customer,Category,Reference,Amount (INR),Direct Cost (INR),Profit / Impact (INR)\n'; rows.forEach(x=>{const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service Cost'; const impact=x.type==='OUTSOURCED_COST'?Number(x.amount||0)-Number(x.directCost||0):x.type==='EXPENSE'?-Number(x.amount||0):Number(x.amount||0); csvContent+=`${esc(x.date)},${esc(type)},${esc(x.description)},${esc(x.customer||'')},${esc(x.category)},${esc(x.reference)},${esc(x.amount)},${esc(x.directCost||0)},${esc(impact)}\n`;});
     } else if(moduleVal==='FinanceTrend'){
-      const dates=[...sales,...services,...outside,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean), months=[...new Set(dates)].sort(); csvContent+='Month,Sales,Service,Outside Service,Other Income,Net Revenue,COGS,Expenses,Net Profit / Loss\n'; months.forEach(k=>{const inM=x=>String(x.date||'').slice(0,7)===k;const sr=sum(sales.filter(inM),x=>x.baseAmount),sv=sum(services.filter(inM),x=>x.subtotal??x.grandTotal),ov=sum(outside.filter(inM),x=>x.amount),oi=sum(income.filter(inM),x=>x.amount),rf=sum(returns.filter(inM),x=>x.amount),cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)),dc=sum(outside.filter(inM),x=>x.directCost),ex=sum(expenses.filter(inM),x=>x.amount),rev=sr+sv+ov-rf,np=rev-cg-dc+oi-ex;csvContent+=`${esc(k)},${sr},${sv},${ov},${oi},${rev},${cg+dc},${ex},${np}\n`;});
-    } else { const type={FinanceExpenses:'EXPENSE',FinanceOutside:'OUTSIDE_SERVICE',FinanceIncome:'OTHER_INCOME'}[moduleVal]; const rows=financeRecords.filter(x=>x.type===type&&isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No records to export!'); if(type==='OUTSIDE_SERVICE'){csvContent+='Date,Customer / Job,Description,Category,Revenue (INR),Direct Cost (INR),Job Profit (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.customer||'')},${esc(x.description)},${esc(x.category)},${esc(x.amount)},${esc(x.directCost||0)},${esc(Number(x.amount||0)-Number(x.directCost||0))}\n`);}else{csvContent+='Date,Description,Category,Reference,Amount (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.description)},${esc(x.category)},${esc(x.reference)},${esc(x.amount)}\n`);}}
+      const dates=[...sales,...services,...outside,...expenses,...income].map(x=>String(x.date||'').slice(0,7)).filter(Boolean), months=[...new Set(dates)].sort(); csvContent+='Month,Sales,Service,Other Income,Net Revenue,COGS,Outside Vendor Cost,Expenses,Net Profit / Loss\n'; months.forEach(k=>{const inM=x=>String(x.date||'').slice(0,7)===k;const sr=sum(sales.filter(inM),x=>x.baseAmount),sv=sum(services.filter(inM),x=>x.subtotal??x.grandTotal),ov=0,oi=sum(income.filter(inM),x=>x.amount),rf=sum(returns.filter(inM),x=>x.amount),cg=sum(sales.filter(inM),x=>(Number(x.costPrice)||0)*(Number(x.qty)||1)),dc=sum(outside.filter(inM),x=>x.amount),ex=sum(expenses.filter(inM),x=>x.amount),rev=sr+sv-rf,np=rev-cg-dc+oi-ex;csvContent+=`${esc(k)},${sr},${sv},${oi},${rev},${cg},${dc},${ex},${np}\n`;});
+    } else { const type={FinanceExpenses:'EXPENSE',FinanceOutside:'OUTSOURCED_COST',FinanceIncome:'OTHER_INCOME'}[moduleVal]; const rows=financeRecords.filter(x=>x.type===type&&isWithinDateRange(x.date)&&(!searchVal||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(searchVal)))); if(!rows.length)return alert('No records to export!'); if(type==='OUTSOURCED_COST'){csvContent+='Date,Customer / Job,Description,Category,Revenue (INR),Direct Cost (INR),Job Profit (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.customer||'')},${esc(x.description)},${esc(x.category)},${esc(x.amount)},${esc(x.directCost||0)},${esc(Number(x.amount||0)-Number(x.directCost||0))}\n`);}else{csvContent+='Date,Description,Category,Reference,Amount (INR)\n';rows.forEach(x=>csvContent+=`${esc(x.date)},${esc(x.description)},${esc(x.category)},${esc(x.reference)},${esc(x.amount)}\n`);}}
   // 1. Enquiries
   } else if (moduleVal === 'Enquiries') {
     const list = state.enquiries.filter(e => isWithinDateRange(e.date));
@@ -5750,24 +5767,56 @@ function handleReportExport() {
     const range=periodRange();
     const sales=(state.billings||[]).filter(x=>isInRange(x.date,range.from,range.to));
     const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,range.from,range.to));
-    const outside=financeState.records.filter(x=>x.type==='OUTSIDE_SERVICE' && isInRange(x.date,range.from,range.to));
+    const outside=financeState.records.filter(x=>x.type==='OUTSOURCED_COST' && isInRange(x.date,range.from,range.to));
     const expenses=financeState.records.filter(x=>x.type==='EXPENSE' && isInRange(x.date,range.from,range.to));
     const other=financeState.records.filter(x=>x.type==='OTHER_INCOME' && isInRange(x.date,range.from,range.to));
     const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN' && isInRange(x.date,range.from,range.to));
     const salesRevenue=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0);
     const serviceRevenue=services.reduce((s,x)=>s+(Number(x.subtotal ?? x.grandTotal)||0),0);
-    const outsideRevenue=outside.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    // Service spare-parts cost: customer is billed for parts, but P&L must subtract the actual inventory cost.
+    const servicePartsCOGS=services.reduce((total,inv)=>{
+      const jc=(state.serviceJobCards||[]).find(j=>j.id===inv.jobCardId);
+      const partsFromJob = (jc?.partsItems||[]);
+      const partsFromInvoice = (inv.items||[]).filter(i=>i.type==='Spare Part');
+      const rows = partsFromJob.length ? partsFromJob : partsFromInvoice;
+      return total + rows.reduce((sum,p)=>{
+        const code=p.itemCode;
+        const stock=code ? (state.inventory||[]).find(i=>i.itemCode===code) : null;
+        const cost=Number(stock?.costPrice ?? stock?.purchasePrice ?? p.costPrice ?? p.unitCost ?? 0)||0;
+        return sum+cost*(Number(p.qty)||1);
+      },0);
+    },0);
+    const servicePartsBilled=services.reduce((sum,inv)=>{
+      const labour=Number(inv.labourAmount)||0, parts=Number(inv.partsAmount)||0;
+      const discount=Math.min(Number(inv.discount)||0, labour+parts);
+      const taxable=Math.max(0, labour+parts-discount);
+      const gst=Number(inv.gstAmount);
+      const tax=(Number.isFinite(gst) && gst>0) ? gst : taxable*(Number(inv.gstRate)||0)/100;
+      const taxableParts=Math.max(0, parts - (labour+parts ? discount*(parts/(labour+parts)) : 0));
+      return sum + taxableParts + (taxable ? tax*(taxableParts/taxable) : 0);
+    },0);
+    const serviceLabourBilled=services.reduce((sum,inv)=>{
+      const labour=Number(inv.labourAmount)||0, parts=Number(inv.partsAmount)||0;
+      const discount=Math.min(Number(inv.discount)||0, labour+parts);
+      const taxable=Math.max(0, labour+parts-discount);
+      const gst=Number(inv.gstAmount);
+      const tax=(Number.isFinite(gst) && gst>0) ? gst : taxable*(Number(inv.gstRate)||0)/100;
+      const taxableLabour=Math.max(0, labour - (labour+parts ? discount*(labour/(labour+parts)) : 0));
+      return sum + taxableLabour + (taxable ? tax*(taxableLabour/taxable) : 0);
+    },0);
+    const labourDirectCost=services.reduce((sum,inv)=>sum + Number(inv.labourCost || inv.technicianCost || inv.directLabourCost || 0),0);
+    const outsideRevenue=0;
     const refund=returns.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const productCOGS=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)
       - returns.reduce((s,r)=>{
           const inv=sales.find(x=>x.invoiceNo===r.invNo);
           return s+(inv ? (Number(inv.costPrice)||0)*(Number(r.qty)||0) : 0);
         },0);
-    const directOutside=outside.reduce((s,x)=>s+(Number(x.directCost)||0),0);
+    const directOutside=outside.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const expenseTotal=expenses.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const otherIncome=other.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const netOperatingRevenue=salesRevenue+serviceRevenue+outsideRevenue-refund;
-    const grossProfit=netOperatingRevenue-productCOGS-directOutside;
+    const grossProfit=netOperatingRevenue-productCOGS-servicePartsCOGS-directOutside;
     const netProfit=grossProfit+otherIncome-expenseTotal;
     const collectedSales=sales.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
     const collectedService=services.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
@@ -5776,7 +5825,9 @@ function handleReportExport() {
     const cashCollected=collectedSales+collectedService+collectedOutside+collectedOther;
     const outstandingSales=sales.reduce((s,x)=>s+Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0)),0);
     const outstandingService=services.reduce((s,x)=>s+Math.max(0,(Number(x.grandTotal)||0)-(Number(x.paidAmount)||0)),0);
-    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,outsideRevenue,refund,productCOGS,directOutside,expenseTotal,otherIncome,netOperatingRevenue,grossProfit,netProfit,cashCollected,outstanding:outstandingSales+outstandingService};
+    const partsProfit=servicePartsBilled-servicePartsCOGS;
+    const labourProfit=serviceLabourBilled-labourDirectCost;
+    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,outsideRevenue,refund,productCOGS,servicePartsCOGS,servicePartsBilled,serviceLabourBilled,labourDirectCost,partsProfit,labourProfit,directOutside,expenseTotal,otherIncome,netOperatingRevenue,grossProfit,netProfit,cashCollected,outstanding:outstandingSales+outstandingService};
   }
 
   function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
@@ -5785,7 +5836,7 @@ function handleReportExport() {
     const label = r.from && r.to ? `${r.from} to ${r.to}` : 'All recorded periods';
     setText('finance-pnl-period-label',label);
     setText('fin-revenue',money(d.netOperatingRevenue));
-    setText('fin-cogs',money(d.productCOGS+d.directOutside));
+    setText('fin-cogs',money(d.productCOGS+d.servicePartsCOGS+d.directOutside));
     setText('fin-gross-profit',money(d.grossProfit));
     setText('fin-expenses',money(d.expenseTotal));
     setText('fin-net-profit',money(d.netProfit));
@@ -5794,12 +5845,17 @@ function handleReportExport() {
     setText('fin-revenue-note','Sales + Service + Outside Service');
     setText('fin-gross-margin',`${d.netOperatingRevenue ? ((d.grossProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% margin`);
     setText('fin-net-margin',`${d.netOperatingRevenue ? ((d.netProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% net margin`);
+    setText('fin-service-labour',money(d.serviceLabourBilled));
+    setText('fin-service-parts',money(d.servicePartsBilled));
+    setText('fin-parts-profit',money(d.partsProfit));
+    setText('fin-labour-profit',money(d.labourProfit));
     setText('pnl-sales',money(d.salesRevenue));
     setText('pnl-service',money(d.serviceRevenue));
     setText('pnl-outside',money(d.outsideRevenue));
     setText('pnl-returns',money(d.refund));
     setText('pnl-net-revenue',money(d.netOperatingRevenue));
     setText('pnl-product-cogs',money(d.productCOGS));
+    setText('pnl-service-parts-cogs',money(d.servicePartsCOGS));
     setText('pnl-direct-service-cost',money(d.directOutside));
     setText('pnl-gross',money(d.grossProfit));
     setText('pnl-other-income',money(d.otherIncome));
@@ -5812,7 +5868,7 @@ function handleReportExport() {
 
     const sourceEl=document.getElementById('finance-source-breakdown');
     if(sourceEl){
-      const sources=[['Product Sales',d.salesRevenue],['Service Invoices',d.serviceRevenue],['Outside Services',d.outsideRevenue],['Other Income',d.otherIncome]];
+      const sources=[['Product Sales',d.salesRevenue],['Service Invoices',d.serviceRevenue],['Outsourced Service Cost',d.directOutside],['Other Income',d.otherIncome]];
       const max=Math.max(1,...sources.map(x=>x[1]));
       sourceEl.innerHTML=sources.map(([name,val])=>`<div class="finance-source-item"><span class="finance-source-label">${name}</span><span class="finance-source-value">${money(val)}</span><div class="finance-source-track"><div class="finance-source-fill" style="width:${Math.min(100,(val/max)*100)}%"></div></div></div>`).join('');
     }
@@ -5837,16 +5893,26 @@ function handleReportExport() {
     const [y,m]=key.split('-').map(Number), from=`${key}-01`, to=`${y}-${String(m).padStart(2,'0')}-${new Date(y,m,0).getDate()}`;
     const sales=(state.billings||[]).filter(x=>isInRange(x.date,from,to));
     const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,from,to));
-    const out=financeState.records.filter(x=>x.type==='OUTSIDE_SERVICE'&&isInRange(x.date,from,to));
+    const out=financeState.records.filter(x=>x.type==='OUTSOURCED_COST'&&isInRange(x.date,from,to));
     const exp=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,from,to));
     const inc=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,from,to));
     const ret=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,from,to));
     const salesRev=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0), svcRev=services.reduce((s,x)=>s+(Number(x.subtotal??x.grandTotal)||0),0);
-    const outsideRev=out.reduce((s,x)=>s+(Number(x.amount)||0),0), refunds=ret.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const outsideRev=0, refunds=ret.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const cogs=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)-ret.reduce((s,r)=>{const inv=sales.find(x=>x.invoiceNo===r.invNo);return s+(inv?(Number(inv.costPrice)||0)*(Number(r.qty)||0):0)},0);
-    const direct=out.reduce((s,x)=>s+(Number(x.directCost)||0),0), expenses=exp.reduce((s,x)=>s+(Number(x.amount)||0),0), other=inc.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const revenue=salesRev+svcRev+outsideRev-refunds, net=revenue-cogs-direct+other-expenses;
-    return {salesRev,svcRev,outsideRev,other,cogs:cogs+direct,expenses,revenue,net};
+    const direct=out.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const servicePartsCOGS=services.reduce((total,inv)=>{
+      const jc=(state.serviceJobCards||[]).find(j=>j.id===inv.jobCardId);
+      if(!jc) return total;
+      return total+(jc.partsItems||[]).reduce((sum,p)=>{
+        if(!p.itemCode) return sum;
+        const stock=(state.inventory||[]).find(i=>i.itemCode===p.itemCode);
+        return sum+(Number(stock?.costPrice ?? stock?.purchasePrice ?? p.costPrice ?? p.unitCost ?? 0)||0)*(Number(p.qty)||0);
+      },0);
+    },0);
+    const expenses=exp.reduce((s,x)=>s+(Number(x.amount)||0),0), other=inc.reduce((s,x)=>s+(Number(x.amount)||0),0);
+    const revenue=salesRev+svcRev+outsideRev-refunds, net=revenue-cogs-servicePartsCOGS-direct+other-expenses;
+    return {salesRev,svcRev,outsideRev,other,cogs:cogs+servicePartsCOGS+direct,expenses,revenue,net};
   }
   function renderMonthlyTable(){
     const body=document.getElementById('finance-monthly-table-body'); if(!body)return;
@@ -5864,9 +5930,9 @@ function handleReportExport() {
     const records=financeState.records.filter(x=>!q || [x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>new Date(b.date)-new Date(a.date));
     if(!records.length){body.innerHTML='<tr><td colspan="8" class="no-data-msg">No manual finance transactions yet.</td></tr>';return;}
     body.innerHTML=records.map(x=>{
-      const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service';
+      const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service Cost';
       const cls=x.type==='EXPENSE'?'expense':x.type==='OTHER_INCOME'?'income':'outside';
-      return `<tr><td>${formatDate(x.date)}</td><td><span class="finance-type-badge ${cls}">${type}</span></td><td><strong>${x.description||'--'}</strong>${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${money(x.amount)}</td><td>${x.type==='OUTSIDE_SERVICE'?money(x.directCost):'--'}</td><td><div class="finance-actions"><button title="Edit" onclick="window.editFinanceRecord('${x.id}')">✏️</button><button title="Delete" onclick="window.deleteFinanceRecord('${x.id}')">🗑️</button></div></td></tr>`;
+      return `<tr><td>${formatDate(x.date)}</td><td><span class="finance-type-badge ${cls}">${type}</span></td><td><strong>${x.description||'--'}</strong>${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${money(x.amount)}</td><td>${x.type==='OUTSOURCED_COST'?money(x.directCost):'--'}</td><td><div class="finance-actions"><button title="Edit" onclick="window.editFinanceRecord('${x.id}')">✏️</button><button title="Delete" onclick="window.deleteFinanceRecord('${x.id}')">🗑️</button></div></td></tr>`;
     }).join('');
   }
 
@@ -5883,7 +5949,7 @@ function handleReportExport() {
     document.getElementById('finance-record-description').value=record?.description||'';
     document.getElementById('finance-record-direct-cost').value=record?.directCost??0;
     document.getElementById('finance-record-customer').value=record?.customer||'';
-    const isOutside=type==='OUTSIDE_SERVICE';
+    const isOutside=type==='OUTSOURCED_COST';
     document.getElementById('finance-direct-cost-wrap').style.display=isOutside?'block':'none';
     document.getElementById('finance-customer-wrap').style.display=isOutside?'block':'none';
     document.getElementById('finance-modal-note').textContent=
@@ -5904,17 +5970,17 @@ function handleReportExport() {
     const open=(type)=>()=>openFinanceModal(type);
     document.getElementById('finance-add-expense-btn')?.addEventListener('click',open('EXPENSE'));
     document.getElementById('finance-add-income-btn')?.addEventListener('click',open('OTHER_INCOME'));
-    document.getElementById('finance-add-outside-btn')?.addEventListener('click',open('OUTSIDE_SERVICE'));
+    document.getElementById('finance-add-outside-btn')?.addEventListener('click',open('OUTSOURCED_COST'));
     document.getElementById('finance-modal-close')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
     document.getElementById('finance-modal-cancel')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
     document.getElementById('finance-transaction-form')?.addEventListener('submit',e=>{
       e.preventDefault();
       const type=document.getElementById('finance-record-type').value, id=document.getElementById('finance-record-id').value;
       const amount=Number(document.getElementById('finance-record-amount').value||0);
-      const directCost=Number(document.getElementById('finance-record-direct-cost').value||0);
+      const directCost=0;
       if(amount<=0){alert('Enter an amount greater than 0.');return;}
-      if(type==='OUTSIDE_SERVICE' && directCost>amount){if(!confirm('Direct cost is higher than the service revenue. Save this loss-making job?'))return;}
-      const record={id:id||'FIN-'+Date.now(),type,date:document.getElementById('finance-record-date').value||todayISO(),amount,category:document.getElementById('finance-record-category').value.trim(),reference:document.getElementById('finance-record-reference').value.trim(),description:document.getElementById('finance-record-description').value.trim(),directCost:type==='OUTSIDE_SERVICE'?directCost:0,customer:type==='OUTSIDE_SERVICE'?document.getElementById('finance-record-customer').value.trim():'',paidAmount:amount};
+      
+      const record={id:id||'FIN-'+Date.now(),type,date:document.getElementById('finance-record-date').value||todayISO(),amount,category:document.getElementById('finance-record-category').value.trim(),reference:document.getElementById('finance-record-reference').value.trim(),description:document.getElementById('finance-record-description').value.trim(),directCost:0,customer:type==='OUTSOURCED_COST'?document.getElementById('finance-record-customer').value.trim():'',paidAmount:amount};
       if(!record.description){alert('Description is required.');return;}
       const idx=financeState.records.findIndex(x=>x.id===id);
       if(idx>=0) financeState.records[idx]=record; else financeState.records.unshift(record);
