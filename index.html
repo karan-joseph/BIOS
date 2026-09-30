@@ -1356,7 +1356,7 @@
             <div class="finance-action-row">
               <button class="btn btn-danger" id="finance-add-expense-btn">+ Add Expense</button>
               <button class="btn btn-success" id="finance-add-income-btn">+ Other Income</button>
-              <button class="btn btn-primary" id="finance-add-outside-btn">+ Outside Service</button>
+              <button class="btn btn-primary" id="finance-add-outside-btn">+ Outside Service Cost</button>
             </div>
           </div>
 
@@ -1375,12 +1375,19 @@
           </div>
 
           <div class="finance-kpi-grid">
-            <div class="finance-kpi revenue"><span>Revenue</span><strong id="fin-revenue">₹0</strong><small id="fin-revenue-note">Sales + Service + Outside Service</small></div>
+            <div class="finance-kpi revenue"><span>Revenue</span><strong id="fin-revenue">₹0</strong><small id="fin-revenue-note">Sales + Service</small></div>
             <div class="finance-kpi cogs"><span>Direct Cost / COGS</span><strong id="fin-cogs">₹0</strong><small>Cost of sold goods + direct service cost</small></div>
             <div class="finance-kpi gross"><span>Gross Profit</span><strong id="fin-gross-profit">₹0</strong><small id="fin-gross-margin">0% margin</small></div>
             <div class="finance-kpi expense"><span>Operating Expenses</span><strong id="fin-expenses">₹0</strong><small>Company expenses entered here</small></div>
             <div class="finance-kpi profit"><span>Net Profit / Loss</span><strong id="fin-net-profit">₹0</strong><small id="fin-net-margin">0% net margin</small></div>
             <div class="finance-kpi cash"><span>Cash / Payments Collected</span><strong id="fin-cash-collected">₹0</strong><small id="fin-outstanding">Outstanding: ₹0</small></div>
+          </div>
+
+          <div class="finance-kpi-grid" style="margin-top:1rem;">
+            <div class="finance-kpi" style="border-left:3px solid var(--primary);"><span>Service Labour</span><strong id="fin-service-labour">₹0</strong><small>Billing amount • GST included</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--primary);"><span>Service Parts</span><strong id="fin-service-parts">₹0</strong><small>Billing amount • GST included</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--success);"><span>Parts Profit</span><strong id="fin-parts-profit">₹0</strong><small>Parts billing less actual stock cost</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--success);"><span>Labour Profit</span><strong id="fin-labour-profit">₹0</strong><small>Labour billing after direct labour cost</small></div>
           </div>
 
           <div class="finance-two-col">
@@ -1389,11 +1396,12 @@
               <div class="finance-pnl">
                 <div class="pnl-row main"><span>Product / Sales Revenue</span><strong id="pnl-sales">₹0</strong></div>
                 <div class="pnl-row main"><span>Service Invoice Revenue</span><strong id="pnl-service">₹0</strong></div>
-                <div class="pnl-row main"><span>Outside Service Revenue</span><strong id="pnl-outside">₹0</strong></div>
+                <div class="pnl-row main"><span>Outsourced Service Cost</span><strong id="pnl-outside">₹0</strong></div>
                 <div class="pnl-row sub"><span>Less: Sales Returns / Refunds</span><strong id="pnl-returns">₹0</strong></div>
                 <div class="pnl-row total"><span>Net Operating Revenue</span><strong id="pnl-net-revenue">₹0</strong></div>
                 <div class="pnl-row sub"><span>Less: Product COGS</span><strong id="pnl-product-cogs">₹0</strong></div>
-                <div class="pnl-row sub"><span>Less: Direct Outside-Service Cost</span><strong id="pnl-direct-service-cost">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Service Spare Parts Cost</span><strong id="pnl-service-parts-cogs">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Outside Vendor Cost</span><strong id="pnl-direct-service-cost">₹0</strong></div>
                 <div class="pnl-row total"><span>Gross Profit</span><strong id="pnl-gross">₹0</strong></div>
                 <div class="pnl-row main"><span>Other Income</span><strong id="pnl-other-income">₹0</strong></div>
                 <div class="pnl-row sub"><span>Less: Operating Expenses</span><strong id="pnl-operating-expense">₹0</strong></div>
@@ -1406,7 +1414,7 @@
               <div id="finance-source-breakdown" class="finance-source-list"></div>
               <div class="finance-mini-summary">
                 <div><span>Invoices</span><strong id="fin-invoice-count">0</strong></div>
-                <div><span>Outside Jobs</span><strong id="fin-outside-count">0</strong></div>
+                <div><span>Outside Service Costs</span><strong id="fin-outside-count">0</strong></div>
                 <div><span>Expenses</span><strong id="fin-expense-count">0</strong></div>
                 <div><span>Other Income</span><strong id="fin-income-count">0</strong></div>
               </div>
@@ -1419,7 +1427,7 @@
             </div>
             <div class="table-responsive">
               <table>
-                <thead><tr><th>Month</th><th>Sales</th><th>Service</th><th>Outside Service</th><th>Other Income</th><th>Total Revenue</th><th>COGS</th><th>Expenses</th><th>Net Profit / Loss</th></tr></thead>
+                <thead><tr><th>Month</th><th>Sales</th><th>Service</th><th>Outside Vendor Cost</th><th>Other Income</th><th>Total Revenue</th><th>COGS</th><th>Expenses</th><th>Net Profit / Loss</th></tr></thead>
                 <tbody id="finance-monthly-table-body"></tbody>
               </table>
             </div>
@@ -1427,7 +1435,7 @@
 
           <div class="finance-panel">
             <div class="finance-panel-head">
-              <div><h4>Finance Ledger</h4><p>Manual expenses, outside services and other income</p></div>
+              <div><h4>Finance Ledger</h4><p>Company expenses, outsourced service costs and other income</p></div>
               <input class="finance-ledger-search" id="finance-ledger-search" placeholder="Search description / category / reference...">
             </div>
             <div class="table-responsive">
@@ -1472,8 +1480,9 @@
                   <option value="FinanceTrend">Monthly Revenue &amp; Profit</option>
                   <option value="FinanceLedger">Finance Ledger</option>
                   <option value="FinanceExpenses">Company Expenses</option>
-                  <option value="FinanceOutside">Outside Services</option>
+                  <option value="FinanceOutside">Outside Service Costs</option>
                   <option value="FinanceIncome">Other Income</option>
+                  <option value="FinanceServiceBreakdown">Service Labour &amp; Parts Profit</option>
                 </optgroup>
                 <optgroup label="Core Business Reports">
                   <option value="Enquiries">Enquiries Report</option>
@@ -3308,11 +3317,11 @@
         <div class="form-grid">
           <div class="form-group"><label>Date *</label><input type="date" id="finance-record-date" required></div>
           <div class="form-group"><label>Amount (₹) *</label><input type="number" id="finance-record-amount" min="0" step="0.01" required></div>
-          <div class="form-group"><label>Category *</label><input type="text" id="finance-record-category" placeholder="Rent / Salary / Electricity..." required></div>
-          <div class="form-group"><label>Reference / Bill No.</label><input type="text" id="finance-record-reference" placeholder="Optional"></div>
+          <div class="form-group"><label>Category *</label><input type="text" id="finance-record-category" placeholder="Rent / Salary / Vendor Service..." required></div>
+          <div class="form-group"><label>Reference / Bill No.</label><input type="text" id="finance-record-reference" placeholder="Vendor bill / reference"></div>
           <div class="form-group" style="grid-column:1/-1;"><label>Description *</label><input type="text" id="finance-record-description" placeholder="What was this transaction for?" required></div>
-          <div class="form-group finance-direct-cost-field" id="finance-direct-cost-wrap" style="display:none;"><label>Direct Cost (₹)</label><input type="number" id="finance-record-direct-cost" min="0" step="0.01" value="0"></div>
-          <div class="form-group finance-direct-cost-field" id="finance-customer-wrap" style="display:none;"><label>Customer / Job</label><input type="text" id="finance-record-customer" placeholder="Customer name / job reference"></div>
+          <div class="form-group finance-direct-cost-field" id="finance-direct-cost-wrap" style="display:none;"><label>Vendor Payment (₹)</label><input type="number" id="finance-record-direct-cost" min="0" step="0.01" value="0"></div>
+          <div class="form-group finance-direct-cost-field" id="finance-customer-wrap" style="display:none;"><label>Customer / Vendor / Job</label><input type="text" id="finance-record-customer" placeholder="Vendor name / customer / job reference"></div>
         </div>
         <div class="finance-modal-note" id="finance-modal-note"></div>
         <div class="modal-footer">
