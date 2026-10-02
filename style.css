@@ -2359,3 +2359,4 @@ img  { max-width: 100%; height: auto; }
 }
 .cash-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.cash-flow-grid>div{padding:.8rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-main)}.cash-flow-grid span{display:block;font-size:.72rem;color:var(--text-muted);font-weight:800}.cash-flow-grid strong{display:block;font-size:1.05rem;margin-top:.2rem}.cash-flow-grid .out strong{color:var(--danger-dark)}.cash-flow-grid .cash-total{grid-column:1/-1;background:var(--primary-soft);border-color:var(--primary)}.cash-flow-grid .cash-total strong{font-size:1.45rem;color:var(--primary)}.cash-flow-note{font-size:.75rem;color:var(--text-muted);margin-top:.65rem;line-height:1.45}.purchase-position{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:650px){.cash-flow-grid,.purchase-position{grid-template-columns:1fr}.cash-flow-grid .cash-total{grid-column:auto}}
+ 
