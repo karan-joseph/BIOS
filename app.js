@@ -5795,8 +5795,10 @@ function handleReportExport() {
   }
   function openingCash(){ return Number(localStorage.getItem(OPENING_CASH_KEY)||0)||0; }
   function isCashMethod(method){
-    const m=String(method||'').toLowerCase();
-    return !m || m==='cash'; // legacy records without a method are treated as cash for migration compatibility
+    const m=String(method||'').trim().toLowerCase().replace(/\s+/g,' ');
+    // Cash-only movement for the physical Cash in Hand figure.
+    // Accept legacy/common labels used by Sales, Service and Expense forms.
+    return !m || ['cash','cash payment','cash received','cash collection'].includes(m);
   }
   function sum(arr,fn){ return arr.reduce((t,x)=>t+(Number(fn(x))||0),0); }
 
@@ -5818,14 +5820,18 @@ function handleReportExport() {
 
   function getPnlData(){
     const range=periodRange();
-    const sales=(state.billings||[]).filter(x=>isInRange(x.date,range.from,range.to));
-    const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,range.from,range.to));
+    const sales=(state.billings||[]).filter(x=>x.status !== 'Cancelled' && isInRange(x.date,range.from,range.to));
+    const services=(state.serviceInvoices||[]).filter(x=>x.status !== 'Cancelled' && isInRange(x.date,range.from,range.to));
     const outside=financeState.records.filter(x=>x.type==='OUTSOURCED_COST'&&isInRange(x.date,range.from,range.to));
     const expenses=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,range.from,range.to));
     const other=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,range.from,range.to));
     const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,range.from,range.to));
     const salesRevenue=sum(sales,x=>x.baseAmount);
     const serviceRevenue=sum(services,x=>x.subtotal??x.grandTotal);
+    // Collections are based on actual paid amount, regardless of payment method.
+    const salesCollection=sum(sales,x=>Math.max(0,Number(x.paidAmount)||0));
+    const serviceCollection=sum(services,x=>Math.max(0,Number(x.paidAmount)||0));
+    const otherIncomeCollection=sum(other,x=>Math.max(0,Number(x.paidAmount ?? x.amount)||0));
     const refund=sum(returns,x=>x.amount);
     const productCOGS=productCogsForSales(sales,returns);
     const servicePartsCOGS=sum(services,servicePartsCostForInvoice);
@@ -5848,7 +5854,7 @@ function handleReportExport() {
       return labourTaxable+(taxable?tax*(labourTaxable/taxable):0);
     });
     const labourDirectCost=sum(services,x=>x.labourCost||x.technicianCost||x.directLabourCost);
-    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,refund,productCOGS,servicePartsCOGS,outsideCost,expenseTotal,otherIncome,netRevenue,grossProfit,netProfit,servicePartsBilled,serviceLabourBilled,labourDirectCost,partsProfit:servicePartsBilled-servicePartsCOGS,labourProfit:serviceLabourBilled-labourDirectCost};
+    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,salesCollection,serviceCollection,otherIncomeCollection,refund,productCOGS,servicePartsCOGS,outsideCost,expenseTotal,otherIncome,netRevenue,grossProfit,netProfit,servicePartsBilled,serviceLabourBilled,labourDirectCost,partsProfit:servicePartsBilled-servicePartsCOGS,labourProfit:serviceLabourBilled-labourDirectCost};
   }
 
   function getPurchaseData(){
@@ -5867,14 +5873,19 @@ function handleReportExport() {
     const sales=(state.billings||[]).filter(x=>x.status !== 'Cancelled'), services=(state.serviceInvoices||[]).filter(x=>x.status !== 'Cancelled');
     const purchases=state.purchases||[];
     const manual=financeState.records||[];
-    const cashSales=sum(sales,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
-    const cashService=sum(services,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
-    const cashOther=sum(manual.filter(x=>x.type==='OTHER_INCOME'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
-    const cashPurchases=sum(purchases,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
-    const cashExpenses=sum(manual.filter(x=>x.type==='EXPENSE'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
-    const cashOutside=sum(manual.filter(x=>x.type==='OUTSOURCED_COST'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
+    // Every actual payment counts in the available funds calculation, regardless of payment method.
+    // A transaction contributes only its actually paid/received amount, not its invoice total.
+    const cashSales=sum(sales,x=>Math.max(0,Number(x.paidAmount ?? 0)));
+    const cashService=sum(services,x=>Math.max(0,Number(x.paidAmount ?? 0)));
+    const cashOther=sum(manual.filter(x=>x.type==='OTHER_INCOME'),x=>Math.max(0,Number(x.paidAmount ?? x.amount ?? 0)));
+    const cashPurchases=sum(purchases,x=>Math.max(0,Number(x.paidAmount ?? 0)));
+    const cashExpenses=sum(manual.filter(x=>x.type==='EXPENSE'),x=>Math.max(0,Number(x.paidAmount ?? x.amount ?? 0)));
+    const cashOutside=sum(manual.filter(x=>x.type==='OUTSOURCED_COST'),x=>Math.max(0,Number(x.paidAmount ?? x.amount ?? 0)));
     const current=openingCash()+cashSales+cashService+cashOther-cashPurchases-cashExpenses-cashOutside;
-    return {opening:openingCash(),cashSales,cashService,cashOther,cashPurchases,cashExpenses,cashOutside,current};
+    const totalSalesCollection=sum(sales,x=>Math.max(0,Number(x.paidAmount)||0));
+    const totalServiceCollection=sum(services,x=>Math.max(0,Number(x.paidAmount)||0));
+    const totalOtherIncomeCollection=sum(manual.filter(x=>x.type==='OTHER_INCOME'),x=>Math.max(0,Number(x.paidAmount ?? x.amount)||0));
+    return {opening:openingCash(),cashSales,cashService,cashOther,cashPurchases,cashExpenses,cashOutside,current,totalSalesCollection,totalServiceCollection,totalOtherIncomeCollection};
   }
 
   function setText(id,val){const e=document.getElementById(id);if(e)e.textContent=val;}
@@ -5887,7 +5898,7 @@ function handleReportExport() {
     setText('fin-gross-profit',money(d.grossProfit));
     setText('fin-expenses',money(d.expenseTotal));
     setText('fin-net-profit',money(d.netProfit));
-    setText('fin-cash-collected',money(d.cashSales+d.cashService+d.cashOther));
+    setText('fin-cash-collected',money(d.salesCollection+d.serviceCollection+d.otherIncomeCollection));
     const outstandingTotal = sum(d.sales,x=>Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0))) + sum(d.services,x=>Math.max(0,(Number(x.grandTotal)||0)-(Number(x.paidAmount)||0)));
     setText('fin-outstanding',`Outstanding: ${money(outstandingTotal)}`);
     setText('fin-revenue-note','Sales + Service');
@@ -5901,7 +5912,7 @@ function handleReportExport() {
     setText('fin-purchases',money(p.total));
     setText('fin-purchase-total',money(p.total)); setText('fin-purchase-gst',money(p.gst)); setText('fin-purchase-paid',money(p.paid)); setText('fin-purchase-payable',money(p.payable));
     setText('cash-opening',money(c.opening)); setText('cash-sales',money(c.cashSales)); setText('cash-service',money(c.cashService)); setText('cash-other-income',money(c.cashOther)); setText('cash-purchases',money(c.cashPurchases)); setText('cash-expenses',money(c.cashExpenses)); setText('cash-outside',money(c.cashOutside)); setText('cash-current',money(c.current));
-    setText('cash-flow-note',`Cash in hand = opening + cash collections − cash payments. UPI/Bank/Card are excluded from physical cash.`);
+    setText('cash-flow-note',`Collections count every actual payment method. Current Cash in Hand/Funds includes every actual paid amount, regardless of payment method.`);
     setText('pnl-sales',money(d.salesRevenue)); setText('pnl-service',money(d.serviceRevenue)); setText('pnl-outside',money(0)); setText('pnl-returns',money(d.refund)); setText('pnl-net-revenue',money(d.netRevenue));
     setText('pnl-product-cogs',money(d.productCOGS)); setText('pnl-service-parts-cogs',money(d.servicePartsCOGS)); setText('pnl-direct-service-cost',money(d.outsideCost)); setText('pnl-gross',money(d.grossProfit)); setText('pnl-other-income',money(d.otherIncome)); setText('pnl-operating-expense',money(d.expenseTotal)); setText('pnl-net',money(d.netProfit));
     setText('fin-invoice-count',String(d.sales.length+d.services.length)); setText('fin-outside-count',String(d.outside.length)); setText('fin-expense-count',String(d.expenses.length)); setText('fin-income-count',String(d.other.length));
