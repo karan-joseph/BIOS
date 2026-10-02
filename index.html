@@ -1385,9 +1385,41 @@
 
           <div class="finance-kpi-grid" style="margin-top:1rem;">
             <div class="finance-kpi" style="border-left:3px solid var(--primary);"><span>Service Labour</span><strong id="fin-service-labour">₹0</strong><small>Billing amount • GST included</small></div>
-            <div class="finance-kpi" style="border-left:3px solid var(--primary);"><span>Service Parts</span><strong id="fin-service-parts">₹0</strong><small>Billing amount • GST included</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--primary);"><span>Service Parts</span><strong id="fin-service-parts">₹0</strong><small>Customer billing • GST included</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--warning);"><span>Service Parts Cost</span><strong id="fin-parts-cost">₹0</strong><small>Actual stock cost used in service</small></div>
             <div class="finance-kpi" style="border-left:3px solid var(--success);"><span>Parts Profit</span><strong id="fin-parts-profit">₹0</strong><small>Parts billing less actual stock cost</small></div>
-            <div class="finance-kpi" style="border-left:3px solid var(--success);"><span>Labour Profit</span><strong id="fin-labour-profit">₹0</strong><small>Labour billing after direct labour cost</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--success);"><span>Labour Profit</span><strong id="fin-labour-profit">₹0</strong><small>Labour billing less direct labour cost</small></div>
+            <div class="finance-kpi" style="border-left:3px solid var(--info);"><span>Total Purchases (GST)</span><strong id="fin-purchases">₹0</strong><small>Full purchase invoice value including GST</small></div>
+          </div>
+
+          <div class="finance-two-col">
+            <div class="finance-panel cash-flow-panel">
+              <div class="finance-panel-head"><div><h4>💰 Current Cash in Hand</h4><p>Actual money movement — purchases are deducted by paid amount</p></div></div>
+              <div class="cash-flow-grid">
+                <div><span>Opening Cash</span><strong id="cash-opening">₹0</strong></div>
+                <div><span>Sales Collected</span><strong id="cash-sales">₹0</strong></div>
+                <div><span>Service Collected</span><strong id="cash-service">₹0</strong></div>
+                <div><span>Other Income Received</span><strong id="cash-other-income">₹0</strong></div>
+                <div class="out"><span>Purchase Payments</span><strong id="cash-purchases">₹0</strong></div>
+                <div class="out"><span>Expenses Paid</span><strong id="cash-expenses">₹0</strong></div>
+                <div class="out"><span>Outside Service Paid</span><strong id="cash-outside">₹0</strong></div>
+                <div class="cash-total"><span>Current Cash in Hand</span><strong id="cash-current">₹0</strong></div>
+              </div>
+              <div class="cash-flow-note" id="cash-flow-note">Set your opening cash to make the balance match your actual company cash.</div>
+              <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" id="finance-set-opening-cash-btn">Set Opening Cash</button>
+              </div>
+            </div>
+            <div class="finance-panel">
+              <div class="finance-panel-head"><div><h4>📦 Purchase & Supplier Position</h4><p>Purchase value is GST-inclusive; only paid amount affects cash</p></div></div>
+              <div class="cash-flow-grid purchase-position">
+                <div><span>Total Purchase Value</span><strong id="fin-purchase-total">₹0</strong></div>
+                <div><span>Purchase GST</span><strong id="fin-purchase-gst">₹0</strong></div>
+                <div><span>Purchase Paid</span><strong id="fin-purchase-paid">₹0</strong></div>
+                <div class="out"><span>Supplier Payable</span><strong id="fin-purchase-payable">₹0</strong></div>
+              </div>
+              <div class="cash-flow-note">Purchase total is not directly treated as P&L expense. Unsold stock remains inventory; sold/used stock goes to the relevant cost category.</div>
+            </div>
           </div>
 
           <div class="finance-two-col">
@@ -1399,8 +1431,8 @@
                 <div class="pnl-row main"><span>Outsourced Service Cost</span><strong id="pnl-outside">₹0</strong></div>
                 <div class="pnl-row sub"><span>Less: Sales Returns / Refunds</span><strong id="pnl-returns">₹0</strong></div>
                 <div class="pnl-row total"><span>Net Operating Revenue</span><strong id="pnl-net-revenue">₹0</strong></div>
-                <div class="pnl-row sub"><span>Less: Product COGS</span><strong id="pnl-product-cogs">₹0</strong></div>
-                <div class="pnl-row sub"><span>Less: Service Spare Parts Cost</span><strong id="pnl-service-parts-cogs">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Cost of Goods Sold (Product COGS)</span><strong id="pnl-product-cogs">₹0</strong></div>
+                <div class="pnl-row sub"><span>Less: Service Parts Cost</span><strong id="pnl-service-parts-cogs">₹0</strong></div>
                 <div class="pnl-row sub"><span>Less: Outside Vendor Cost</span><strong id="pnl-direct-service-cost">₹0</strong></div>
                 <div class="pnl-row total"><span>Gross Profit</span><strong id="pnl-gross">₹0</strong></div>
                 <div class="pnl-row main"><span>Other Income</span><strong id="pnl-other-income">₹0</strong></div>
@@ -2020,6 +2052,12 @@
               <div class="form-group">
                 <label for="purchase-paid-amount">Paid Amount (₹) *</label>
                 <input type="number" id="purchase-paid-amount" min="0" step="0.01" required value="0">
+              </div>
+              <div class="form-group">
+                <label for="purchase-payment-method">Payment Method</label>
+                <select id="purchase-payment-method">
+                  <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Bank">Bank Transfer</option><option value="Card">Card</option><option value="Credit">Credit / Pay Later</option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="purchase-balance-amount">Balance Amount (Auto ₹)</label>
@@ -3319,6 +3357,7 @@
           <div class="form-group"><label>Amount (₹) *</label><input type="number" id="finance-record-amount" min="0" step="0.01" required></div>
           <div class="form-group"><label>Category *</label><input type="text" id="finance-record-category" placeholder="Rent / Salary / Vendor Service..." required></div>
           <div class="form-group"><label>Reference / Bill No.</label><input type="text" id="finance-record-reference" placeholder="Vendor bill / reference"></div>
+          <div class="form-group"><label>Payment Method</label><select id="finance-record-payment-method"><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Bank">Bank Transfer</option><option value="Card">Card</option></select></div>
           <div class="form-group" style="grid-column:1/-1;"><label>Description *</label><input type="text" id="finance-record-description" placeholder="What was this transaction for?" required></div>
           <div class="form-group finance-direct-cost-field" id="finance-direct-cost-wrap" style="display:none;"><label>Vendor Payment (₹)</label><input type="number" id="finance-record-direct-cost" min="0" step="0.01" value="0"></div>
           <div class="form-group finance-direct-cost-field" id="finance-customer-wrap" style="display:none;"><label>Customer / Vendor / Job</label><input type="text" id="finance-record-customer" placeholder="Vendor name / customer / job reference"></div>
@@ -3328,6 +3367,18 @@
           <button type="button" class="btn btn-outline" id="finance-modal-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Transaction</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Finance Opening Cash Modal -->
+  <div class="modal-overlay" id="finance-opening-cash-modal">
+    <div class="modal-content finance-modal-content" style="max-width:520px;">
+      <div class="modal-header"><h3>Set Opening Cash</h3><button class="modal-close" id="finance-opening-cash-close">&times;</button></div>
+      <form id="finance-opening-cash-form">
+        <div class="form-group"><label>Opening Cash Balance (₹) *</label><input type="number" id="finance-opening-cash-amount" min="0" step="0.01" required></div>
+        <div class="finance-modal-note">Enter the actual company cash available at the start of your selected accounting period / migration date. This is used only for Cash in Hand, not P&amp;L.</div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline" id="finance-opening-cash-cancel">Cancel</button><button type="submit" class="btn btn-primary">Save Opening Cash</button></div>
       </form>
     </div>
   </div>
