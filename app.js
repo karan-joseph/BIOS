@@ -665,6 +665,7 @@ function setupEventListeners() {
       document.getElementById('purchase-min-stock').value = 2;
       document.getElementById('purchase-gst-rate').value = "18";
       document.getElementById('purchase-paid-amount').value = "0";
+      const pm = document.getElementById('purchase-payment-method'); if (pm) pm.value = 'Cash';
       populatePurchaseDataLists();
       calculatePurchaseTotals();
     });
@@ -1701,7 +1702,7 @@ function renderBillingsTable() {
       <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(item.totalAmount)}</td>
       <td class="actions-cell">
         <button class="btn btn-primary btn-sm" onclick="previewInvoice('${item.id}')">⎙ Print</button>
-        <button class="btn btn-outline btn-sm btn-danger" onclick="deleteInvoice('${item.id}')">Delete</button>
+        ${item.status === 'Cancelled' ? '<span class="badge badge-pending">Cancelled</span>' : `<button class="btn btn-outline btn-sm btn-danger" onclick="cancelInvoice('${item.id}')">Cancel Invoice</button>`}
       </td>
     </tr>
   `).join('');
@@ -1759,29 +1760,30 @@ function openInvoicePreviewModal(invoice) {
   document.getElementById('invoice-modal').classList.add('active');
 }
 
-window.deleteInvoice = function(id) {
+window.cancelInvoice = function(id) {
   const item = state.billings.find(b => b.id === id);
-  if (!item) return;
-  if (confirm(`Delete Invoice ${item.invoiceNo}? Note: Stock will be automatically restored.`)) {
-    // Reverse stock deduction
-    recordStockMovement({
-      itemCode: item.itemCode,
-      itemName: item.productName,
-      type: 'SALE_REVERSAL',
-      refNo: `REVERSAL-${item.invoiceNo}`,
-      inQty: item.qty || 1,
-      outQty: 0,
-      unitCost: item.costPrice || 0,
-      remarks: `Invoice ${item.invoiceNo} deleted - Stock restored`
-    });
-
-    state.billings = state.billings.filter(b => b.id !== id);
-    saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
-    addActivity('billing', `Deleted Invoice <strong>${item.invoiceNo}</strong> (Stock Restored)`);
-    renderBillingsTable();
-    renderInventoryTable();
-    renderDashboard();
-  }
+  if (!item || item.status === 'Cancelled') return;
+  const qty = Number(item.qty || 1);
+  if (!confirm(`Cancel Invoice ${item.invoiceNo}?\n\nThe sold quantity (${qty}) will be returned to stock first. The invoice will remain in reports as Cancelled.`)) return;
+  recordStockMovement({
+    itemCode: item.itemCode,
+    itemName: item.productName,
+    type: 'SALE_REVERSAL',
+    refNo: `CANCEL-${item.invoiceNo}`,
+    inQty: qty,
+    outQty: 0,
+    unitCost: item.costPrice || 0,
+    remarks: `Invoice ${item.invoiceNo} cancelled - ${qty} unit(s) returned to stock`
+  });
+  item.status = 'Cancelled';
+  item.cancelledAt = new Date().toISOString();
+  item.cancelReason = 'Invoice cancelled; stock returned';
+  item.balanceAmount = 0;
+  saveToStorage(STORAGE_KEYS.BILLINGS, state.billings);
+  addActivity('billing', `Cancelled Invoice <strong>${item.invoiceNo}</strong> (Stock Returned)`);
+  renderBillingsTable();
+  renderInventoryTable();
+  renderDashboard();
 };
 
 // ==========================================================================
@@ -1874,7 +1876,8 @@ function handlePurchaseSubmit(e) {
   else { sup.totalPurchases = parseFloat(sup.totalPurchases || 0) + totalAmount; sup.balanceDue = parseFloat(sup.balanceDue || 0) + balanceAmount; if (supplierPhone) sup.phone = supplierPhone; }
   saveToStorage(STORAGE_KEYS.SUPPLIERS, state.suppliers);
 
-  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, serials };
+  const paymentMethod = document.getElementById('purchase-payment-method')?.value || 'Cash';
+  const newPurchase = { id: editId || ('PUR-' + Date.now()), invoiceNo, date, supplier, supplierPhone, itemCode, itemName, category, brand, model, qty, rate, discount, gstRate, taxableAmount, gstAmount, totalAmount, paidAmount, balanceAmount, status, paymentMethod, serials };
   if (editId) { const idx = state.purchases.findIndex(p => p.id === editId); if (idx !== -1) state.purchases[idx] = newPurchase; }
   else state.purchases.push(newPurchase);
   saveToStorage(STORAGE_KEYS.PURCHASES, state.purchases);
@@ -3159,9 +3162,7 @@ function renderServiceInvoicesTable() {
             <button class="btn btn-secondary btn-sm" onclick="openServiceInvoiceModal('${inv.id || inv.invoiceNo}')" title="Edit / Update Payment">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteServiceInvoice('${inv.id || inv.invoiceNo}')" title="Delete Invoice">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
+            ${inv.status === 'Cancelled' ? '<span class="badge badge-pending">Cancelled</span>' : `<button class="btn btn-danger btn-sm" onclick="cancelServiceInvoice('${inv.id || inv.invoiceNo}')" title="Cancel Invoice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg> Cancel</button>`}
           </div>
         </td>
       </tr>
@@ -3953,7 +3954,9 @@ function handleJobCardSubmit(e) {
           }
         }
       }
-      partsItems.push({ itemCode, partName, qty, rate, amount });
+      const stockForCost = itemCode ? state.inventory.find(i => i.itemCode === itemCode) : null;
+      const costPrice = Number(stockForCost?.costPrice ?? stockForCost?.purchaseRate ?? rate ?? 0) || 0;
+      partsItems.push({ itemCode, partName, qty, rate, amount, costPrice });
       totalParts += amount;
     }
   });
@@ -4244,7 +4247,9 @@ function handleEstimationSubmit(e) {
     const rate = parseFloat(row.querySelector('.est-part-rate')?.value || 0);
     const amount = parseFloat(row.querySelector('.est-part-amount')?.value || qty * rate);
     if (partName && qty > 0) {
-      partsItems.push({ itemCode, partName, qty, rate, amount });
+      const stockForCost = itemCode ? state.inventory.find(i => i.itemCode === itemCode) : null;
+      const costPrice = Number(stockForCost?.costPrice ?? stockForCost?.purchaseRate ?? rate ?? 0) || 0;
+      partsItems.push({ itemCode, partName, qty, rate, amount, costPrice });
       partsAmount += amount;
     }
   });
@@ -4517,13 +4522,42 @@ function handleServiceInvoiceSubmit(e) {
   alert(`✅ Service Invoice #${invNumber} generated successfully!`);
 }
 
-window.deleteServiceInvoice = function(invId) {
-  if (confirm(`Are you sure you want to delete Service Invoice ${invId}?`)) {
-    state.serviceInvoices = state.serviceInvoices.filter(i => (i.id !== invId && i.invoiceNo !== invId));
-    saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
-    renderServiceModule();
-    renderDashboard();
+window.cancelServiceInvoice = function(invId) {
+  const inv = (state.serviceInvoices || []).find(i => i.id === invId || i.invoiceNo === invId);
+  if (!inv || inv.status === 'Cancelled') return;
+  const jc = (state.serviceJobCards || []).find(j => j.id === inv.jobCardId || j.invoiceId === inv.invoiceNo);
+  const parts = (jc?.partsItems || []).filter(p => p.itemCode && Number(p.qty) > 0);
+  const partSummary = parts.length ? `\n\n${parts.map(p => `• ${p.partName} × ${p.qty}`).join('\n')}\n\nAll these parts will be returned to inventory before cancellation.` : '\n\nNo stock parts are linked to this invoice.';
+  if (!confirm(`Cancel Service Invoice ${inv.invoiceNo}?${partSummary}\n\nThe invoice will remain in reports with status Cancelled.`)) return;
+
+  // Return every consumed service part before changing invoice status.
+  parts.forEach(p => recordStockMovement({
+    itemCode: p.itemCode,
+    itemName: p.partName,
+    type: 'SERVICE_REVERSAL',
+    refNo: `CANCEL-${inv.invoiceNo}`,
+    inQty: Number(p.qty),
+    outQty: 0,
+    unitCost: Number(p.costPrice || p.rate || 0),
+    remarks: `Service Invoice ${inv.invoiceNo} cancelled - part returned to inventory`
+  }));
+
+  if (jc) {
+    jc.status = 'Cancelled';
+    jc.cancelledAt = new Date().toISOString();
+    jc.cancelReason = `Linked invoice ${inv.invoiceNo} cancelled; all consumed parts returned`;
+    saveToStorage(STORAGE_KEYS.SERVICE_JOB_CARDS, state.serviceJobCards);
   }
+  inv.status = 'Cancelled';
+  inv.paymentStatus = 'Cancelled';
+  inv.balanceAmount = 0;
+  inv.cancelledAt = new Date().toISOString();
+  inv.cancelReason = 'Invoice cancelled after returning all service parts';
+  saveToStorage(STORAGE_KEYS.SERVICE_INVOICES, state.serviceInvoices);
+  addActivity('service', `Cancelled Service Invoice <strong>${inv.invoiceNo}</strong> (All Parts Returned)`);
+  renderServiceModule();
+  renderInventoryTable();
+  renderDashboard();
 };
 
 // 20. Print Modals Logic (Job Card, Estimation, Service Invoice)
@@ -4863,6 +4897,7 @@ function renderReports() {
         <th>Base Amount</th>
         <th>GST Amount</th>
         <th>Grand Total</th>
+        <th>Status</th>
       </tr>
     `;
     const data = state.billings.filter(b => {
@@ -4884,6 +4919,7 @@ function renderReports() {
           <td>${formatCurrency(item.baseAmount)}</td>
           <td>${formatCurrency(item.gstAmount)}</td>
           <td style="font-weight: 700; color: var(--success-dark);">${formatCurrency(item.totalAmount)}</td>
+          <td><span class="badge ${item.status === 'Cancelled' ? 'badge-pending' : 'badge-paid'}">${item.status || 'Unpaid'}</span></td>
         </tr>
       `).join('');
     }
@@ -5192,6 +5228,7 @@ function renderReports() {
         <th>Unit Selling Rate</th>
         <th>Base Amount</th>
         <th>Total Invoice Amount</th>
+        <th>Status</th>
       </tr>
     `;
     const data = state.billings.filter(b => {
@@ -5202,7 +5239,7 @@ function renderReports() {
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (data.length === 0) {
-      tableRowsHtml = `<tr><td colspan="8" class="no-data-msg">No sales stock movements found.</td></tr>`;
+      tableRowsHtml = `<tr><td colspan="9" class="no-data-msg">No sales stock movements found.</td></tr>`;
     } else {
       tableRowsHtml = data.map(item => `
         <tr>
@@ -5214,6 +5251,7 @@ function renderReports() {
           <td>${formatCurrency(item.unitRate || (item.baseAmount / (item.qty || 1)))}</td>
           <td>${formatCurrency(item.baseAmount)}</td>
           <td style="font-weight:700; color: var(--success-dark);">${formatCurrency(item.totalAmount)}</td>
+          <td><span class="badge ${item.status === 'Cancelled' ? 'badge-pending' : 'badge-paid'}">${item.status || 'Unpaid'}</span></td>
         </tr>
       `).join('');
     }
@@ -5361,6 +5399,7 @@ function renderReports() {
         <th>Parts (₹)</th>
         <th>GST (₹)</th>
         <th>Grand Total (₹)</th>
+        <th>Invoice Status</th>
         <th>Payment Status</th>
       </tr>
     `;
@@ -5372,7 +5411,7 @@ function renderReports() {
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (data.length === 0) {
-      tableRowsHtml = `<tr><td colspan="10" class="no-data-msg">No service invoices found.</td></tr>`;
+      tableRowsHtml = `<tr><td colspan="11" class="no-data-msg">No service invoices found.</td></tr>`;
     } else {
       tableRowsHtml = data.map(item => `
         <tr>
@@ -5385,7 +5424,8 @@ function renderReports() {
           <td>${formatCurrency(item.partsAmount)}</td>
           <td>${formatCurrency(item.gstAmount)}</td>
           <td style="font-weight:700; color: var(--primary);">${formatCurrency(item.grandTotal)}</td>
-          <td><span class="badge ${item.paymentStatus === 'Paid' ? 'badge-paid' : item.paymentStatus === 'Partially Paid' ? 'badge-partial' : 'badge-pending'}">${item.paymentStatus}</span></td>
+          <td><span class="badge ${item.status === 'Cancelled' ? 'badge-pending' : 'badge-paid'}">${item.status || 'Active'}</span></td>
+          <td><span class="badge ${item.status === 'Cancelled' ? 'badge-pending' : item.paymentStatus === 'Paid' ? 'badge-paid' : item.paymentStatus === 'Partially Paid' ? 'badge-partial' : 'badge-pending'}">${item.status === 'Cancelled' ? 'Cancelled' : item.paymentStatus}</span></td>
         </tr>
       `).join('');
     }
@@ -5643,9 +5683,9 @@ function handleReportExport() {
   } else if (moduleVal === 'SalesStock') {
     const list = state.billings.filter(b => isWithinDateRange(b.date));
     if (list.length === 0) return alert("No sales records to export!");
-    csvContent += "Invoice No,Date,Customer Name,Customer Phone,Item Code,Product Description,Sold Qty,Unit Selling Rate (INR),Base Amount (INR),GST (INR),Grand Total (INR)\n";
+    csvContent += "Invoice No,Date,Customer Name,Customer Phone,Item Code,Product Description,Sold Qty,Unit Selling Rate (INR),Base Amount (INR),GST (INR),Grand Total (INR),Status\n";
     list.forEach(item => {
-      csvContent += `${escapeCSV(item.invoiceNo)},${escapeCSV(item.date)},${escapeCSV(item.customerName)},${escapeCSV(item.customerMobile || "")},${escapeCSV(item.itemCode || "")},${escapeCSV(item.productName)},${escapeCSV(item.qty || 1)},${escapeCSV(item.unitRate || (item.baseAmount / (item.qty || 1)))},${escapeCSV(item.baseAmount)},${escapeCSV(item.gstAmount)},${escapeCSV(item.totalAmount)}\n`;
+      csvContent += `${escapeCSV(item.invoiceNo)},${escapeCSV(item.date)},${escapeCSV(item.customerName)},${escapeCSV(item.customerMobile || "")},${escapeCSV(item.itemCode || "")},${escapeCSV(item.productName)},${escapeCSV(item.qty || 1)},${escapeCSV(item.unitRate || (item.baseAmount / (item.qty || 1)))},${escapeCSV(item.baseAmount)},${escapeCSV(item.gstAmount)},${escapeCSV(item.totalAmount)},${escapeCSV(item.status || "Unpaid")}\n`;
     });
 
   // 12. PC Builds
@@ -5684,9 +5724,9 @@ function handleReportExport() {
   } else if (moduleVal === 'ServiceInvoices') {
     const list = (state.serviceInvoices || []).filter(i => isWithinDateRange(i.date));
     if (list.length === 0) return alert("No service invoices to export!");
-    csvContent += "Invoice No,Date,Job Card Ref,Customer Name,Customer Mobile,Customer Address,Device Details,Labour Charges (INR),Parts Charges (INR),Taxable Subtotal (INR),Discount (INR),GST Rate (%),GST Amount (INR),Grand Total (INR),Payment Status,Payment Method,Paid Amount (INR),Balance Due (INR)\n";
+    csvContent += "Invoice No,Date,Job Card Ref,Customer Name,Customer Mobile,Customer Address,Device Details,Labour Charges (INR),Parts Charges (INR),Taxable Subtotal (INR),Discount (INR),GST Rate (%),GST Amount (INR),Grand Total (INR),Invoice Status,Payment Status,Payment Method,Paid Amount (INR),Balance Due (INR)\n";
     list.forEach(i => {
-      csvContent += `${escapeCSV(i.invoiceNo)},${escapeCSV(i.date)},${escapeCSV(i.jobCardId || "")},${escapeCSV(i.customerName)},${escapeCSV(i.customerMobile)},${escapeCSV(i.customerAddress || "")},${escapeCSV(i.deviceBrand + " " + i.deviceModel)},${escapeCSV(i.labourAmount)},${escapeCSV(i.partsAmount)},${escapeCSV(i.subtotal)},${escapeCSV(i.discount)},${escapeCSV(i.gstRate)},${escapeCSV(i.gstAmount)},${escapeCSV(i.grandTotal)},${escapeCSV(i.paymentStatus)},${escapeCSV(i.paymentMethod || "")},${escapeCSV(i.paidAmount)},${escapeCSV(i.balanceAmount)}\n`;
+      csvContent += `${escapeCSV(i.invoiceNo)},${escapeCSV(i.date)},${escapeCSV(i.jobCardId || "")},${escapeCSV(i.customerName)},${escapeCSV(i.customerMobile)},${escapeCSV(i.customerAddress || "")},${escapeCSV(i.deviceBrand + " " + i.deviceModel)},${escapeCSV(i.labourAmount)},${escapeCSV(i.partsAmount)},${escapeCSV(i.subtotal)},${escapeCSV(i.discount)},${escapeCSV(i.gstRate)},${escapeCSV(i.gstAmount)},${escapeCSV(i.grandTotal)},${escapeCSV(i.status || "Active")},${escapeCSV(i.paymentStatus)},${escapeCSV(i.paymentMethod || "")},${escapeCSV(i.paidAmount)},${escapeCSV(i.balanceAmount)}\n`;
     });
 
   // 16. Service Parts Consumption
@@ -5725,283 +5765,191 @@ function handleReportExport() {
   document.body.removeChild(link);
 }
 
-/* ==========================================================================
-   FINANCE & P&L MODULE - ADDITIVE ONLY
-   Existing sales/service/inventory workflows are not replaced.
-   ========================================================================== */
+/* ============================================================================
+   FINANCE 2.0
+   - P&L: Product COGS + Service Parts Cost are separate.
+   - Cash Flow: actual cash movement is separate from P&L.
+   - Purchases are GST-inclusive for purchase reporting; only paid amount
+     reduces cash, while unsold stock remains inventory.
+   ============================================================================ */
 (function initFinanceModule(){
   const FINANCE_KEY = 'bios_finance_records_v1';
+  const OPENING_CASH_KEY = 'bios_finance_opening_cash_v2';
   const financeState = { records: [], period: 'month', from: '', to: '' };
 
   function loadFinance(){
     try { financeState.records = JSON.parse(localStorage.getItem(FINANCE_KEY)) || []; }
-    catch(e){ financeState.records = []; console.error('Finance data load failed', e); }
+    catch(e){ financeState.records=[]; console.error('Finance data load failed',e); }
   }
-  function saveFinance(){ localStorage.setItem(FINANCE_KEY, JSON.stringify(financeState.records)); }
-
-  function todayISO(){
-    const d = new Date();
-    const m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
-    return `${d.getFullYear()}-${m}-${day}`;
-  }
+  function saveFinance(){ localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState.records)); }
+  function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function money(n){ return formatCurrency(Number(n)||0); }
-  function dateKey(v){
-    if(!v) return '';
-    const d = new Date(v);
-    if(Number.isNaN(d.getTime())) return String(v).slice(0,10);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
-  function isInRange(date, from, to){
-    const k=dateKey(date); return (!from || k>=from) && (!to || k<=to);
-  }
+  function dateKey(v){ if(!v)return ''; const d=new Date(v); if(Number.isNaN(d.getTime()))return String(v).slice(0,10); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function isInRange(date,from,to){ const k=dateKey(date); return (!from||k>=from)&&(!to||k<=to); }
   function periodRange(){
-    const now=new Date(), y=now.getFullYear(), m=now.getMonth();
-    if(financeState.period==='month'){
-      return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`};
-    }
-    if(financeState.period==='year') return {from:`${y}-01-01`,to:`${y}-12-31`};
-    if(financeState.period==='custom') return {from:financeState.from,to:financeState.to};
+    const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+    if(financeState.period==='month')return {from:`${y}-${String(m+1).padStart(2,'0')}-01`,to:`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`};
+    if(financeState.period==='year')return {from:`${y}-01-01`,to:`${y}-12-31`};
+    if(financeState.period==='custom')return {from:financeState.from,to:financeState.to};
     return {from:'',to:''};
   }
-  function getFinanceData(){
+  function openingCash(){ return Number(localStorage.getItem(OPENING_CASH_KEY)||0)||0; }
+  function isCashMethod(method){
+    const m=String(method||'').toLowerCase();
+    return !m || m==='cash'; // legacy records without a method are treated as cash for migration compatibility
+  }
+  function sum(arr,fn){ return arr.reduce((t,x)=>t+(Number(fn(x))||0),0); }
+
+  function productCogsForSales(sales, returns){
+    let cogs=sum(sales,x=>(Number(x.costPrice)||0)*(Number(x.qty)||1));
+    cogs-=sum(returns,r=>{ const inv=sales.find(x=>x.invoiceNo===r.invNo); return inv?(Number(inv.costPrice)||0)*(Number(r.qty)||0):0; });
+    return Math.max(0,cogs);
+  }
+
+  function servicePartsCostForInvoice(inv){
+    const jc=(state.serviceJobCards||[]).find(j=>j.id===inv.jobCardId);
+    const rows=(jc?.partsItems?.length?jc.partsItems:(inv.items||[]).filter(i=>i.type==='Spare Part'))||[];
+    return sum(rows,p=>{
+      const stock=p.itemCode?(state.inventory||[]).find(i=>i.itemCode===p.itemCode):null;
+      const cost=Number(p.costPrice ?? p.unitCost ?? stock?.costPrice ?? stock?.purchaseRate ?? stock?.purchasePrice ?? 0)||0;
+      return cost*(Number(p.qty)||1);
+    });
+  }
+
+  function getPnlData(){
     const range=periodRange();
     const sales=(state.billings||[]).filter(x=>isInRange(x.date,range.from,range.to));
     const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,range.from,range.to));
-    const outside=financeState.records.filter(x=>x.type==='OUTSOURCED_COST' && isInRange(x.date,range.from,range.to));
-    const expenses=financeState.records.filter(x=>x.type==='EXPENSE' && isInRange(x.date,range.from,range.to));
-    const other=financeState.records.filter(x=>x.type==='OTHER_INCOME' && isInRange(x.date,range.from,range.to));
-    const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN' && isInRange(x.date,range.from,range.to));
-    const salesRevenue=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0);
-    const serviceRevenue=services.reduce((s,x)=>s+(Number(x.subtotal ?? x.grandTotal)||0),0);
-    // Service spare-parts cost: customer is billed for parts, but P&L must subtract the actual inventory cost.
-    const servicePartsCOGS=services.reduce((total,inv)=>{
-      const jc=(state.serviceJobCards||[]).find(j=>j.id===inv.jobCardId);
-      const partsFromJob = (jc?.partsItems||[]);
-      const partsFromInvoice = (inv.items||[]).filter(i=>i.type==='Spare Part');
-      const rows = partsFromJob.length ? partsFromJob : partsFromInvoice;
-      return total + rows.reduce((sum,p)=>{
-        const code=p.itemCode;
-        const stock=code ? (state.inventory||[]).find(i=>i.itemCode===code) : null;
-        const cost=Number(stock?.costPrice ?? stock?.purchasePrice ?? p.costPrice ?? p.unitCost ?? 0)||0;
-        return sum+cost*(Number(p.qty)||1);
-      },0);
-    },0);
-    const servicePartsBilled=services.reduce((sum,inv)=>{
-      const labour=Number(inv.labourAmount)||0, parts=Number(inv.partsAmount)||0;
-      const discount=Math.min(Number(inv.discount)||0, labour+parts);
-      const taxable=Math.max(0, labour+parts-discount);
-      const gst=Number(inv.gstAmount);
-      const tax=(Number.isFinite(gst) && gst>0) ? gst : taxable*(Number(inv.gstRate)||0)/100;
-      const taxableParts=Math.max(0, parts - (labour+parts ? discount*(parts/(labour+parts)) : 0));
-      return sum + taxableParts + (taxable ? tax*(taxableParts/taxable) : 0);
-    },0);
-    const serviceLabourBilled=services.reduce((sum,inv)=>{
-      const labour=Number(inv.labourAmount)||0, parts=Number(inv.partsAmount)||0;
-      const discount=Math.min(Number(inv.discount)||0, labour+parts);
-      const taxable=Math.max(0, labour+parts-discount);
-      const gst=Number(inv.gstAmount);
-      const tax=(Number.isFinite(gst) && gst>0) ? gst : taxable*(Number(inv.gstRate)||0)/100;
-      const taxableLabour=Math.max(0, labour - (labour+parts ? discount*(labour/(labour+parts)) : 0));
-      return sum + taxableLabour + (taxable ? tax*(taxableLabour/taxable) : 0);
-    },0);
-    const labourDirectCost=services.reduce((sum,inv)=>sum + Number(inv.labourCost || inv.technicianCost || inv.directLabourCost || 0),0);
-    const outsideRevenue=0;
-    const refund=returns.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const productCOGS=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)
-      - returns.reduce((s,r)=>{
-          const inv=sales.find(x=>x.invoiceNo===r.invNo);
-          return s+(inv ? (Number(inv.costPrice)||0)*(Number(r.qty)||0) : 0);
-        },0);
-    const directOutside=outside.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const expenseTotal=expenses.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const otherIncome=other.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const netOperatingRevenue=salesRevenue+serviceRevenue+outsideRevenue-refund;
-    const grossProfit=netOperatingRevenue-productCOGS-servicePartsCOGS-directOutside;
+    const outside=financeState.records.filter(x=>x.type==='OUTSOURCED_COST'&&isInRange(x.date,range.from,range.to));
+    const expenses=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,range.from,range.to));
+    const other=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,range.from,range.to));
+    const returns=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,range.from,range.to));
+    const salesRevenue=sum(sales,x=>x.baseAmount);
+    const serviceRevenue=sum(services,x=>x.subtotal??x.grandTotal);
+    const refund=sum(returns,x=>x.amount);
+    const productCOGS=productCogsForSales(sales,returns);
+    const servicePartsCOGS=sum(services,servicePartsCostForInvoice);
+    const outsideCost=sum(outside,x=>x.amount);
+    const expenseTotal=sum(expenses,x=>x.amount);
+    const otherIncome=sum(other,x=>x.amount);
+    const netRevenue=salesRevenue+serviceRevenue-refund;
+    const grossProfit=netRevenue-productCOGS-servicePartsCOGS-outsideCost;
     const netProfit=grossProfit+otherIncome-expenseTotal;
-    const collectedSales=sales.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
-    const collectedService=services.reduce((s,x)=>s+(Number(x.paidAmount)||0),0);
-    const collectedOutside=outside.reduce((s,x)=>s+(Number(x.paidAmount ?? x.amount)||0),0);
-    const collectedOther=otherIncome;
-    const cashCollected=collectedSales+collectedService+collectedOutside+collectedOther;
-    const outstandingSales=sales.reduce((s,x)=>s+Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0)),0);
-    const outstandingService=services.reduce((s,x)=>s+Math.max(0,(Number(x.grandTotal)||0)-(Number(x.paidAmount)||0)),0);
-    const partsProfit=servicePartsBilled-servicePartsCOGS;
-    const labourProfit=serviceLabourBilled-labourDirectCost;
-    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,outsideRevenue,refund,productCOGS,servicePartsCOGS,servicePartsBilled,serviceLabourBilled,labourDirectCost,partsProfit,labourProfit,directOutside,expenseTotal,otherIncome,netOperatingRevenue,grossProfit,netProfit,cashCollected,outstanding:outstandingSales+outstandingService};
+    const servicePartsBilled=sum(services,inv=>{
+      const labour=Number(inv.labourAmount)||0,parts=Number(inv.partsAmount)||0,discount=Math.min(Number(inv.discount)||0,labour+parts),taxable=Math.max(0,labour+parts-discount);
+      const gst=Number(inv.gstAmount); const tax=Number.isFinite(gst)&&gst>0?gst:taxable*(Number(inv.gstRate)||0)/100;
+      const partTaxable=Math.max(0,parts-(labour+parts?discount*(parts/(labour+parts)):0));
+      return partTaxable+(taxable?tax*(partTaxable/taxable):0);
+    });
+    const serviceLabourBilled=sum(services,inv=>{
+      const labour=Number(inv.labourAmount)||0,parts=Number(inv.partsAmount)||0,discount=Math.min(Number(inv.discount)||0,labour+parts),taxable=Math.max(0,labour+parts-discount);
+      const gst=Number(inv.gstAmount); const tax=Number.isFinite(gst)&&gst>0?gst:taxable*(Number(inv.gstRate)||0)/100;
+      const labourTaxable=Math.max(0,labour-(labour+parts?discount*(labour/(labour+parts)):0));
+      return labourTaxable+(taxable?tax*(labourTaxable/taxable):0);
+    });
+    const labourDirectCost=sum(services,x=>x.labourCost||x.technicianCost||x.directLabourCost);
+    return {range,sales,services,outside,expenses,other,returns,salesRevenue,serviceRevenue,refund,productCOGS,servicePartsCOGS,outsideCost,expenseTotal,otherIncome,netRevenue,grossProfit,netProfit,servicePartsBilled,serviceLabourBilled,labourDirectCost,partsProfit:servicePartsBilled-servicePartsCOGS,labourProfit:serviceLabourBilled-labourDirectCost};
   }
 
-  function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+  function getPurchaseData(){
+    const range=periodRange();
+    const purchases=(state.purchases||[]).filter(x=>isInRange(x.date,range.from,range.to));
+    return {
+      purchases,
+      total:sum(purchases,x=>x.totalAmount),
+      gst:sum(purchases,x=>x.gstAmount),
+      paid:sum(purchases,x=>x.paidAmount),
+      payable:sum(purchases,x=>x.balanceAmount)
+    };
+  }
+
+  function getCashData(){
+    const sales=(state.billings||[]).filter(x=>x.status !== 'Cancelled'), services=(state.serviceInvoices||[]).filter(x=>x.status !== 'Cancelled');
+    const purchases=state.purchases||[];
+    const manual=financeState.records||[];
+    const cashSales=sum(sales,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
+    const cashService=sum(services,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
+    const cashOther=sum(manual.filter(x=>x.type==='OTHER_INCOME'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
+    const cashPurchases=sum(purchases,x=>isCashMethod(x.paymentMethod)?x.paidAmount:0);
+    const cashExpenses=sum(manual.filter(x=>x.type==='EXPENSE'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
+    const cashOutside=sum(manual.filter(x=>x.type==='OUTSOURCED_COST'),x=>isCashMethod(x.paymentMethod)?(x.paidAmount??x.amount):0);
+    const current=openingCash()+cashSales+cashService+cashOther-cashPurchases-cashExpenses-cashOutside;
+    return {opening:openingCash(),cashSales,cashService,cashOther,cashPurchases,cashExpenses,cashOutside,current};
+  }
+
+  function setText(id,val){const e=document.getElementById(id);if(e)e.textContent=val;}
   function renderFinance(){
-    const d=getFinanceData(), r=d.range;
-    const label = r.from && r.to ? `${r.from} to ${r.to}` : 'All recorded periods';
+    const d=getPnlData(),p=getPurchaseData(),c=getCashData(),r=d.range;
+    const label=r.from&&r.to?`${r.from} to ${r.to}`:'All recorded periods';
     setText('finance-pnl-period-label',label);
-    setText('fin-revenue',money(d.netOperatingRevenue));
-    setText('fin-cogs',money(d.productCOGS+d.servicePartsCOGS+d.directOutside));
+    setText('fin-revenue',money(d.netRevenue));
+    setText('fin-cogs',money(d.productCOGS+d.servicePartsCOGS+d.outsideCost));
     setText('fin-gross-profit',money(d.grossProfit));
     setText('fin-expenses',money(d.expenseTotal));
     setText('fin-net-profit',money(d.netProfit));
-    setText('fin-cash-collected',money(d.cashCollected));
-    setText('fin-outstanding',`Outstanding: ${money(d.outstanding)}`);
-    setText('fin-revenue-note','Sales + Service + Outside Service');
-    setText('fin-gross-margin',`${d.netOperatingRevenue ? ((d.grossProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% margin`);
-    setText('fin-net-margin',`${d.netOperatingRevenue ? ((d.netProfit/d.netOperatingRevenue)*100).toFixed(1) : 0}% net margin`);
+    setText('fin-cash-collected',money(d.cashSales+d.cashService+d.cashOther));
+    const outstandingTotal = sum(d.sales,x=>Math.max(0,(Number(x.totalAmount)||0)-(Number(x.paidAmount)||0))) + sum(d.services,x=>Math.max(0,(Number(x.grandTotal)||0)-(Number(x.paidAmount)||0)));
+    setText('fin-outstanding',`Outstanding: ${money(outstandingTotal)}`);
+    setText('fin-revenue-note','Sales + Service');
+    setText('fin-gross-margin',`${d.netRevenue?((d.grossProfit/d.netRevenue)*100).toFixed(1):0}% margin`);
+    setText('fin-net-margin',`${d.netRevenue?((d.netProfit/d.netRevenue)*100).toFixed(1):0}% net margin`);
     setText('fin-service-labour',money(d.serviceLabourBilled));
     setText('fin-service-parts',money(d.servicePartsBilled));
+    setText('fin-parts-cost',money(d.servicePartsCOGS));
     setText('fin-parts-profit',money(d.partsProfit));
     setText('fin-labour-profit',money(d.labourProfit));
-    setText('pnl-sales',money(d.salesRevenue));
-    setText('pnl-service',money(d.serviceRevenue));
-    setText('pnl-outside',money(d.outsideRevenue));
-    setText('pnl-returns',money(d.refund));
-    setText('pnl-net-revenue',money(d.netOperatingRevenue));
-    setText('pnl-product-cogs',money(d.productCOGS));
-    setText('pnl-service-parts-cogs',money(d.servicePartsCOGS));
-    setText('pnl-direct-service-cost',money(d.directOutside));
-    setText('pnl-gross',money(d.grossProfit));
-    setText('pnl-other-income',money(d.otherIncome));
-    setText('pnl-operating-expense',money(d.expenseTotal));
-    setText('pnl-net',money(d.netProfit));
-    setText('fin-invoice-count',String(d.sales.length+d.services.length));
-    setText('fin-outside-count',String(d.outside.length));
-    setText('fin-expense-count',String(d.expenses.length));
-    setText('fin-income-count',String(d.other.length));
-
-    const sourceEl=document.getElementById('finance-source-breakdown');
-    if(sourceEl){
-      const sources=[['Product Sales',d.salesRevenue],['Service Invoices',d.serviceRevenue],['Outsourced Service Cost',d.directOutside],['Other Income',d.otherIncome]];
-      const max=Math.max(1,...sources.map(x=>x[1]));
-      sourceEl.innerHTML=sources.map(([name,val])=>`<div class="finance-source-item"><span class="finance-source-label">${name}</span><span class="finance-source-value">${money(val)}</span><div class="finance-source-track"><div class="finance-source-fill" style="width:${Math.min(100,(val/max)*100)}%"></div></div></div>`).join('');
-    }
-    renderMonthlyTable();
-    renderFinanceLedger();
+    setText('fin-purchases',money(p.total));
+    setText('fin-purchase-total',money(p.total)); setText('fin-purchase-gst',money(p.gst)); setText('fin-purchase-paid',money(p.paid)); setText('fin-purchase-payable',money(p.payable));
+    setText('cash-opening',money(c.opening)); setText('cash-sales',money(c.cashSales)); setText('cash-service',money(c.cashService)); setText('cash-other-income',money(c.cashOther)); setText('cash-purchases',money(c.cashPurchases)); setText('cash-expenses',money(c.cashExpenses)); setText('cash-outside',money(c.cashOutside)); setText('cash-current',money(c.current));
+    setText('cash-flow-note',`Cash in hand = opening + cash collections − cash payments. UPI/Bank/Card are excluded from physical cash.`);
+    setText('pnl-sales',money(d.salesRevenue)); setText('pnl-service',money(d.serviceRevenue)); setText('pnl-outside',money(0)); setText('pnl-returns',money(d.refund)); setText('pnl-net-revenue',money(d.netRevenue));
+    setText('pnl-product-cogs',money(d.productCOGS)); setText('pnl-service-parts-cogs',money(d.servicePartsCOGS)); setText('pnl-direct-service-cost',money(d.outsideCost)); setText('pnl-gross',money(d.grossProfit)); setText('pnl-other-income',money(d.otherIncome)); setText('pnl-operating-expense',money(d.expenseTotal)); setText('pnl-net',money(d.netProfit));
+    setText('fin-invoice-count',String(d.sales.length+d.services.length)); setText('fin-outside-count',String(d.outside.length)); setText('fin-expense-count',String(d.expenses.length)); setText('fin-income-count',String(d.other.length));
+    const sourceEl=document.getElementById('finance-source-breakdown'); if(sourceEl){const sources=[['Product Sales',d.salesRevenue],['Service Invoices',d.serviceRevenue],['Other Income',d.otherIncome]];const max=Math.max(1,...sources.map(x=>x[1]));sourceEl.innerHTML=sources.map(([n,v])=>`<div class="finance-source-item"><span class="finance-source-label">${n}</span><span class="finance-source-value">${money(v)}</span><div class="finance-source-track"><div class="finance-source-fill" style="width:${Math.min(100,(v/max)*100)}%"></div></div></div>`).join('');}
+    renderMonthlyTable(); renderFinanceLedger();
   }
 
   function monthsForRange(){
-    const r=periodRange(), out=[];
-    let start=r.from ? new Date(r.from+'T00:00:00') : null;
-    let end=r.to ? new Date(r.to+'T00:00:00') : null;
-    if(!start){
-      const all=[...(state.billings||[]),...(state.serviceInvoices||[]),...financeState.records].map(x=>dateKey(x.date)).filter(Boolean).sort();
-      if(!all.length) return [];
-      start=new Date(all[0]+'T00:00:00'); end=new Date(all[all.length-1]+'T00:00:00');
-    }
-    start=new Date(start.getFullYear(),start.getMonth(),1); end=new Date(end.getFullYear(),end.getMonth(),1);
-    for(let d=new Date(start);d<=end;d.setMonth(d.getMonth()+1)) out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    return out;
+    const r=periodRange(),all=[...(state.billings||[]),...(state.serviceInvoices||[]),...(state.purchases||[]),...financeState.records].map(x=>dateKey(x.date)).filter(Boolean).sort();
+    if(!all.length)return [];
+    const start=r.from?new Date(r.from+'T00:00:00'):new Date(all[0]+'T00:00:00');
+    const end=r.to?new Date(r.to+'T00:00:00'):new Date(all[all.length-1]+'T00:00:00');
+    if(end<start)return [];
+    const out=[];let d=new Date(start.getFullYear(),start.getMonth(),1),last=new Date(end.getFullYear(),end.getMonth(),1);
+    while(d<=last){out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);d.setMonth(d.getMonth()+1);}return out;
   }
   function monthData(key){
-    const [y,m]=key.split('-').map(Number), from=`${key}-01`, to=`${y}-${String(m).padStart(2,'0')}-${new Date(y,m,0).getDate()}`;
-    const sales=(state.billings||[]).filter(x=>isInRange(x.date,from,to));
-    const services=(state.serviceInvoices||[]).filter(x=>isInRange(x.date,from,to));
-    const out=financeState.records.filter(x=>x.type==='OUTSOURCED_COST'&&isInRange(x.date,from,to));
-    const exp=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,from,to));
-    const inc=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,from,to));
-    const ret=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,from,to));
-    const salesRev=sales.reduce((s,x)=>s+(Number(x.baseAmount)||0),0), svcRev=services.reduce((s,x)=>s+(Number(x.subtotal??x.grandTotal)||0),0);
-    const outsideRev=0, refunds=ret.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const cogs=sales.reduce((s,x)=>s+(Number(x.costPrice)||0)*(Number(x.qty)||1),0)-ret.reduce((s,r)=>{const inv=sales.find(x=>x.invoiceNo===r.invNo);return s+(inv?(Number(inv.costPrice)||0)*(Number(r.qty)||0):0)},0);
-    const direct=out.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const servicePartsCOGS=services.reduce((total,inv)=>{
-      const jc=(state.serviceJobCards||[]).find(j=>j.id===inv.jobCardId);
-      if(!jc) return total;
-      return total+(jc.partsItems||[]).reduce((sum,p)=>{
-        if(!p.itemCode) return sum;
-        const stock=(state.inventory||[]).find(i=>i.itemCode===p.itemCode);
-        return sum+(Number(stock?.costPrice ?? stock?.purchasePrice ?? p.costPrice ?? p.unitCost ?? 0)||0)*(Number(p.qty)||0);
-      },0);
-    },0);
-    const expenses=exp.reduce((s,x)=>s+(Number(x.amount)||0),0), other=inc.reduce((s,x)=>s+(Number(x.amount)||0),0);
-    const revenue=salesRev+svcRev+outsideRev-refunds, net=revenue-cogs-servicePartsCOGS-direct+other-expenses;
-    return {salesRev,svcRev,outsideRev,other,cogs:cogs+servicePartsCOGS+direct,expenses,revenue,net};
+    const [y,m]=key.split('-').map(Number),from=`${key}-01`,to=`${y}-${String(m).padStart(2,'0')}-${new Date(y,m,0).getDate()}`;
+    const sales=(state.billings||[]).filter(x=>x.status !== 'Cancelled' && isInRange(x.date,from,to)),services=(state.serviceInvoices||[]).filter(x=>x.status !== 'Cancelled' && isInRange(x.date,from,to)),out=financeState.records.filter(x=>x.type==='OUTSOURCED_COST'&&isInRange(x.date,from,to)),exp=financeState.records.filter(x=>x.type==='EXPENSE'&&isInRange(x.date,from,to)),inc=financeState.records.filter(x=>x.type==='OTHER_INCOME'&&isInRange(x.date,from,to)),ret=(state.returns||[]).filter(x=>x.type==='SALES_RETURN'&&isInRange(x.date,from,to));
+    const salesRev=sum(sales,x=>x.baseAmount),svcRev=sum(services,x=>x.subtotal??x.grandTotal),refund=sum(ret,x=>x.amount),pc=productCogsForSales(sales,ret),sp=sum(services,servicePartsCostForInvoice),outside=sum(out,x=>x.amount),expenses=sum(exp,x=>x.amount),other=sum(inc,x=>x.amount),revenue=salesRev+svcRev-refund,net=revenue-pc-sp-outside+other-expenses;
+    return {salesRev,svcRev,other,cogs:pc+sp+outside,expenses,revenue,net};
   }
   function renderMonthlyTable(){
-    const body=document.getElementById('finance-monthly-table-body'); if(!body)return;
-    const months=monthsForRange();
-    if(!months.length){body.innerHTML='<tr><td colspan="9" class="no-data-msg">No financial data yet.</td></tr>';return;}
-    body.innerHTML=months.map(k=>{
-      const d=monthData(k), label=new Date(k+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'});
-      return `<tr><td style="font-weight:800">${label}</td><td>${money(d.salesRev)}</td><td>${money(d.svcRev)}</td><td>${money(d.outsideRev)}</td><td>${money(d.other)}</td><td style="font-weight:800">${money(d.revenue+d.other)}</td><td>${money(d.cogs)}</td><td>${money(d.expenses)}</td><td style="font-weight:800;color:${d.net>=0?'var(--success-dark)':'var(--danger-dark)'}">${money(d.net)}</td></tr>`;
-    }).join('');
+    const body=document.getElementById('finance-monthly-table-body');if(!body)return;const months=monthsForRange();if(!months.length){body.innerHTML='<tr><td colspan="9" class="no-data-msg">No financial data yet.</td></tr>';return;}
+    body.innerHTML=months.map(k=>{const d=monthData(k),label=new Date(k+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'});return `<tr><td style="font-weight:800">${label}</td><td>${money(d.salesRev)}</td><td>${money(d.svcRev)}</td><td>${money(d.cogs)}</td><td>${money(d.other)}</td><td style="font-weight:800">${money(d.revenue+d.other)}</td><td>${money(d.cogs)}</td><td>${money(d.expenses)}</td><td style="font-weight:800;color:${d.net>=0?'var(--success-dark)':'var(--danger-dark)'}">${money(d.net)}</td></tr>`;}).join('');
   }
-
   function renderFinanceLedger(){
-    const body=document.getElementById('finance-ledger-body');if(!body)return;
-    const q=(document.getElementById('finance-ledger-search')?.value||'').toLowerCase().trim();
-    const records=financeState.records.filter(x=>!q || [x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const body=document.getElementById('finance-ledger-body');if(!body)return;const q=(document.getElementById('finance-ledger-search')?.value||'').toLowerCase().trim();const records=financeState.records.filter(x=>!q||[x.description,x.category,x.reference,x.customer].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>new Date(b.date)-new Date(a.date));
     if(!records.length){body.innerHTML='<tr><td colspan="8" class="no-data-msg">No manual finance transactions yet.</td></tr>';return;}
-    body.innerHTML=records.map(x=>{
-      const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service Cost';
-      const cls=x.type==='EXPENSE'?'expense':x.type==='OTHER_INCOME'?'income':'outside';
-      return `<tr><td>${formatDate(x.date)}</td><td><span class="finance-type-badge ${cls}">${type}</span></td><td><strong>${x.description||'--'}</strong>${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${money(x.amount)}</td><td>${x.type==='OUTSOURCED_COST'?money(x.directCost):'--'}</td><td><div class="finance-actions"><button title="Edit" onclick="window.editFinanceRecord('${x.id}')">✏️</button><button title="Delete" onclick="window.deleteFinanceRecord('${x.id}')">🗑️</button></div></td></tr>`;
-    }).join('');
+    body.innerHTML=records.map(x=>{const type=x.type==='EXPENSE'?'Expense':x.type==='OTHER_INCOME'?'Other Income':'Outside Service Cost',cls=x.type==='EXPENSE'?'expense':x.type==='OTHER_INCOME'?'income':'outside';return `<tr><td>${formatDate(x.date)}</td><td><span class="finance-type-badge ${cls}">${type}</span></td><td><strong>${x.description||'--'}</strong>${x.customer?`<br><small>${x.customer}</small>`:''}</td><td>${x.category||'--'}</td><td>${x.reference||'--'}</td><td style="font-weight:800">${money(x.amount)}</td><td>${x.type==='OUTSOURCED_COST'?money(x.directCost):'--'}</td><td><div class="finance-actions"><button title="Edit" onclick="window.editFinanceRecord('${x.id}')">✏️</button><button title="Delete" onclick="window.deleteFinanceRecord('${x.id}')">🗑️</button></div></td></tr>`;}).join('');
   }
-
-  function openFinanceModal(type, record){
-    const modal=document.getElementById('finance-transaction-modal'); if(!modal)return;
-    const title=type==='EXPENSE'?'Add Company Expense':type==='OTHER_INCOME'?'Add Other Income':'Add Outside Service';
-    document.getElementById('finance-modal-title').textContent=record ? `Edit ${title.replace('Add ','')}` : title;
-    document.getElementById('finance-record-id').value=record?.id||'';
-    document.getElementById('finance-record-type').value=type;
-    document.getElementById('finance-record-date').value=record?.date||todayISO();
-    document.getElementById('finance-record-amount').value=record?.amount??'';
-    document.getElementById('finance-record-category').value=record?.category|| (type==='EXPENSE'?'General':type==='OTHER_INCOME'?'Other Income':'Outside Service');
-    document.getElementById('finance-record-reference').value=record?.reference||'';
-    document.getElementById('finance-record-description').value=record?.description||'';
-    document.getElementById('finance-record-direct-cost').value=record?.directCost??0;
-    document.getElementById('finance-record-customer').value=record?.customer||'';
-    const isOutside=type==='OUTSOURCED_COST';
-    document.getElementById('finance-direct-cost-wrap').style.display=isOutside?'block':'none';
-    document.getElementById('finance-customer-wrap').style.display=isOutside?'block':'none';
-    document.getElementById('finance-modal-note').textContent=
-      type==='EXPENSE'?'Company expenses reduce Net Profit. Inventory purchases are not automatically treated as an expense here because stock becomes an asset until sold.':
-      type==='OTHER_INCOME'?'Use this for income outside normal product/service sales. It is shown separately in the P&L.':
-      'Use this for service work done outside the normal service-invoice workflow. Enter the customer/job, revenue received/earned and any direct cost used for that job.';
-    modal.classList.add('active');
+  function openFinanceModal(type,record){
+    const modal=document.getElementById('finance-transaction-modal');if(!modal)return;const title=type==='EXPENSE'?'Add Company Expense':type==='OTHER_INCOME'?'Add Other Income':'Add Outside Service';
+    document.getElementById('finance-modal-title').textContent=record?`Edit ${title.replace('Add ','')}`:title;document.getElementById('finance-record-id').value=record?.id||'';document.getElementById('finance-record-type').value=type;document.getElementById('finance-record-date').value=record?.date||todayISO();document.getElementById('finance-record-amount').value=record?.amount??'';document.getElementById('finance-record-category').value=record?.category||(type==='EXPENSE'?'General':type==='OTHER_INCOME'?'Other Income':'Outside Service');document.getElementById('finance-record-reference').value=record?.reference||'';document.getElementById('finance-record-description').value=record?.description||'';document.getElementById('finance-record-direct-cost').value=record?.directCost??0;document.getElementById('finance-record-customer').value=record?.customer||'';
+    const pm=document.getElementById('finance-record-payment-method');if(pm)pm.value=record?.paymentMethod||'Cash';const isOutside=type==='OUTSOURCED_COST';document.getElementById('finance-direct-cost-wrap').style.display=isOutside?'block':'none';document.getElementById('finance-customer-wrap').style.display=isOutside?'block':'none';modal.classList.add('active');
   }
-
-  window.editFinanceRecord=function(id){const r=financeState.records.find(x=>x.id===id);if(r)openFinanceModal(r.type,r);};
-  window.deleteFinanceRecord=function(id){
-    const r=financeState.records.find(x=>x.id===id); if(!r)return;
-    if(!confirm(`Delete this ${r.type==='EXPENSE'?'expense':r.type==='OTHER_INCOME'?'other income':'outside service'} record?`))return;
-    financeState.records=financeState.records.filter(x=>x.id!==id);saveFinance();renderFinance();
-  };
-
+  window.editFinanceRecord=id=>{const r=financeState.records.find(x=>x.id===id);if(r)openFinanceModal(r.type,r);};
+  window.deleteFinanceRecord=id=>{const r=financeState.records.find(x=>x.id===id);if(!r)return;if(!confirm(`Delete this ${r.type==='EXPENSE'?'expense':r.type==='OTHER_INCOME'?'other income':'outside service'} record?`))return;financeState.records=financeState.records.filter(x=>x.id!==id);saveFinance();renderFinance();};
   function bindFinance(){
-    const open=(type)=>()=>openFinanceModal(type);
-    document.getElementById('finance-add-expense-btn')?.addEventListener('click',open('EXPENSE'));
-    document.getElementById('finance-add-income-btn')?.addEventListener('click',open('OTHER_INCOME'));
-    document.getElementById('finance-add-outside-btn')?.addEventListener('click',open('OUTSOURCED_COST'));
-    document.getElementById('finance-modal-close')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
-    document.getElementById('finance-modal-cancel')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
-    document.getElementById('finance-transaction-form')?.addEventListener('submit',e=>{
-      e.preventDefault();
-      const type=document.getElementById('finance-record-type').value, id=document.getElementById('finance-record-id').value;
-      const amount=Number(document.getElementById('finance-record-amount').value||0);
-      const directCost=0;
-      if(amount<=0){alert('Enter an amount greater than 0.');return;}
-      
-      const record={id:id||'FIN-'+Date.now(),type,date:document.getElementById('finance-record-date').value||todayISO(),amount,category:document.getElementById('finance-record-category').value.trim(),reference:document.getElementById('finance-record-reference').value.trim(),description:document.getElementById('finance-record-description').value.trim(),directCost:0,customer:type==='OUTSOURCED_COST'?document.getElementById('finance-record-customer').value.trim():'',paidAmount:amount};
-      if(!record.description){alert('Description is required.');return;}
-      const idx=financeState.records.findIndex(x=>x.id===id);
-      if(idx>=0) financeState.records[idx]=record; else financeState.records.unshift(record);
-      saveFinance(); document.getElementById('finance-transaction-modal').classList.remove('active'); renderFinance();
-    });
-    document.querySelectorAll('[data-finance-period]').forEach(btn=>btn.addEventListener('click',()=>{
-      document.querySelectorAll('[data-finance-period]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-      financeState.period=btn.dataset.financePeriod;
-      document.getElementById('finance-custom-dates').style.display=financeState.period==='custom'?'flex':'none';
-      if(financeState.period==='custom' && !financeState.from){financeState.from=todayISO();financeState.to=todayISO();document.getElementById('finance-from-date').value=financeState.from;document.getElementById('finance-to-date').value=financeState.to;}
-      renderFinance();
-    }));
-    document.getElementById('finance-apply-date-btn')?.addEventListener('click',()=>{
-      financeState.from=document.getElementById('finance-from-date').value;financeState.to=document.getElementById('finance-to-date').value;
-      if(!financeState.from||!financeState.to){alert('Select both From and To dates.');return;} renderFinance();
-    });
-    document.getElementById('finance-ledger-search')?.addEventListener('input',renderFinanceLedger);
-    document.getElementById('finance-transaction-modal')?.addEventListener('click',e=>{if(e.target.id==='finance-transaction-modal')e.currentTarget.classList.remove('active');});
-    document.querySelectorAll('.nav-link[data-target="finance"]').forEach(link=>link.addEventListener('click',()=>setTimeout(renderFinance,0)));
+    const open=type=>()=>openFinanceModal(type);document.getElementById('finance-add-expense-btn')?.addEventListener('click',open('EXPENSE'));document.getElementById('finance-add-income-btn')?.addEventListener('click',open('OTHER_INCOME'));document.getElementById('finance-add-outside-btn')?.addEventListener('click',open('OUTSOURCED_COST'));
+    document.getElementById('finance-modal-close')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));document.getElementById('finance-modal-cancel')?.addEventListener('click',()=>document.getElementById('finance-transaction-modal').classList.remove('active'));
+    document.getElementById('finance-transaction-form')?.addEventListener('submit',e=>{e.preventDefault();const type=document.getElementById('finance-record-type').value,id=document.getElementById('finance-record-id').value,amount=Number(document.getElementById('finance-record-amount').value||0);if(amount<=0)return alert('Enter an amount greater than 0.');const record={id:id||'FIN-'+Date.now(),type,date:document.getElementById('finance-record-date').value||todayISO(),amount,category:document.getElementById('finance-record-category').value.trim(),reference:document.getElementById('finance-record-reference').value.trim(),description:document.getElementById('finance-record-description').value.trim(),directCost:0,customer:type==='OUTSOURCED_COST'?document.getElementById('finance-record-customer').value.trim():'',paymentMethod:document.getElementById('finance-record-payment-method')?.value||'Cash',paidAmount:amount};if(!record.description)return alert('Description is required.');const idx=financeState.records.findIndex(x=>x.id===id);if(idx>=0)financeState.records[idx]=record;else financeState.records.unshift(record);saveFinance();document.getElementById('finance-transaction-modal').classList.remove('active');renderFinance();});
+    document.querySelectorAll('[data-finance-period]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-finance-period]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');financeState.period=btn.dataset.financePeriod;document.getElementById('finance-custom-dates').style.display=financeState.period==='custom'?'flex':'none';if(financeState.period==='custom'&&!financeState.from){financeState.from=todayISO();financeState.to=todayISO();document.getElementById('finance-from-date').value=financeState.from;document.getElementById('finance-to-date').value=financeState.to;}renderFinance();}));
+    document.getElementById('finance-apply-date-btn')?.addEventListener('click',()=>{financeState.from=document.getElementById('finance-from-date').value;financeState.to=document.getElementById('finance-to-date').value;if(!financeState.from||!financeState.to)return alert('Select both From and To dates.');renderFinance();});
+    document.getElementById('finance-ledger-search')?.addEventListener('input',renderFinanceLedger);document.getElementById('finance-transaction-modal')?.addEventListener('click',e=>{if(e.target.id==='finance-transaction-modal')e.currentTarget.classList.remove('active');});document.querySelectorAll('.nav-link[data-target="finance"]').forEach(link=>link.addEventListener('click',()=>setTimeout(renderFinance,0)));
+    const openCash=()=>{const m=document.getElementById('finance-opening-cash-modal');if(!m)return;document.getElementById('finance-opening-cash-amount').value=openingCash();m.classList.add('active');};
+    document.getElementById('finance-set-opening-cash-btn')?.addEventListener('click',openCash);document.getElementById('finance-opening-cash-close')?.addEventListener('click',()=>document.getElementById('finance-opening-cash-modal').classList.remove('active'));document.getElementById('finance-opening-cash-cancel')?.addEventListener('click',()=>document.getElementById('finance-opening-cash-modal').classList.remove('active'));
+    document.getElementById('finance-opening-cash-form')?.addEventListener('submit',e=>{e.preventDefault();const v=Number(document.getElementById('finance-opening-cash-amount').value||0);if(v<0)return alert('Opening cash cannot be negative.');localStorage.setItem(OPENING_CASH_KEY,String(v));document.getElementById('finance-opening-cash-modal').classList.remove('active');renderFinance();});
   }
-
-  loadFinance();
-  document.addEventListener('DOMContentLoaded',()=>{bindFinance();renderFinance();});
+  loadFinance();document.addEventListener('DOMContentLoaded',()=>{bindFinance();renderFinance();});
 })();
